@@ -1,10 +1,12 @@
 # 05 – Alarmierung und Push
 
-## Ablauf
+Fachbegriffe: [CONTEXT.md](../CONTEXT.md) (Alarmierung, Erstalarm, Nachalarmierung, Quittierung, Besatzung).
+
+## Ablauf einer Alarmierung
 
 ```mermaid
 sequenceDiagram
-    participant L as Leitstelle (Admin)
+    participant L as Leitstelle
     participant S as Scheduler
     participant B as Backend
     participant DB as PostgreSQL
@@ -12,34 +14,60 @@ sequenceDiagram
     participant H as Handy
     participant M as Monitor
 
-    alt manuell
-        L->>B: POST /incidents/{id}/alarm
+    alt sofort
+        L->>B: POST /incidents/{id}/alarms (ohne scheduled_at)
     else zeitgesteuert
-        S->>B: Job "alarm-incident" fällig
+        S->>B: Job "trigger-alarm" fällig
     end
-    B->>DB: state=alarmed, alarmed_at=now() (Transaktion, idempotent)
-    B-->>M: WS incident.alarmed
-    B-->>H: WS incident.alarmed (falls App offen)
-    B->>F: Push an alle Geräte der Besatzung
+    B->>DB: alarm.state=triggered, Empfänger aus Besatzung der aktiven Schicht einfrieren,<br/>Einsatz draft→running (beim Erstalarm), alles in einer Transaktion
+    B-->>M: WS alarm.triggered
+    B-->>H: WS alarm.triggered (falls App offen)
+    B->>F: Push an alle Geräte der Empfänger
     F->>H: Notification (Alarmton)
-    H->>B: PUT /incidents/{id}/response
-    B-->>M: WS incident.response
+    H->>B: POST /alarms/{id}/acknowledge
+    B-->>M: WS alarm.acknowledged
+    H->>B: PUT /vehicles/{id}/status (3 = ausgerückt)
 ```
+
+### Empfänger
+
+- Empfänger sind alle Personen, die in der **zum Auslösezeitpunkt aktiven Schicht** einem der
+  alarmierten Fahrzeuge zugeordnet sind. Sie werden in `alarm_recipient` eingefroren.
+- Steht eine Person in derselben Schicht auf mehreren alarmierten Fahrzeugen, bekommt sie einen
+  Push. Die Leitstelle erhält eine Warnung, dass die Person doppelt besetzt ist.
+- Bei einer **Nachalarmierung** werden nur die neuen Fahrzeuge alarmiert. Personen, die schon
+  im Einsatz sind, bekommen keinen zweiten Alarm.
 
 ### Idempotenz
 
-`alarm` darf nur von `draft`/`scheduled` nach `alarmed` wechseln
-(`UPDATE … WHERE state IN ('draft','scheduled') RETURNING …`). Ein doppelter Klick oder ein
-Scheduler-Retry löst so keinen zweiten Alarm aus.
+Eine Alarmierung wechselt nur `planned → triggered` per
+`UPDATE alarm SET state='triggered' … WHERE id=$1 AND state='planned' RETURNING …`. Eine sofortige
+Alarmierung wird direkt als `triggered` angelegt. Doppelklick oder Scheduler-Retry lösen so keinen
+zweiten Alarm aus. Der Einsatz wechselt `draft → running` mit derselben Bedingung.
 
-### Zeitgesteuerte Alarme
+### Zeitgesteuerte Alarmierungen
 
-- Bei `schedule` legt das Backend einen Job mit `start_after = scheduled_at` und einem
-  Singleton-Key `incident:<id>` an.
-- Bei `unschedule` und `cancel` wird der Job gelöscht.
-- Nach einem Server-Neustart laufen überfällige Jobs sofort nach. Ein Alarm, der mehr als
-  10 Minuten überfällig ist, wird **nicht** automatisch ausgelöst, sondern im Admin als
-  „verpasst“ markiert.
+- Eine geplante Alarmierung legt einen Job mit `start_after = scheduled_at` und dem Singleton-Key
+  `alarm:<id>` an. Wird der Zeitpunkt geändert, wird der Job ersetzt.
+- Verwerfen (manuell oder durch Schließen bzw. Verwerfen des Einsatzes) löscht den Job.
+- Nach einem Server-Neustart laufen überfällige Jobs sofort nach. Ist eine Alarmierung mehr als
+  **10 Minuten** überfällig, wird sie **nicht** ausgelöst, sondern als `missed` (verpasst)
+  markiert. Die Leitstelle entscheidet dann selbst.
+- Später: Die **Vorwarnung** ist ein zweiter Job bei `scheduled_at − prewarning_minutes`. Er
+  schickt einen normalen Push ohne Alarmton an die Einsatzvorbereitung.
+
+### Quittierung
+
+Die Leitstelle sieht pro Empfänger drei Zustände:
+
+| Zustand | Bedeutung |
+|---------|-----------|
+| quittiert | Person hat den Alarm bestätigt |
+| ausstehend | Gerät vorhanden, noch keine Quittierung, also prüfen, ob das Handy stumm ist |
+| kein Gerät | Person hat kein gekoppeltes Gerät; wird über Monitor und Gong alarmiert, zählt nicht als fehlend |
+
+Eine Zu- oder Absage gibt es nicht ([ADR 0006](adr/0006-quittierung-statt-rueckmeldung.md)).
+Das Ausrücken bestätigt der Fahrzeugstatus 3.
 
 ## Push-Zustellung
 
@@ -56,7 +84,7 @@ es speichert keine Daten von uns.
 
 ### Payload (datensparsam)
 
-Im Push stehen nur Stichwort, Adresse und die Einsatz-ID, keine Namen von Mitgliedern.
+Im Push stehen nur Stichwort und Adresse aus dem Meldebild sowie die IDs. Keine Namen von Personen, **nie das Drehbuch**.
 
 **Android (FCM, data + notification, Priorität `high`):**
 
@@ -74,7 +102,7 @@ Im Push stehen nur Stichwort, Adresse und die Einsatz-ID, keine Namen von Mitgli
       }
     },
     "notification": { "title": "B2 – Wohnungsbrand", "body": "Musterstraße 1" },
-    "data": { "type": "incident.alarmed", "incident_id": "<id>" }
+    "data": { "type": "alarm.triggered", "incident_id": "<id>", "alarm_id": "<id>" }
   }
 }
 ```
@@ -89,7 +117,8 @@ Im Push stehen nur Stichwort, Adresse und die Einsatz-ID, keine Namen von Mitgli
     "interruption-level": "time-sensitive",
     "thread-id": "incident-<id>"
   },
-  "incident_id": "<id>"
+  "incident_id": "<id>",
+  "alarm_id": "<id>"
 }
 ```
 
@@ -135,5 +164,5 @@ Header: `apns-push-type: alert`, `apns-priority: 10`, `apns-expiration: now+300`
   Alarmton und zeigt das Alarm-Overlay.
 - Der Monitor in der Halle ist die zweite, unabhängige Alarmierung (Ton über die Lautsprecher
   des Fernsehers).
-- Im Admin ist pro Einsatz sichtbar, wie viele Pushes zugestellt bzw. abgelehnt wurden und wie
-  viele Rückmeldungen eingegangen sind.
+- Bei der Leitstelle ist pro Alarmierung sichtbar, wie viele Pushes zugestellt bzw. abgelehnt
+  wurden und wer quittiert hat.

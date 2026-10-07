@@ -19,18 +19,18 @@ Store-Formalitäten ab Tag 1 parallel, und der Umfang wird strikt auf das MVP au
 | Tag | Aufgabe |
 |-----|---------|
 | 1 | Backend-Gerüst, Docker Compose lokal, Migrationen, Health-Endpunkt, CI |
-| 2 | Auth (Login, Kopplung, Refresh), Mitglieder, Geräte |
-| 3 | Fahrzeuge, Besatzung, Statuswechsel, WebSocket + Snapshot |
-| 4 | Einsätze, Zustandsautomat, sofortiger und geplanter Alarm (Job-Queue) |
+| 2 | Auth (Login, Kopplung, Refresh), Personen, Berechtigungen, Geräte, BF-Tag, Teilnahme |
+| 3 | Fahrzeuge, Schichten, Besatzung, Fahrzeugstatus, WebSocket + Snapshot |
+| 4 | Einsätze (Meldebild/Drehbuch), Alarmierungen sofort + geplant, Nachalarmierung, Empfänger einfrieren, Quittierung |
 | 5 | Push-Versand FCM + APNs, OpenAPI → `packages/api_client` generieren |
-| 6–7 | Flutter-Monorepo, `packages/core`, Admin: Login, Lage, Einsätze, Fahrzeuge, Mitglieder |
+| 6–7 | Flutter-Monorepo, `packages/core`, Web: Login, Lage, Einsätze, Schichten, Personen, Fahrzeuge |
 
 ## Woche 2 – Monitor, App, Release
 
 | Tag | Aufgabe |
 |-----|---------|
-| 8 | Monitor: Einsatzansicht, Statusleiste, Standby-Folien, Ton, Wake Lock |
-| 9 | App: Kopplung, Push-Setup, Alarm-Screen, Rückmeldung |
+| 8 | Monitor: Einsatzansicht, Statusleiste, Besatzungen, Standby-Folien, Ton, Wake Lock |
+| 9 | App: Kopplung, Push-Setup, Alarm-Screen, Quittierung |
 | 10 | App: Einsatzliste, FMS-Tasten, Onboarding (Berechtigungen, Testalarm) |
 | 11 | Deployment auf den VPS, Backups, erste Builds in Play Internal Testing und TestFlight |
 | 12 | Probealarm mit echten Geräten (Android verschiedener Hersteller, iPhone) |
@@ -45,7 +45,7 @@ Store-Formalitäten ab Tag 1 parallel, und der Umfang wird strikt auf das MVP au
 | Kinderkonten (Family Link) können nicht testen | früh mit 1–2 Kindern prüfen; Eltern-Konten oder APK |
 | Push kommt bei manchen Android-Herstellern nicht an | Onboarding für die Akku-Optimierung, Testalarm-Funktion, Monitor als Zweitalarm |
 | iOS-Gerät stumm geschaltet | Hinweis an die Teilnehmer, Time-Sensitive-Notifications |
-| 2 Wochen reichen nicht | Admin anfangs minimal halten (Einsätze, Fahrzeuge); Folien und Mitglieder-UI notfalls per Seed-Skript |
+| 2 Wochen reichen nicht | Admin anfangs minimal halten (Einsätze, Fahrzeuge); Folien und Personen-UI notfalls per Seed-Skript |
 | Netz am Gerätehaus schlecht | WLAN-Abdeckung vorher prüfen, Monitor per LAN anschließen |
 
 ## Nach dem MVP

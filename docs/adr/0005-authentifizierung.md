@@ -1,4 +1,4 @@
-# ADR 0005 – Gerätekopplung per QR-Code statt E-Mail-Login für Mitglieder
+# ADR 0005 – Gerätekopplung per QR-Code statt E-Mail-Login für Personen
 
 - **Status:** Vorgeschlagen
 - **Datum:** 2026-10-07
@@ -10,8 +10,8 @@ und widerspricht der Datensparsamkeit. Monitore haben keine Tastatur.
 
 ## Entscheidung
 
-- **Admin/Leitstelle:** Benutzername + Passwort (Argon2id). 2FA (TOTP) ist optional für später.
-- **Mitglieder und Monitore:** Der Admin erzeugt einen **Einmal-Kopplungscode**
+- **Web (Administrator, Leitstelle, Einsatzvorbereitung):** Benutzername + Passwort (Argon2id). 2FA (TOTP) ist optional für später.
+- **Personen in der App und Monitore:** Der Admin erzeugt einen **Einmal-Kopplungscode**
   (QR-Code + 8 Zeichen zum Abtippen, 24 h gültig). Die App bzw. der Monitor löst ihn ein und
   erhält ein langlebiges Refresh-Token (Rotation bei jeder Nutzung) und ein kurzlebiges
   Access-Token (JWT, 15 min).

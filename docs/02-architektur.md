@@ -37,7 +37,7 @@ flowchart LR
 
 Ein einzelner Prozess, der alles bedient. Bei der Größe einer JF reicht das locker.
 
-- **REST-API** unter `/api/v1` für CRUD und Aktionen (alarmieren, Status setzen, Rückmelden).
+- **REST-API** unter `/api/v1` für CRUD und Aktionen (alarmieren, Status setzen, quittieren).
 - **WebSocket** unter `/ws` für Echtzeit-Events an Admin, Monitor und die geöffnete App.
 - **Job-Scheduler** für zeitgesteuerte Alarme. Die Jobs liegen in PostgreSQL, damit sie einen
   Neustart überleben. Kein Redis nötig.
@@ -68,7 +68,7 @@ Dateien aus und leitet `/api` und `/ws` an das Backend weiter.
 
 ## Echtzeit-Konzept
 
-1. Jede Änderung (Statuswechsel, Alarm, Rückmeldung) wird zuerst in PostgreSQL geschrieben.
+1. Jede Änderung (Statuswechsel, Alarmierung, Quittierung) wird zuerst in PostgreSQL geschrieben.
 2. Danach sendet das Backend ein Event über den WebSocket an alle verbundenen Clients.
 3. Clients halten **keinen** eigenen Wahrheitszustand. Nach einem (Re-)Connect holen sie
    `GET /api/v1/snapshot` und wenden danach nur noch Events an.
@@ -80,13 +80,14 @@ Pub/Sub noch einen Message-Broker.
 ## Alarmierungskette (Kurzfassung)
 
 ```
-Admin klickt "Alarmieren"  ──or──  Scheduler erreicht scheduled_at
+Leitstelle löst Alarmierung aus  ──oder──  Scheduler erreicht scheduled_at
             │
             ▼
-Backend: incident.state = alarmed, alarmed_at = now()   (Transaktion)
+Backend: alarm.state = triggered, Empfänger aus Besatzung einfrieren,
+         Einsatz draft → running beim Erstalarm   (eine Transaktion)
             │
-            ├── WebSocket-Event "incident.alarmed" → Monitor + offene Apps
-            └── Push an alle Geräte der betroffenen Mitglieder → FCM / APNs
+            ├── WebSocket-Event "alarm.triggered" → Monitor + offene Apps
+            └── Push an alle Geräte der Empfänger → FCM / APNs
 ```
 
 Details: [05 – Alarmierung und Push](05-alarmierung-push.md)

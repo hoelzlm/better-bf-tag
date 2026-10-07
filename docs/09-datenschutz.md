@@ -6,14 +6,18 @@
 
 ## Grundsätze
 
-1. **Datensparsamkeit:** Nur Anzeigename (z. B. „Max M.“), Rolle und Fahrzeugzuordnung.
+1. **Datensparsamkeit:** Nur Anzeigename (z. B. „Max M.“), Personentyp, Berechtigung und Besatzung.
    Keine Geburtsdaten, Adressen, Telefonnummern oder E-Mails der Jugendlichen.
-2. **Keine E-Mail-Registrierung:** Mitglieder koppeln ihr Gerät per QR-Code (ADR 0005).
+2. **Keine E-Mail-Registrierung:** Personen koppeln ihr Gerät per QR-Code (ADR 0005).
 3. **EU-Hosting:** Hetzner (Deutschland/Finnland) mit AV-Vertrag.
 4. **Zweckbindung:** Die Daten dienen nur der Übung bzw. dem BF-Tag.
-5. **Löschkonzept:** Nach dem BF-Tag werden Einsatzprotokolle, Rückmeldungen und Statushistorie
-   nach X Wochen gelöscht (Admin-Funktion „Veranstaltung archivieren/bereinigen“). Mitglieder
-   werden beim Austritt gelöscht.
+5. **Anonymisierung:** 8 Wochen nach Ende eines BF-Tags (oder vorher manuell) werden alle
+   Personenbezüge entfernt: Teilnahmen, Besatzungen und Quittierungen werden gelöscht,
+   Verfasser von Einsatzberichten und Statuswechseln werden entfernt. Personen anderer
+   Feuerwehren werden gelöscht. Einsätze (Meldebild, Drehbuch) und Berichtstexte bleiben für
+   künftige BF-Tage erhalten. Personen der eigenen JF bleiben dauerhaft (nur Anzeigename,
+   Personentyp, Berechtigung) und werden beim Austritt gelöscht. Siehe
+   [ADR 0007](adr/0007-personen-dauerhaft-anonymisierung.md).
 
 ## Drittanbieter
 

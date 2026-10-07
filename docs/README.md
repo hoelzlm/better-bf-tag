@@ -1,5 +1,7 @@
 # Dokumentation
 
+Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
+
 | Dokument | Inhalt |
 |----------|--------|
 | [01 – Vision und Scope](01-vision-scope.md) | Ziel, Rahmenbedingungen, MVP-Umfang, Nicht-Ziele |
@@ -21,7 +23,9 @@
 | [0002](adr/0002-backend-sprache.md) | Backend: Node.js/TypeScript vs. Python | Vorgeschlagen (Node.js) |
 | [0003](adr/0003-push.md) | Push über FCM (Android) und APNs direkt (iOS) | Vorgeschlagen |
 | [0004](adr/0004-flutter-web.md) | Admin und Monitor als eine Flutter-Web-App | Vorgeschlagen |
-| [0005](adr/0005-authentifizierung.md) | Login per QR-Code-Kopplung statt E-Mail für Mitglieder | Vorgeschlagen |
+| [0005](adr/0005-authentifizierung.md) | Login per QR-Code-Kopplung statt E-Mail für Personen | Vorgeschlagen |
+| [0006](adr/0006-quittierung-statt-rueckmeldung.md) | Quittierung statt „komme / komme nicht“ | Angenommen |
+| [0007](adr/0007-personen-dauerhaft-anonymisierung.md) | Personen dauerhaft, Anonymisierung nach 8 Wochen | Angenommen |
 
 Neue ADRs nach dem Muster `adr/NNNN-titel.md` anlegen (Kontext → Entscheidung → Konsequenzen).
 

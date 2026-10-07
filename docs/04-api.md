@@ -1,125 +1,138 @@
 # 04 – API
 
-Basis-URL: `https://<domain>/api/v1`. Format: JSON. Die maßgebliche Spezifikation ist die aus dem
-Backend generierte OpenAPI-Datei (`/api/v1/openapi.json`). Dieses Dokument ist der Entwurf.
+Basis-URL: `https://<domain>/api/v1`. Format: JSON. Maßgeblich ist später die aus dem Backend
+generierte OpenAPI-Datei (`/api/v1/openapi.json`). Dieses Dokument ist der Entwurf.
+Fachbegriffe: [CONTEXT.md](../CONTEXT.md).
 
 ## Authentifizierung
 
-Details zur Entscheidung: [ADR 0005](adr/0005-authentifizierung.md)
+Entscheidung: [ADR 0005](adr/0005-authentifizierung.md)
 
 | Client | Login | Token |
 |--------|-------|-------|
-| Admin (Web) | `POST /auth/login` mit Benutzername + Passwort | Access-Token (15 min) + Refresh-Token als HttpOnly-Cookie |
-| Mobile-App | `POST /auth/pair` mit Kopplungscode aus dem QR-Code | Access-Token (15 min) + Refresh-Token (lange gültig, im Secure Storage) |
-| Monitor | `POST /auth/pair` mit Kopplungscode | wie Mobile-App, Rolle `monitor` (nur lesend) |
+| Web (Admin/Leitstelle/Einsatzvorbereitung) | `POST /auth/login` mit Benutzername + Passwort | Access-Token (15 min) + Refresh-Token als HttpOnly-Cookie |
+| Mobile-App | `POST /auth/pair` mit Kopplungscode | Access-Token + langlebiges Refresh-Token (Secure Storage) |
+| Monitor | `POST /auth/pair` mit Kopplungscode | wie App, nur lesend |
 
-Das Access-Token ist ein JWT mit `sub` (member- oder monitor-ID), `role` und `device_id`.
-Wird ein Gerät im Admin gesperrt, schlägt der nächste Refresh fehl.
+Das JWT enthält `sub` (Person- oder Monitor-ID), `permission` und `device_id`.
 
-### Endpunkte
+| Methode | Pfad | Beschreibung |
+|---------|------|--------------|
+| POST | `/auth/login` | Web-Login |
+| POST | `/auth/pair` | Code einlösen → Tokens |
+| POST | `/auth/refresh` | Token erneuern |
+| POST | `/auth/logout` | Refresh-Token widerrufen |
 
-| Methode | Pfad | Rolle | Beschreibung |
-|---------|------|-------|--------------|
-| POST | `/auth/login` | – | Web-Login |
-| POST | `/auth/pair` | – | Code einlösen → Tokens |
-| POST | `/auth/refresh` | – | Token erneuern |
-| POST | `/auth/logout` | alle | Refresh-Token widerrufen |
+## Berechtigungen
+
+| Aktion | Mannschaft | Einsatzvorbereitung | Leitstelle | Administrator |
+|---|:-:|:-:|:-:|:-:|
+| Meldebild sehen, quittieren, Status eigenes Fahrzeug | ✓ | ✓ | ✓ | ✓ |
+| Drehbuch sehen | | ✓ | ✓ | ✓ |
+| Einsätze anlegen/bearbeiten | | ✓ | ✓ | ✓ |
+| Alarmieren, Einsatz schließen, Status überschreiben | | | ✓ | ✓ |
+| Schichten/Besatzungen pflegen | | | ✓ | ✓ |
+| Einsatzbericht prüfen (später) | | | ✓ | ✓ |
+| Anonymisierung auslösen | | | ✓ | ✓ |
+| Personen, Fahrzeuge, Feuerwehren, Monitore, BF-Tage, Folien verwalten | | | | ✓ |
+
+Die Spalten sind getrennte Rechte und keine Hierarchie, nur der Administrator darf alles.
+**Das Drehbuch (`script`) wird für die Berechtigung Mannschaft und für Monitore serverseitig
+aus jeder Antwort und jedem Event entfernt.**
 
 ## Ressourcen
 
-### Mitglieder
+Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den laufenden.
 
-| Methode | Pfad | Rolle |
-|---------|------|-------|
-| GET | `/members` | admin, dispatcher |
-| POST | `/members` | admin |
-| PATCH | `/members/{id}` | admin |
-| DELETE | `/members/{id}` | admin |
-| POST | `/members/{id}/pairing-code` | admin → liefert Code + QR-Inhalt |
-| GET | `/members/{id}/devices` | admin |
-| DELETE | `/devices/{id}` | admin (Gerät sperren) |
+### Stammdaten (Administrator)
 
-### Eigenes Gerät
+| Methode | Pfad |
+|---------|------|
+| GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` |
+| GET/POST/PATCH/DELETE | `/persons[/{id}]` |
+| POST | `/persons/{id}/pairing-code` |
+| GET | `/persons/{id}/devices` |
+| DELETE | `/devices/{id}` |
+| GET/POST/PATCH/DELETE | `/vehicles[/{id}]` |
+| GET/POST/DELETE | `/monitors[/{id}]`, `POST /monitors/{id}/pairing-code` |
+| GET/POST/PATCH/DELETE | `/slides[/{id}]`, `POST /slides/{id}/image` |
+| GET/POST/PATCH | `/bf-days[/{id}]` |
+| POST | `/bf-days/{id}/anonymize` (auch Leitstelle) |
 
-| Methode | Pfad | Rolle | Beschreibung |
-|---------|------|-------|--------------|
-| GET | `/me` | member+ | eigenes Profil, eigene Fahrzeuge |
-| PUT | `/me/device/push-token` | member+ | FCM/APNs-Token hinterlegen bzw. aktualisieren |
+### Pro BF-Tag
 
-### Fahrzeuge
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET/PUT | `/bf-days/{day}/participants` | Admin |
+| GET | `/bf-days/{day}/shifts` | alle |
+| POST/PATCH/DELETE | `/bf-days/{day}/shifts[/{id}]` | Leitstelle |
+| PUT | `/shifts/{id}/crew` | Leitstelle; Body: Liste aus `{vehicle_id, person_id, function}` |
 
-| Methode | Pfad | Rolle |
-|---------|------|-------|
-| GET | `/vehicles` | alle |
-| POST | `/vehicles` | admin |
-| PATCH | `/vehicles/{id}` | admin |
-| DELETE | `/vehicles/{id}` | admin |
-| PUT | `/vehicles/{id}/crew` | admin |
-| PUT | `/vehicles/{id}/status` | dispatcher+, member (nur eigenes Fahrzeug) |
+### Fahrzeugstatus
 
-### Einsätze
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| PUT | `/vehicles/{id}/status` | Besatzung der aktuellen Schicht oder Leitstelle |
 
-| Methode | Pfad | Rolle | Beschreibung |
-|---------|------|-------|--------------|
-| GET | `/incidents?state=…` | alle | Liste |
-| GET | `/incidents/{id}` | alle | Detail inkl. Fahrzeuge und Rückmeldungen |
-| POST | `/incidents` | dispatcher+ | anlegen (`draft`) |
-| PATCH | `/incidents/{id}` | dispatcher+ | bearbeiten, solange nicht `closed` |
-| POST | `/incidents/{id}/schedule` | dispatcher+ | `{ "scheduled_at": "…" }` |
-| POST | `/incidents/{id}/unschedule` | dispatcher+ | |
-| POST | `/incidents/{id}/alarm` | dispatcher+ | sofort alarmieren |
-| POST | `/incidents/{id}/close` | dispatcher+ | |
-| POST | `/incidents/{id}/cancel` | dispatcher+ | |
-| PUT | `/incidents/{id}/response` | member+ | `{ "response": "coming" }` |
+### Einsätze und Alarmierungen
 
-### Monitor
+| Methode | Pfad | Berechtigung | Beschreibung |
+|---------|------|--------------|--------------|
+| GET | `/bf-days/{day}/incidents?state=…` | alle | Liste (Drehbuch je nach Berechtigung) |
+| GET | `/incidents/{id}` | alle | inkl. Alarmierungen, Empfänger und Quittierungen |
+| POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung | anlegen (`draft`) |
+| PATCH | `/incidents/{id}` | Einsatzvorbereitung | Meldebild/Drehbuch bearbeiten, solange nicht `closed` |
+| POST | `/incidents/{id}/discard` | Einsatzvorbereitung | nur `draft` |
+| POST | `/incidents/{id}/close` | Leitstelle | verwirft geplante Alarmierungen |
+| POST | `/incidents/{id}/alarms` | Leitstelle | `{ vehicle_ids, scheduled_at? }`: ohne Zeit sofort, sonst geplant |
+| PATCH | `/alarms/{id}` | Leitstelle | geplante Zeit oder Fahrzeuge ändern |
+| POST | `/alarms/{id}/discard` | Leitstelle | geplante Alarmierung verwerfen |
+| POST | `/alarms/{id}/acknowledge` | Empfänger | Quittierung |
+| POST | `/incidents/{id}/copy` | Einsatzvorbereitung | in einen anderen BF-Tag kopieren (später) |
+| POST | `/incidents/{id}/ready` | Einsatzvorbereitung | Bereitmeldung (später) |
 
-| Methode | Pfad | Rolle |
-|---------|------|-------|
-| GET | `/monitors` | admin |
-| POST | `/monitors` | admin |
-| POST | `/monitors/{id}/pairing-code` | admin |
-| DELETE | `/monitors/{id}` | admin |
-| GET | `/slides` | alle |
-| POST/PATCH/DELETE | `/slides[/{id}]` | admin |
-| POST | `/slides/{id}/image` | admin (multipart) |
+### Später
 
-### Snapshot
+| Methode | Pfad | Beschreibung |
+|---------|------|--------------|
+| GET/PUT | `/incidents/{id}/reports/{vehicle_id}` | Einsatzbericht (GF der Besatzung) |
+| POST | `/incidents/{id}/reports/{vehicle_id}/approve` bzw. `/return` | Prüfung |
+| POST | `/vehicles/{id}/talk-request` | Sprechaufforderung |
+| POST | `/bf-days/{day}/announcements` | Durchsage `{ text, shift_id? }` |
+| GET/POST/PATCH/DELETE | `/bf-days/{day}/program-items[/{id}]` | Tagesablauf |
 
-| Methode | Pfad | Rolle | Beschreibung |
-|---------|------|-------|--------------|
-| GET | `/snapshot` | alle | aktive Einsätze, alle Fahrzeuge mit Status, Rückmeldungen, Slides, aktuelle `seq` |
+### Eigenes Gerät und Snapshot
+
+| Methode | Pfad | Beschreibung |
+|---------|------|--------------|
+| GET | `/me` | Person, aktuelle Besatzungen |
+| PUT | `/me/device/push-token` | Push-Token aktualisieren |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze, Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
 ## WebSocket `/ws`
 
-- Verbindung mit `?token=<access_token>` oder Auth-Nachricht als erste Nachricht.
-- Server → Client: Events. Client → Server: nur `ping` und `auth`.
-- Heartbeat alle 25 s. Der Client verbindet sich mit exponentiellem Backoff neu.
-
-### Event-Format
+- Auth per `?token=` oder als erste Nachricht; Heartbeat alle 25 s; Reconnect mit Backoff.
+- Events tragen eine fortlaufende `seq`. Bei einer Lücke lädt der Client den Snapshot neu.
 
 ```json
-{
-  "seq": 1042,
-  "type": "vehicle.status_changed",
-  "at": "2026-10-07T18:12:03Z",
-  "data": { "vehicle_id": "…", "status": 3 }
-}
+{ "seq": 1042, "type": "vehicle.status_changed", "at": "2026-10-07T18:12:03Z",
+  "data": { "vehicle_id": "…", "status": 3 } }
 ```
-
-### Event-Typen
 
 | Typ | Daten | Empfänger |
 |-----|-------|-----------|
-| `incident.created` | Einsatz | admin, dispatcher |
-| `incident.updated` | Einsatz | admin, dispatcher; alle, falls alarmiert |
-| `incident.alarmed` | Einsatz inkl. Fahrzeuge | alle |
+| `incident.created` / `incident.updated` | Einsatz | Einsatzvorbereitung, Leitstelle, Admin |
+| `alarm.planned` / `alarm.discarded` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin |
+| `alarm.triggered` | Einsatz (Meldebild) + Alarmierung + Empfänger | alle |
+| `alarm.missed` | Alarmierung | Leitstelle, Admin |
+| `alarm.acknowledged` | `{ alarm_id, person_id, display_name }` | alle |
+| `incident.close_suggested` | `{ id }` | Leitstelle |
 | `incident.closed` | `{ id }` | alle |
-| `incident.response` | `{ incident_id, member_id, display_name, response }` | alle |
 | `vehicle.status_changed` | `{ vehicle_id, status, at }` | alle |
-| `vehicle.updated` | Fahrzeug | alle |
-| `slides.changed` | – | monitor |
+| `shift.crew_changed` | Schicht + Besatzungen | alle |
+| `slides.changed` | – | Monitore |
 | `session.revoked` | – | betroffenes Gerät |
+| später: `announcement.created`, `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 
 ## Fehlerformat
 
@@ -127,7 +140,7 @@ Wird ein Gerät im Admin gesperrt, schlägt der nächste Refresh fehl.
 { "error": { "code": "incident_not_editable", "message": "Einsatz ist bereits abgeschlossen." } }
 ```
 
-HTTP-Statuscodes: 400 Validierung, 401 nicht angemeldet, 403 Rolle fehlt, 404, 409 Zustandskonflikt.
+400 Validierung, 401 nicht angemeldet, 403 Berechtigung fehlt, 404, 409 Zustandskonflikt.
 
 ## Client-Generierung
 
@@ -135,5 +148,4 @@ HTTP-Statuscodes: 400 Validierung, 401 nicht angemeldet, 403 Rolle fehlt, 404, 4
 backend → openapi.json → openapi-generator (dart-dio) → packages/api_client
 ```
 
-Die WebSocket-Events sind nicht Teil von OpenAPI. Ihre Dart-Typen werden in `packages/core`
-von Hand gepflegt, die Schemas im Backend sind die Referenz.
+Die Dart-Typen der WebSocket-Events werden in `packages/core` von Hand gepflegt.

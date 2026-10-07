@@ -1,62 +1,84 @@
 # 01 – Vision und Scope
 
+Fachbegriffe: siehe [CONTEXT.md](../CONTEXT.md).
+
 ## Ziel
 
-Beim BF-Tag erlebt die Jugendfeuerwehr 24 Stunden lang einen „Berufsfeuerwehr-Alltag“ mit
+Beim BF-Tag erlebt die Jugendfeuerwehr 24 Stunden lang einen Berufsfeuerwehr-Alltag mit
 simulierten Einsätzen. Die Software soll das realistisch abbilden:
 
-- Die Betreuer (Leitstelle) bereiten Einsätze vor und lösen sie manuell oder zeitgesteuert aus.
-- Die Jugendlichen werden über ihr Handy alarmiert, sehen den Einsatz und geben eine Rückmeldung.
-- Ein Monitor in der Fahrzeughalle bzw. im Aufenthaltsraum zeigt den laufenden Einsatz groß an.
-- Fahrzeuge melden ihren Status (FMS 1–8) wie im echten Funkverkehr.
+- Die Einsatzvorbereitung plant Einsätze mit **Meldebild** (für alle) und **Drehbuch** (nur Betreuer).
+- Die Leitstelle löst **Alarmierungen** manuell oder zeitgesteuert aus, inklusive Nachalarmierungen.
+- Die **Besatzung** der alarmierten Fahrzeuge wird über ihre Handys alarmiert und **quittiert**.
+  Ausgerückt wird über den **Fahrzeugstatus** 3, wie bei einer Berufsfeuerwehr.
+- Ein **Monitor** in der Fahrzeughalle zeigt den laufenden Einsatz bzw. im Standby Uhr,
+  Fahrzeugstatus, Besatzungen und Folien.
 
 ## Vorbild
 
-[bf-tag.de](https://bf-tag.de) bietet das als kostenlosen Dienst an (Web-Dashboard, Alarmmonitor,
-iOS-App, Android nur als APK-Download). Wir wollen:
+[bf-tag.de](https://bf-tag.de) bietet Alarmmonitor, Einsatzplanung, Alarmierung, Fahrzeug-,
+Benutzer- und Feuerwehrverwaltung, Dienstplan, Ausbildungsplanung, Einsatzberichte und Apps
+(Android nur als APK). Wir bauen **den vollen Funktionsumfang nach, aber in Etappen**: Das MVP
+läuft beim ersten BF-Tag, der Rest folgt. Das Domain-Modell berücksichtigt schon jetzt alles.
 
-1. eine Android-App über den Play Store,
-2. volle Kontrolle über Daten und Hosting,
-3. einen kleineren, auf unsere JF zugeschnittenen Funktionsumfang.
+Zuordnung der bf-tag.de-Funktionen zu unseren Begriffen:
 
-## MVP (Version 1)
+| bf-tag.de | bei uns |
+|-----------|---------|
+| Einsatzplanung | Einsatz (Meldebild + Drehbuch), Vorwarnung, Bereitmeldung |
+| Alarmierung | Alarmierung (Erstalarm, Nachalarmierung), Quittierung |
+| Statusverwaltung | Fahrzeugstatus, Sprechaufforderung |
+| Fahrzeugverwaltung | Fahrzeug |
+| Feuerwehrverwaltung | Feuerwehr |
+| Benutzerverwaltung | Person, Personentyp, Berechtigung, Teilnahme |
+| Dienstplan | **Schicht** + Besatzung (steuert die Alarmierung) und **Tagesablauf** (Anzeige) |
+| Ausbildungsplanung | Programmpunkt vom Typ Ausbildung im Tagesablauf |
+| Einsatzberichte | Einsatzbericht (pro Fahrzeug, mit Prüfung) |
+| Alarmmonitor | Monitor, Folie |
 
-| # | Funktion | Admin (Web) | Monitor (Web) | App |
-|---|----------|:-----------:|:-------------:|:---:|
-| 1 | Mitglieder und Rollen verwalten | ✓ | | |
-| 2 | Geräte per QR-Code koppeln | ✓ | ✓ | ✓ |
-| 3 | Fahrzeuge verwalten (Funkrufname, Typ, Sortierung) | ✓ | | |
-| 4 | Fahrzeugstatus FMS setzen und anzeigen | ✓ | ✓ (nur Anzeige) | ✓ |
-| 5 | Einsätze anlegen (Stichwort, Adresse, Text, Fahrzeuge) | ✓ | | |
-| 6 | Einsatz sofort alarmieren | ✓ | | |
-| 7 | Einsatz zeitgesteuert alarmieren | ✓ | | |
-| 8 | Push-Alarm mit Alarmton | | | ✓ |
-| 9 | Rückmeldung „komme“ / „komme nicht“ | | ✓ (Anzeige) | ✓ |
-| 10 | Einsatz abschließen | ✓ | | |
-| 11 | Monitor: aktiver Einsatz, Fahrzeugstatus, Uhr | | ✓ | |
-| 12 | Monitor: Standby-Folien (Text/Bild) | ✓ (pflegen) | ✓ | |
-| 13 | Einsatzliste (laufend + vergangen) | ✓ | | ✓ |
+## Etappen
 
-## Später (nach MVP)
+### MVP (erster BF-Tag)
 
-- Dienstplan / Wachabteilungen
-- Ausbildungsplanung
-- Einsatzberichte (Formular nach dem Einsatz)
-- Karte mit Einsatzort und Route
-- Gong und Sprachausgabe (TTS) am Monitor
-- Einsatzvorlagen und Szenario-Import (CSV)
-- Statistik nach dem BF-Tag
+| Begriff | Umfang |
+|---------|--------|
+| BF-Tag, Teilnahme | anlegen, Zeitraum, Zustand |
+| Feuerwehr | nur die eigene; im Modell vorhanden, im UI versteckt |
+| Person | Personentyp, Berechtigung, Kopplung per QR-Code |
+| Schicht, Besatzung, Funktion | standardmäßig eine Schicht über den ganzen BF-Tag |
+| Fahrzeug, Fahrzeugstatus | Status setzen (Besatzung), überschreiben (Leitstelle) |
+| Einsatz | Meldebild + Drehbuch, Abschlussvorschlag |
+| Alarmierung | Erstalarm + Nachalarmierung, sofort + zeitgesteuert, verpasste Alarmierungen |
+| Quittierung | quittiert / ausstehend / kein Gerät |
+| Monitor | Einsatzansicht; Standby mit Uhr, Fahrzeugstatus, Besatzungen, Folien |
+| Anonymisierung | manuell auslösbar |
+
+### Danach
+
+- Weitere Feuerwehren im UI
+- Einsatzbericht mit Prüfung
+- Vorwarnung und Bereitmeldung
+- Sprechaufforderung
+- Durchsage (an alle oder an eine Schicht), auch auf dem Monitor
+- Tagesablauf mit Programmpunkten, auf Monitor und in der App
+- Einsatz aus früherem BF-Tag kopieren
+- Automatische Anonymisierung nach 8 Wochen
+- Karte, Gong/TTS am Monitor, Statistik
 
 ## Nicht-Ziele
 
 - Echter Einsatzbetrieb, Anbindung an echte Leitstellen, FMS/TETRA-Schnittstellen
-- Mehrere Organisationen (Multi-Tenant)
+- Mehrere Betreiber (Multi-Tenant). Andere Feuerwehren nehmen teil, betreiben aber kein eigenes System
+- Mehrere Wachen bzw. Standorte (vorerst; alle Monitore zeigen alles)
+- „Komme / komme nicht“-Rückmeldung (siehe [ADR 0006](adr/0006-quittierung-statt-rueckmeldung.md))
+- Einsatzvorlagen-Bibliothek (stattdessen Einsätze kopieren)
 - Öffentliche Registrierung
-- Offline-Betrieb ohne Netz (Grundvoraussetzung ist WLAN oder Mobilfunk am Gerätehaus)
+- Offline-Betrieb ohne Netz
 
 ## Erfolgskriterien
 
-- Alarm erreicht ≥ 95 % der gekoppelten Geräte innerhalb von 5 Sekunden.
-- Monitor zeigt Statusänderungen in < 1 Sekunde.
-- Ein Betreuer kann einen Einsatz in < 1 Minute anlegen und auslösen.
-- System läuft 24 h stabil auf einem kleinen VPS.
+- Alarm erreicht ≥ 95 % der Geräte innerhalb von 5 Sekunden.
+- Die Leitstelle sieht sofort, wessen Alarm nicht quittiert wurde.
+- Der Monitor zeigt Statusänderungen in < 1 Sekunde.
+- Einen Einsatz anlegen und auslösen dauert < 1 Minute.
+- Das System läuft 24 h stabil auf einem kleinen VPS.
