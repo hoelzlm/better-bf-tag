@@ -49,7 +49,8 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | Methode | Pfad |
 |---------|------|
 | GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` |
-| GET/POST/PATCH/DELETE | `/persons[/{id}]` |
+| GET/POST/PATCH | `/persons[/{id}]` |
+| PUT/DELETE | `/persons/{id}/web-access` |
 | POST | `/persons/{id}/pairing-code` |
 | GET | `/persons/{id}/devices` |
 | DELETE | `/devices/{id}` |
@@ -111,8 +112,19 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 ## WebSocket `/ws`
 
-- Auth per `?token=` oder als erste Nachricht; Heartbeat alle 25 s; Reconnect mit Backoff.
+- Auth per Query-Parameter `?token=<Access-Token>`, nur beim Verbindungsaufbau geprüft. Fehlt
+  das Token oder ist es ungültig, schließt der Server die Verbindung mit Close-Code **4401**
+  (keine HTTP-Ablehnung des Upgrades, da Browser diese nicht auswerten können).
+- Sofort nach erfolgreicher Authentifizierung: `{ "type": "hello", "seq": <aktuelle seq> }`.
+- Danach `{ "type": "heartbeat", "seq": <aktuelle seq> }` alle `WS_HEARTBEAT_MS` (Standard
+  25000 ms), zusätzlich zu WebSocket-Protokoll-Pings im gleichen Takt; bleibt ein Pong aus,
+  beendet der Server die Verbindung.
 - Events tragen eine fortlaufende `seq`. Bei einer Lücke lädt der Client den Snapshot neu.
+- Für Events außerhalb der Berechtigung der Verbindung kommt statt des Events
+  `{ "seq": N, "type": "skip" }` — `seq` bleibt dadurch pro Verbindung lückenlos, ohne Inhalte
+  zu verraten.
+- Reconnect mit Backoff bei fehlender Nachricht über 2 × Heartbeat-Intervall oder geschlossenem
+  Socket.
 
 ```json
 { "seq": 1042, "type": "vehicle.status_changed", "at": "2026-10-07T18:12:03Z",

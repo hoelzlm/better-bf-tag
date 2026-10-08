@@ -11,6 +11,7 @@ import { fastifySwaggerUi } from '@fastify/swagger-ui';
 import { fastifyCors } from '@fastify/cors';
 import { fastifyCookie } from '@fastify/cookie';
 import { fastifyRateLimit } from '@fastify/rate-limit';
+import fastifyWebsocket from '@fastify/websocket';
 
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
@@ -20,6 +21,11 @@ import { createErrorHandler, createNotFoundHandler, ApiError } from './errors.js
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
+import { vehicleRoutes } from './routes/vehicles.js';
+import { personRoutes } from './routes/persons.js';
+import { snapshotRoutes } from './routes/snapshot.js';
+import { Realtime } from './realtime/realtime.js';
+import { wsRoutes } from './realtime/ws.js';
 import './access/authenticate.js';
 
 export interface AppDeps {
@@ -37,6 +43,7 @@ declare module 'fastify' {
     pool: Pool;
     clock: Clock;
     pushSender: PushSender;
+    realtime: Realtime;
   }
 }
 
@@ -47,6 +54,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: {
       level: 'info',
     },
+    trustProxy: config.TRUST_PROXY,
   });
 
   app.decorate('config', config);
@@ -54,6 +62,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.decorate('pool', pool);
   app.decorate('clock', clock);
   app.decorate('pushSender', pushSender);
+  app.decorate('realtime', new Realtime(db, clock));
 
   // Zod type provider
   app.setValidatorCompiler(validatorCompiler);
@@ -103,11 +112,19 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     },
   });
 
+  // WebSocket transport (ADR 0009): `/ws`, not under `/api/v1`, hidden from
+  // the OpenAPI spec (see wsRoutes).
+  await app.register(fastifyWebsocket);
+  await app.register(wsRoutes);
+
   // Register routes under /api/v1
   await app.register(async function routes(fastify) {
     await fastify.register(healthRoutes, { prefix: '/api/v1' });
     await fastify.register(authRoutes, { prefix: '/api/v1' });
     await fastify.register(meRoutes, { prefix: '/api/v1' });
+    await fastify.register(vehicleRoutes, { prefix: '/api/v1' });
+    await fastify.register(personRoutes, { prefix: '/api/v1' });
+    await fastify.register(snapshotRoutes, { prefix: '/api/v1' });
 
     // The generated spec is served for the Dart client codegen; hidden from
     // the spec itself to avoid a self-referential entry.

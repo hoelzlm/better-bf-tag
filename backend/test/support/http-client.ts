@@ -28,8 +28,20 @@ export class HttpClient {
     return this.request('POST', path, body, opts);
   }
 
+  put(path: string, body?: unknown, opts?: { token?: string }): Promise<HttpResponse> {
+    return this.request('PUT', path, body, opts);
+  }
+
+  patch(path: string, body?: unknown, opts?: { token?: string }): Promise<HttpResponse> {
+    return this.request('PATCH', path, body, opts);
+  }
+
+  delete(path: string, opts?: { token?: string }): Promise<HttpResponse> {
+    return this.request('DELETE', path, undefined, opts);
+  }
+
   private async request(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body: unknown,
     opts?: { token?: string }

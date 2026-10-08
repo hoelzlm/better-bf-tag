@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'screens/lage_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/monitor_placeholder_screen.dart';
+import 'screens/vehicles_screen.dart';
 
 /// Bridges a Riverpod provider's changes into a [Listenable] that go_router's
 /// `refreshListenable` can subscribe to, so route redirects re-evaluate
@@ -55,8 +56,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             return '/admin/login';
           }
           return null;
-        case SessionSignedIn():
+        case SessionSignedIn(person: final person):
           if (isLoginRoute) {
+            return '/admin';
+          }
+          final isFahrzeugeRoute =
+              state.matchedLocation == '/admin/fahrzeuge';
+          if (isFahrzeugeRoute && person.permission != Permission.admin) {
             return '/admin';
           }
           return null;
@@ -75,6 +81,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin',
         builder: (context, state) => const _SessionGate(child: LageScreen()),
+      ),
+      GoRoute(
+        path: '/admin/fahrzeuge',
+        builder: (context, state) =>
+            const _SessionGate(child: VehiclesScreen()),
       ),
       GoRoute(
         path: '/monitor',

@@ -18,6 +18,8 @@ export interface SignablePerson {
 export interface AccessTokenClaims {
   personId: string;
   permission: Permission;
+  /** Present for device (mobile) tokens; device table/checks land in T04-2. */
+  deviceId?: string;
 }
 
 function secretKey(config: Config): Uint8Array {
@@ -51,7 +53,13 @@ export async function verifyAccessToken(
     if (typeof personId !== 'string' || typeof permission !== 'string') {
       throw new Error('access token missing required claims');
     }
-    return { personId, permission: permission as Permission };
+    const deviceIdClaim = payload['device_id'];
+    const deviceId = typeof deviceIdClaim === 'string' ? deviceIdClaim : undefined;
+    return {
+      personId,
+      permission: permission as Permission,
+      ...(deviceId !== undefined ? { deviceId } : {}),
+    };
   } catch {
     throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
   }
