@@ -76,6 +76,27 @@ export function createErrorHandler(app: FastifyInstance) {
       });
     }
 
+    // Raw image-upload routes (ADR 0014) rely on Fastify's own body-size
+    // and content-type-parser errors rather than throwing ApiError, so map
+    // their statusCodes to our `{error:{code,message}}` shape here too.
+    if (statusCode === 413) {
+      return reply.status(413).send({
+        error: {
+          code: 'image_too_large' as const,
+          message: 'Bild ist zu groß.',
+        },
+      });
+    }
+
+    if (statusCode === 415) {
+      return reply.status(415).send({
+        error: {
+          code: 'unsupported_image_type' as const,
+          message: 'Nicht unterstützter Bildtyp.',
+        },
+      });
+    }
+
     // Unknown error — log and return generic 500
     request.log.warn({ error: error.message }, 'Unhandled error');
     return reply.status(500).send({

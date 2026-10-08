@@ -36,6 +36,13 @@
       "when": 1791499081187,
       "tag": "0004_fixed_masked_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791500584705,
+      "tag": "0005_quick_guardian",
+      "breakpoints": true
     }
   ]
 }
