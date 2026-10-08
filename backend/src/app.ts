@@ -51,6 +51,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: {
       level: 'info',
     },
+    trustProxy: config.TRUST_PROXY,
   });
 
   app.decorate('config', config);

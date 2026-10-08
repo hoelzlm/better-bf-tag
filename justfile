@@ -41,3 +41,7 @@ build-web:
 # Run the web app locally against a local backend.
 web:
     cd apps/web && flutter run -d web-server --web-port 8081 --dart-define=API_BASE_URL=http://localhost:8080
+
+# Build the production images and smoke-test the full infra/ compose stack locally.
+infra-smoke:
+    ./infra/smoke-test.sh

@@ -1,0 +1,17 @@
+# Root .dockerignore — applies to any build context rooted at the repo root
+# (currently infra/web.Dockerfile, context "."). The backend image uses
+# context ./backend and is unaffected by this file.
+.git/
+.worktrees/
+.scratch/
+docs/
+*.md
+backend/node_modules/
+backend/dist/
+backend/coverage/
+apps/web/.dart_tool/
+apps/web/android/
+apps/web/ios/
+apps/web/linux/
+apps/web/macos/
+apps/web/windows/
