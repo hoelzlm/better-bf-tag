@@ -4,6 +4,7 @@ publish_to: none
 environment:
   sdk: ^3.9.0
 
-# T01-6 adds apps/web and packages/core here.
 workspace:
   - packages/api_client
+  - packages/core
+  - apps/web
