@@ -65,7 +65,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | DELETE | `/devices/{id}` |
 | GET/POST/PATCH/DELETE | `/vehicles[/{id}]` |
 | GET/POST/PATCH/DELETE | `/monitors[/{id}]`, `POST /monitors/{id}/pairing-code` |
-| GET/POST/PATCH/DELETE | `/slides[/{id}]`, `POST /slides/{id}/image` |
+| GET/POST/PATCH/DELETE | `/slides[/{id}]`, `PUT /slides/order`, `POST/DELETE /slides/{id}/image` (ADR 0014); `GET /slides/{id}/image` auch Monitor |
 | GET/POST/PATCH | `/bf-days[/{id}]` (GET: alle Personen) |
 | POST | `/bf-days/{id}/start`, `/bf-days/{id}/end` (ADR 0013) |
 | POST | `/bf-days/{id}/anonymize` (auch Leitstelle) |
@@ -154,7 +154,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | `bf_day.updated` | BF-Tag | alle |
 | `shift.crew_changed` | Schicht + Besatzungen (auch bei Anlegen/Bearbeiten einer Schicht) | alle |
 | `shift.deleted` | `{ id, bf_day_id }` | alle |
-| `slides.changed` | – | Monitore |
+| `slides.changed` | `{ slides }` = alle aktiven Folien (ADR 0014) | alle |
 | `session.revoked` | – | betroffenes Gerät (kein `seq`, Verbindung wird danach mit Close-Code **4403** geschlossen) |
 | später: `announcement.created`, `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 

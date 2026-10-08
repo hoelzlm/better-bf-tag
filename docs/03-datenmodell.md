@@ -111,7 +111,8 @@ Constraint: `permission = 'admin'` ⇒ `person_type = 'supervisor'`.
 ### `monitor_display`, `slide` – Monitor, Folie
 
 Wie bisher: Monitor mit `name`, `refresh_token_hash`, `last_seen_at`, `revoked_at`;
-Folie mit `title`, `body` (Markdown), `image_path`, `duration_seconds`, `sort_order`, `active`.
+Folie mit `title`, `body` (Markdown), `duration_seconds`, `sort_order`, `active`; das optionale
+Bild liegt in `slide_image` (bytea in PostgreSQL, ADR 0014).
 
 ## Pro BF-Tag
 
