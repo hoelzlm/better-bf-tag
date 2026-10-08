@@ -49,7 +49,8 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | Methode | Pfad |
 |---------|------|
 | GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` |
-| GET/POST/PATCH/DELETE | `/persons[/{id}]` |
+| GET/POST/PATCH | `/persons[/{id}]` |
+| PUT/DELETE | `/persons/{id}/web-access` |
 | POST | `/persons/{id}/pairing-code` |
 | GET | `/persons/{id}/devices` |
 | DELETE | `/devices/{id}` |

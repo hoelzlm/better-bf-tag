@@ -8,6 +8,9 @@ part of 'serializers.dart';
 
 Serializers _$serializers =
     (Serializers().toBuilder()
+          ..add(CreatePersonRequest.serializer)
+          ..add(CreatePersonRequestPermissionEnum.serializer)
+          ..add(CreatePersonRequestPersonTypeEnum.serializer)
           ..add(CreateVehicleRequest.serializer)
           ..add(GetHealth200Response.serializer)
           ..add(GetHealth200ResponseDatabaseEnum.serializer)
@@ -19,6 +22,9 @@ Serializers _$serializers =
           ..add(GetSnapshot200Response.serializer)
           ..add(GetVehicleStatusHistory200ResponseInner.serializer)
           ..add(GetVehicleStatusHistory200ResponseInnerSource_Enum.serializer)
+          ..add(ListPersons200ResponseInner.serializer)
+          ..add(ListPersons200ResponseInnerPermissionEnum.serializer)
+          ..add(ListPersons200ResponseInnerPersonTypeEnum.serializer)
           ..add(ListVehicles200ResponseInner.serializer)
           ..add(Login200Response.serializer)
           ..add(Login200ResponsePerson.serializer)
@@ -29,6 +35,10 @@ Serializers _$serializers =
           ..add(LoginRequest.serializer)
           ..add(ReorderVehiclesRequest.serializer)
           ..add(SetVehicleStatusRequest.serializer)
+          ..add(SetWebAccessRequest.serializer)
+          ..add(UpdatePersonRequest.serializer)
+          ..add(UpdatePersonRequestPermissionEnum.serializer)
+          ..add(UpdatePersonRequestPersonTypeEnum.serializer)
           ..add(UpdateVehicleRequest.serializer)
           ..addBuilderFactory(
             const FullType(BuiltList, const [
