@@ -1,0 +1,43 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$BFTAG_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+
+	# `route` disables Caddy's automatic path-specificity sorting so these
+	# handle blocks are evaluated top to bottom, most specific first.
+	route {
+		redir /datenschutz /datenschutz/ 308
+
+		handle /api/* {
+			reverse_proxy backend:8080
+		}
+		handle /ws {
+			reverse_proxy backend:8080
+		}
+		handle /ws/* {
+			reverse_proxy backend:8080
+		}
+		handle /datenschutz/* {
+			root * /srv/static
+			file_server
+		}
+		handle / {
+			redir / /admin 302
+		}
+		handle {
+			root * /srv/web
+			header /index.html Cache-Control "no-cache"
+			try_files {path} /index.html
+			file_server
+		}
+	}
+}
