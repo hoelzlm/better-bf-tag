@@ -22,6 +22,7 @@ ci:
     flutter pub get
     flutter analyze apps/web packages/core
     dart analyze packages/api_client --no-fatal-warnings
+    cd packages/core && flutter test
     cd apps/web && flutter test
     cd apps/web && flutter build web --release
 
