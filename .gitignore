@@ -37,3 +37,6 @@ infra/secrets/
 *service-account*.json
 google-services.json
 GoogleService-Info.plist
+
+# Hermes kanban worktrees
+.worktrees/
