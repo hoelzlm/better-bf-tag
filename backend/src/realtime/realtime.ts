@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import type { Clock } from '../clock.js';
+import type { Permission } from '../access/types.js';
 
 /** The transaction type passed into a `mutate()` callback. */
 export type Tx = Parameters<Db['transaction']>[0] extends (tx: infer T) => unknown ? T : never;
@@ -10,9 +11,20 @@ export interface RealtimeEvent {
   type: string;
   at: string;
   data: unknown;
+  /**
+   * Restricts delivery to connections whose permission passes; default is
+   * everyone (ADR 0009). Connections outside the audience get a `skip`
+   * message instead, so `seq` stays gap-free per connection without leaking
+   * the event's data.
+   */
+  audience?: (permission: Permission) => boolean;
 }
 
-export type Emit = (type: string, data: unknown) => Promise<void>;
+export type Emit = (
+  type: string,
+  data: unknown,
+  opts?: { audience?: (permission: Permission) => boolean }
+) => Promise<void>;
 
 /** T02-2 wraps this with permission filtering before delivering to WebSocket clients. */
 export interface RealtimeSubscriber {
@@ -52,12 +64,18 @@ export class Realtime {
       const pending: RealtimeEvent[] = [];
 
       const result = await this.db.transaction(async tx => {
-        const emit: Emit = async (type, data) => {
+        const emit: Emit = async (type, data, opts) => {
           const result = await tx.execute<{ seq: number }>(
             sql`update realtime_state set seq = seq + 1 where id = 1 returning seq`
           );
           const seq = Number(result.rows[0]?.seq);
-          pending.push({ seq, type, at: this.clock.now().toISOString(), data });
+          pending.push({
+            seq,
+            type,
+            at: this.clock.now().toISOString(),
+            data,
+            audience: opts?.audience,
+          });
         };
         return fn(tx as Tx, emit);
       });
@@ -86,5 +104,22 @@ export class Realtime {
     return () => {
       this.subscribers.delete(subscriber);
     };
+  }
+
+  /**
+   * Atomically (under the mutex) reads the current `seq` and registers the
+   * subscriber, so a WebSocket connection's `hello` seq can never miss or
+   * duplicate an event emitted concurrently with the attach.
+   */
+  attach(subscriber: RealtimeSubscriber): Promise<number> {
+    return this.mutex.run(async () => {
+      const seq = await this.currentSeq();
+      this.subscribers.add(subscriber);
+      return seq;
+    });
+  }
+
+  detach(subscriber: RealtimeSubscriber): void {
+    this.subscribers.delete(subscriber);
   }
 }
