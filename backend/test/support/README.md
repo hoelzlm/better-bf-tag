@@ -24,3 +24,12 @@ same database (e.g. to test bootstrap idempotency); it returns a new
 The one allowed exception to black-box testing is asserting on database
 constraints the API cannot reach yet — do that with a raw `pg.Pool` against
 `app.databaseUrl`, as in `db-constraints.test.ts`.
+
+A second, narrower exception: there is no API yet to create a Person with
+an arbitrary Berechtigung (crew/preparation/dispatch/admin), so
+`test/support/create-person.ts` inserts one directly via SQL
+(`createPerson(app, {...})`), reusing the bootstrap `is_own` fire
+department. Every other interaction with that Person — logging in, calling
+protected routes — still goes through the real HTTP API; use
+`loginAs(app, username, password)` to get a bearer token via the real
+`/auth/login` endpoint.

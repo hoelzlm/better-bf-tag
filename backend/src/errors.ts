@@ -1,5 +1,6 @@
 import type { FastifyError, FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
+import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 
 export class ApiError extends Error {
   constructor(
@@ -18,6 +19,23 @@ export function createErrorHandler(app: FastifyInstance) {
     if (error instanceof ZodError) {
       const issues = error.issues.map(issue => ({
         path: issue.path,
+        message: issue.message,
+      }));
+      return reply.status(400).send({
+        error: {
+          code: 'validation_error' as const,
+          message: 'Validation failed',
+          issues,
+        },
+      });
+    }
+
+    // Request (body/params/query) validation failures from
+    // fastify-type-provider-zod: Fastify wraps these as a FastifyError with
+    // a `validation` array rather than throwing the ZodError directly.
+    if (hasZodFastifySchemaValidationErrors(error)) {
+      const issues = error.validation.map(issue => ({
+        path: issue.instancePath,
         message: issue.message,
       }));
       return reply.status(400).send({

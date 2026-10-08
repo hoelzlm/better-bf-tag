@@ -20,6 +20,9 @@ import { createErrorHandler, createNotFoundHandler, ApiError } from './errors.js
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
+import { vehicleRoutes } from './routes/vehicles.js';
+import { snapshotRoutes } from './routes/snapshot.js';
+import { Realtime } from './realtime/realtime.js';
 import './access/authenticate.js';
 
 export interface AppDeps {
@@ -37,6 +40,7 @@ declare module 'fastify' {
     pool: Pool;
     clock: Clock;
     pushSender: PushSender;
+    realtime: Realtime;
   }
 }
 
@@ -54,6 +58,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.decorate('pool', pool);
   app.decorate('clock', clock);
   app.decorate('pushSender', pushSender);
+  app.decorate('realtime', new Realtime(db, clock));
 
   // Zod type provider
   app.setValidatorCompiler(validatorCompiler);
@@ -108,6 +113,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await fastify.register(healthRoutes, { prefix: '/api/v1' });
     await fastify.register(authRoutes, { prefix: '/api/v1' });
     await fastify.register(meRoutes, { prefix: '/api/v1' });
+    await fastify.register(vehicleRoutes, { prefix: '/api/v1' });
+    await fastify.register(snapshotRoutes, { prefix: '/api/v1' });
 
     // The generated spec is served for the Dart client codegen; hidden from
     // the spec itself to avoid a self-referential entry.
