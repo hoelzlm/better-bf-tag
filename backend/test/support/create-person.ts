@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
 import { hashPassword } from '../../src/access/passwords.js';
+import { signAccessToken } from '../../src/access/tokens.js';
+import { loadConfig } from '../../src/config.js';
 import type { Permission, PersonType } from '../../src/access/types.js';
 import type { TestApp } from './test-app.js';
 
@@ -47,4 +49,24 @@ export async function loginAs(app: TestApp, username: string, password: string):
     throw new Error(`loginAs(${username}): login failed with status ${res.status}`);
   }
   return (res.body as { access_token: string }).access_token;
+}
+
+/**
+ * Signs an access token directly, bypassing `/auth/login`. Needed because
+ * ADR 0010 forbids web login entirely for permission=crew — there is no
+ * HTTP path to obtain a bearer token for a crew Person (device/mobile auth
+ * lands in T04-2). `requireAuth` reloads the actual permission from the DB
+ * on every request, so the `permission` claim here only has to be well
+ * formed, not correct; it is never trusted.
+ */
+export function signTestAccessToken(
+  app: TestApp,
+  personId: string,
+  permission: Permission = 'crew'
+): Promise<string> {
+  const config = loadConfig({
+    DATABASE_URL: app.databaseUrl,
+    JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
+  });
+  return signAccessToken({ config, clock: app.clock }, { id: personId, permission });
 }

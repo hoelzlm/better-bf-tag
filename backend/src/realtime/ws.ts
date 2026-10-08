@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
+import { eq } from 'drizzle-orm';
+import { person } from '../db/schema.js';
 import { verifyAccessToken } from '../access/tokens.js';
 import type { Permission } from '../access/types.js';
 import type { RealtimeEvent, RealtimeSubscriber } from './realtime.js';
@@ -48,7 +50,19 @@ async function handleConnection(
   let permission: Permission;
   try {
     const claims = await verifyAccessToken({ config: app.config, clock: app.clock }, token);
-    permission = claims.permission;
+
+    // ADR 0010 "Prüfung bei jeder Anfrage": the same person check requireAuth
+    // does on every HTTP request applies at connection time for /ws too.
+    const [found] = await app.db
+      .select({ id: person.id, permission: person.permission, active: person.active })
+      .from(person)
+      .where(eq(person.id, claims.personId))
+      .limit(1);
+    if (!found || !found.active) {
+      socket.close(4401, 'unauthorized');
+      return;
+    }
+    permission = found.permission;
   } catch {
     socket.close(4401, 'unauthorized');
     return;

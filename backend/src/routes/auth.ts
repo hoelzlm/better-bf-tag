@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne } from 'drizzle-orm';
 import { person, webSession } from '../db/schema.js';
 import { verifyPassword } from '../access/passwords.js';
 import { hashRefreshToken, newRefreshToken, signAccessToken } from '../access/tokens.js';
@@ -95,7 +95,7 @@ export const authRoutes: FastifyPluginAsyncZod = async fastify => {
         .where(eq(person.username, username))
         .limit(1);
 
-      if (!found || !found.active || !found.passwordHash) {
+      if (!found || !found.active || !found.passwordHash || found.permission === 'crew') {
         throw invalidCredentials();
       }
 
@@ -168,7 +168,8 @@ export const authRoutes: FastifyPluginAsyncZod = async fastify => {
             eq(webSession.refreshTokenHash, oldHash),
             isNull(webSession.revokedAt),
             gt(webSession.expiresAt, now),
-            eq(person.active, true)
+            eq(person.active, true),
+            ne(person.permission, 'crew')
           )
         )
         .limit(1);

@@ -69,6 +69,12 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**logout**](doc/AuthApi.md#logout) | **POST** /api/v1/auth/logout | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
+[*PersonsApi*](doc/PersonsApi.md) | [**createPerson**](doc/PersonsApi.md#createperson) | **POST** /api/v1/persons | 
+[*PersonsApi*](doc/PersonsApi.md) | [**getPerson**](doc/PersonsApi.md#getperson) | **GET** /api/v1/persons/{id} | 
+[*PersonsApi*](doc/PersonsApi.md) | [**listPersons**](doc/PersonsApi.md#listpersons) | **GET** /api/v1/persons | 
+[*PersonsApi*](doc/PersonsApi.md) | [**removeWebAccess**](doc/PersonsApi.md#removewebaccess) | **DELETE** /api/v1/persons/{id}/web-access | 
+[*PersonsApi*](doc/PersonsApi.md) | [**setWebAccess**](doc/PersonsApi.md#setwebaccess) | **PUT** /api/v1/persons/{id}/web-access | 
+[*PersonsApi*](doc/PersonsApi.md) | [**updatePerson**](doc/PersonsApi.md#updateperson) | **PATCH** /api/v1/persons/{id} | 
 [*SnapshotApi*](doc/SnapshotApi.md) | [**getSnapshot**](doc/SnapshotApi.md#getsnapshot) | **GET** /api/v1/snapshot | 
 [*VehiclesApi*](doc/VehiclesApi.md) | [**createVehicle**](doc/VehiclesApi.md#createvehicle) | **POST** /api/v1/vehicles | 
 [*VehiclesApi*](doc/VehiclesApi.md) | [**getVehicleStatusHistory**](doc/VehiclesApi.md#getvehiclestatushistory) | **GET** /api/v1/vehicles/{id}/status-history | 
@@ -80,12 +86,14 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [CreatePersonRequest](doc/CreatePersonRequest.md)
  - [CreateVehicleRequest](doc/CreateVehicleRequest.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)
  - [GetMe200Response](doc/GetMe200Response.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
  - [GetVehicleStatusHistory200ResponseInner](doc/GetVehicleStatusHistory200ResponseInner.md)
+ - [ListPersons200ResponseInner](doc/ListPersons200ResponseInner.md)
  - [ListVehicles200ResponseInner](doc/ListVehicles200ResponseInner.md)
  - [Login200Response](doc/Login200Response.md)
  - [Login200ResponsePerson](doc/Login200ResponsePerson.md)
@@ -94,6 +102,8 @@ Class | Method | HTTP request | Description
  - [LoginRequest](doc/LoginRequest.md)
  - [ReorderVehiclesRequest](doc/ReorderVehiclesRequest.md)
  - [SetVehicleStatusRequest](doc/SetVehicleStatusRequest.md)
+ - [SetWebAccessRequest](doc/SetWebAccessRequest.md)
+ - [UpdatePersonRequest](doc/UpdatePersonRequest.md)
  - [UpdateVehicleRequest](doc/UpdateVehicleRequest.md)
 
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { startTestApp, type TestApp } from './support/test-app.js';
-import { createPerson, loginAs } from './support/create-person.js';
+import { createPerson, loginAs, signTestAccessToken } from './support/create-person.js';
 import { connectWs, type WsMessage, type WsTestClient } from './support/ws-client.js';
 
 interface VehicleJson {
@@ -97,14 +97,15 @@ describe('realtime websocket /ws', () => {
       });
       dispatchToken = await loginAs(app, 'dispatch1', 'dispatch-password');
 
-      await createPerson(app, {
+      const crewPerson = await createPerson(app, {
         displayName: 'Mannschaft',
         personType: 'youth',
         permission: 'crew',
         username: 'crew1',
         password: 'crew-password',
       });
-      crewToken = await loginAs(app, 'crew1', 'crew-password');
+      // permission=crew cannot log in (ADR 0010); sign a token directly.
+      crewToken = await signTestAccessToken(app, crewPerson.id, 'crew');
     });
 
     afterAll(async () => {
