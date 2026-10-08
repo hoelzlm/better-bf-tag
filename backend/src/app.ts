@@ -18,6 +18,9 @@ import type { Clock } from './clock.js';
 import type { PushSender } from './push/push-sender.js';
 import { createErrorHandler, createNotFoundHandler } from './errors.js';
 import { healthRoutes } from './routes/health.js';
+import { authRoutes } from './routes/auth.js';
+import { meRoutes } from './routes/me.js';
+import './access/authenticate.js';
 
 export interface AppDeps {
   config: Config;
@@ -101,6 +104,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Register routes under /api/v1
   await app.register(async function routes(fastify) {
     await fastify.register(healthRoutes, { prefix: '/api/v1' });
+    await fastify.register(authRoutes, { prefix: '/api/v1' });
+    await fastify.register(meRoutes, { prefix: '/api/v1' });
   });
 
   return app;
