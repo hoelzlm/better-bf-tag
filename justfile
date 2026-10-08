@@ -46,3 +46,7 @@ web:
 # Build the production images and smoke-test the full infra/ compose stack locally.
 infra-smoke:
     ./infra/smoke-test.sh
+
+# Automated local round-trip test for the nightly backup/restore scripts.
+infra-backup-test:
+    ./infra/test/backup-restore.sh

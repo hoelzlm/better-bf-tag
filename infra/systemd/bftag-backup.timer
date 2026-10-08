@@ -1,0 +1,10 @@
+[Unit]
+Description=Run better-bf-tag nightly database backup daily at 03:15
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

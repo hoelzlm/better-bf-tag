@@ -93,9 +93,73 @@ bf.example.de {
 
 ## Backups
 
-- Nächtlich `pg_dump` per Cronjob, mit **restic** verschlüsselt auf eine Hetzner Storage Box.
-- Aufbewahrung: 7 tägliche, 4 wöchentliche Stände.
-- Wiederherstellung **einmal vor dem BF-Tag testen**.
+Jede Nacht um 03:15 Uhr (systemd-Timer `bftag-backup.timer`, mit zufälliger Verzögerung
+bis zu 10 Minuten) läuft `/opt/bftag/backup.sh` als root auf dem Host (nicht im Container):
+Ein `pg_dump -Fc` der Datenbank wird per Pipe direkt an `restic backup --stdin` auf eine
+Hetzner Storage Box geschickt (`sftp:`-Repository). Alte Stände werden danach mit
+`restic forget --keep-daily 7 --keep-weekly 4 --prune` aufgeräumt: 7 tägliche und
+4 wöchentliche Stände bleiben erhalten.
+
+### Einrichtung
+
+1. Eine Hetzner Storage Box anlegen (Typ reicht klein, z. B. BX11) und SSH-Keys dafür
+   aktivieren (Storage-Box-Konsole → "SSH-Unterstützung aktivieren", eigenen Public Key
+   hinterlegen). Die Box ist unter `uXXXXXX.your-storagebox.de`, Port `23` erreichbar.
+2. Auf dem Server (als root, via `infra/provision.sh` bereits installiert): restic ist
+   vorhanden, `/opt/bftag/backup.sh` und `/opt/bftag/restore.sh` liegen bereit (Kopie aus
+   `infra/backup.sh` / `infra/restore.sh`), die systemd-Units
+   `infra/systemd/bftag-backup.{service,timer}` sind nach `/etc/systemd/system/` kopiert.
+3. `/etc/bftag/restic.env` (Modus 600) aus `infra/restic.env.example` anlegen: Repository-URL
+   der eigenen Storage Box eintragen (`RESTIC_REPOSITORY=sftp:uXXXXXX@uXXXXXX.your-storagebox.de:23/bftag`),
+   ein zufälliges restic-Passwort erzeugen (`openssl rand -base64 32`) und in
+   `/etc/bftag/restic-password` (Modus 600) ablegen, `RESTIC_PASSWORD_FILE` darauf zeigen lassen.
+4. Repository einmalig initialisieren: `/opt/bftag/backup.sh --init` (legt das restic-Repository
+   an, falls `restic snapshots` fehlschlägt, und macht direkt das erste Backup).
+
+### Timer aktivieren
+
+```
+systemctl daemon-reload
+systemctl enable --now bftag-backup.timer
+systemctl list-timers bftag-backup.timer   # nächste Ausführung prüfen
+```
+
+### Manuelles Backup
+
+```
+systemctl start bftag-backup.service       # läuft synchron, Ausgabe über journald
+journalctl -u bftag-backup.service -n 50
+```
+
+Oder direkt: `/opt/bftag/backup.sh` (Umgebungsvariablen aus `/etc/bftag/restic.env` müssen
+dafür manuell geladen werden, z. B. `set -a; source /etc/bftag/restic.env; set +a`).
+
+### Wiederherstellung
+
+1. Verfügbare Stände ansehen: `set -a; source /etc/bftag/restic.env; set +a; restic snapshots --tag db`.
+2. Backend kurz anhalten lassen (macht `restore.sh` automatisch) und den gewünschten Stand
+   einspielen:
+   ```
+   set -a; source /etc/bftag/restic.env; set +a
+   /opt/bftag/restore.sh latest --yes       # oder eine konkrete Snapshot-ID statt "latest"
+   ```
+   `restore.sh` verlangt die Flag `--yes`, weil die aktuelle Datenbank dabei überschrieben
+   wird (`pg_restore --clean --if-exists`). Ohne `--yes` bricht das Skript sofort ab.
+3. Nach dem Lauf prüfen, ob das Backend wieder erreichbar ist
+   (`curl https://$BFTAG_DOMAIN/api/v1/health`) und stichprobenartig Daten in der Oberfläche
+   kontrollieren.
+
+### Aufbewahrung
+
+7 tägliche und 4 wöchentliche Stände (`restic forget --keep-daily 7 --keep-weekly 4 --prune`,
+läuft nach jedem Backup automatisch).
+
+### Wiederherstellungstest
+
+| Datum | Umgebung | Ergebnis |
+|-------|----------|----------|
+| 2026-10-08 | lokal, `infra/test/backup-restore.sh` | PASS – Backup (restic/restic-Docker-Image, lokales Repository), Restore und Tabelleninhalt nach Restore identisch zum Original; zweiter Backup-Lauf (forget/prune) ebenfalls erfolgreich. |
+| | VPS – vom Betreiber vor dem BF-Tag auszufüllen | |
 
 ## Deploy-Ablauf
 
