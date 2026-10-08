@@ -38,6 +38,7 @@ export const configSchema = z.object({
   BOOTSTRAP_ADMIN_USERNAME: z.string().optional(),
   BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
   OWN_FIRE_DEPARTMENT_NAME: z.string().default('Eigene Feuerwehr'),
+  SLIDE_IMAGE_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
 });
 
 export type Config = z.infer<typeof configSchema>;

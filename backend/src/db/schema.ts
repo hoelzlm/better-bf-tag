@@ -12,8 +12,16 @@ import {
   integer,
   bigint,
   primaryKey,
+  customType,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+
+/** Raw binary data (ADR 0014): Folienbilder liegen als `bytea` in Postgres. */
+const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return 'bytea';
+  },
+});
 
 export const personTypeEnum = pgEnum('person_type', ['youth', 'supervisor']);
 export const permissionEnum = pgEnum('permission', ['crew', 'preparation', 'dispatch', 'admin']);
@@ -223,3 +231,29 @@ export const crewAssignment = pgTable(
   },
   table => [primaryKey({ columns: [table.shiftId, table.vehicleId, table.personId] })]
 );
+
+export const slide = pgTable(
+  'slide',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    durationSeconds: integer('duration_seconds').notNull().default(10),
+    sortOrder: integer('sort_order').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  table => [check('slide_duration_seconds_range', sql`${table.durationSeconds} between 3 and 300`)]
+);
+
+export const slideImage = pgTable('slide_image', {
+  slideId: uuid('slide_id')
+    .primaryKey()
+    .references(() => slide.id, { onDelete: 'cascade' }),
+  contentType: text('content_type').notNull(),
+  data: bytea('data').notNull(),
+  sha256: text('sha256').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+});
