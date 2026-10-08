@@ -12,6 +12,19 @@ dev:
 test:
     cd backend && npm test
 
+# Run everything CI runs, locally: backend + Flutter.
+ci:
+    cd backend && npm ci
+    cd backend && npm run typecheck
+    cd backend && npm run lint
+    cd backend && npm run openapi:check
+    cd backend && npm test
+    flutter pub get
+    flutter analyze apps/web packages/core
+    dart analyze packages/api_client --no-fatal-warnings
+    cd apps/web && flutter test
+    cd apps/web && flutter build web --release
+
 # Regenerate backend/openapi.json and the Dart client in packages/api_client.
 gen-api:
     cd backend && npm run openapi

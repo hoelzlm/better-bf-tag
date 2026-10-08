@@ -1,0 +1,40 @@
+name: API client codegen check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/openapi.json'
+      - 'packages/api_client/**'
+      - 'scripts/gen-api.sh'
+      - '.github/workflows/api-client.yml'
+  pull_request:
+    paths:
+      - 'backend/openapi.json'
+      - 'packages/api_client/**'
+      - 'scripts/gen-api.sh'
+      - '.github/workflows/api-client.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+          cache: true
+
+      - name: Regenerate Dart API client from openapi.json
+        run: ./scripts/gen-api.sh
+
+      - name: Fail if generated client is out of sync
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "packages/api_client is out of sync with backend/openapi.json. Run ./scripts/gen-api.sh and commit the result." >&2
+            git status --porcelain
+            git diff
+            exit 1
+          fi
