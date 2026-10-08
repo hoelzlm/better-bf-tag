@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'screens/lage_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/monitor_placeholder_screen.dart';
+import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
 import 'screens/vehicles_screen.dart';
 
@@ -64,7 +65,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           final isFahrzeugeRoute =
               state.matchedLocation == '/admin/fahrzeuge';
           final isPersonsRoute = state.matchedLocation == '/admin/persons';
-          if ((isFahrzeugeRoute || isPersonsRoute) &&
+          final isMonitorsRoute =
+              state.matchedLocation == '/admin/monitors';
+          if ((isFahrzeugeRoute || isPersonsRoute || isMonitorsRoute) &&
               person.permission != Permission.admin) {
             return '/admin';
           }
@@ -94,6 +97,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/persons',
         builder: (context, state) =>
             const _SessionGate(child: PersonsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/monitors',
+        builder: (context, state) =>
+            const _SessionGate(child: MonitorsScreen()),
       ),
       GoRoute(
         path: '/monitor',
