@@ -15,9 +15,10 @@ describe('database constraints', () => {
   beforeAll(async () => {
     app = await startTestApp();
     pool = new Pool({ connectionString: app.databaseUrl });
+    // Bootstrap (ensureBootstrap, run from prepare()) already creates the own
+    // fire department, so reuse it instead of inserting a second is_own=true row.
     const result = await pool.query<{ id: string }>(
-      `insert into fire_department (name, is_own) values ($1, true) returning id`,
-      ['Test-Feuerwehr']
+      `select id from fire_department where is_own = true limit 1`
     );
     fireDepartmentId = result.rows[0]!.id;
   });

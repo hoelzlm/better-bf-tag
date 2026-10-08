@@ -16,6 +16,8 @@ export const healthRoutes: FastifyPluginAsync<{ prefix?: string }> = async fasti
     '/health',
     {
       schema: {
+        operationId: 'getHealth',
+        tags: ['health'],
         response: {
           200: healthResponseSchema,
           503: healthErrorResponseSchema,
