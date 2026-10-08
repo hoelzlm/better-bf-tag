@@ -24,6 +24,7 @@ import { meRoutes } from './routes/me.js';
 import { vehicleRoutes } from './routes/vehicles.js';
 import { personRoutes } from './routes/persons.js';
 import { deviceRoutes } from './routes/devices.js';
+import { monitorRoutes } from './routes/monitors.js';
 import { snapshotRoutes } from './routes/snapshot.js';
 import { Realtime } from './realtime/realtime.js';
 import { createWsPlugin } from './realtime/ws.js';
@@ -131,6 +132,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await fastify.register(vehicleRoutes, { prefix: '/api/v1' });
     await fastify.register(personRoutes, { prefix: '/api/v1' });
     await fastify.register(deviceRoutes, { prefix: '/api/v1' });
+    await fastify.register(monitorRoutes, { prefix: '/api/v1' });
     await fastify.register(snapshotRoutes, { prefix: '/api/v1' });
 
     // The generated spec is served for the Dart client codegen; hidden from

@@ -14,6 +14,8 @@ import 'package:built_value/iso_8601_date_time_serializer.dart';
 import 'package:bftag_api_client/src/date_serializer.dart';
 import 'package:bftag_api_client/src/model/date.dart';
 
+import 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
+import 'package:bftag_api_client/src/model/create_monitor_request.dart';
 import 'package:bftag_api_client/src/model/create_pairing_code201_response.dart';
 import 'package:bftag_api_client/src/model/create_pairing_codes201_response.dart';
 import 'package:bftag_api_client/src/model/create_pairing_codes_request.dart';
@@ -25,6 +27,7 @@ import 'package:bftag_api_client/src/model/get_health503_response.dart';
 import 'package:bftag_api_client/src/model/get_me200_response.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response.dart';
 import 'package:bftag_api_client/src/model/get_vehicle_status_history200_response_inner.dart';
+import 'package:bftag_api_client/src/model/list_monitors200_response_inner.dart';
 import 'package:bftag_api_client/src/model/list_person_devices200_response_inner.dart';
 import 'package:bftag_api_client/src/model/list_persons200_response_inner.dart';
 import 'package:bftag_api_client/src/model/list_vehicles200_response_inner.dart';
@@ -33,6 +36,9 @@ import 'package:bftag_api_client/src/model/login200_response_person.dart';
 import 'package:bftag_api_client/src/model/login401_response.dart';
 import 'package:bftag_api_client/src/model/login401_response_error.dart';
 import 'package:bftag_api_client/src/model/login_request.dart';
+import 'package:bftag_api_client/src/model/monitor_pair200_response.dart';
+import 'package:bftag_api_client/src/model/monitor_pair200_response_monitor.dart';
+import 'package:bftag_api_client/src/model/monitor_pair_request.dart';
 import 'package:bftag_api_client/src/model/pair200_response.dart';
 import 'package:bftag_api_client/src/model/pair_request.dart';
 import 'package:bftag_api_client/src/model/reorder_vehicles_request.dart';
@@ -44,6 +50,8 @@ import 'package:bftag_api_client/src/model/update_vehicle_request.dart';
 part 'serializers.g.dart';
 
 @SerializersFor([
+  CreateMonitorPairingCode201Response,
+  CreateMonitorRequest,
   CreatePairingCode201Response,
   CreatePairingCodes201Response,
   CreatePairingCodesRequest,
@@ -55,6 +63,7 @@ part 'serializers.g.dart';
   GetMe200Response,
   GetSnapshot200Response,
   GetVehicleStatusHistory200ResponseInner,
+  ListMonitors200ResponseInner,
   ListPersonDevices200ResponseInner,
   ListPersons200ResponseInner,
   ListVehicles200ResponseInner,
@@ -63,6 +72,9 @@ part 'serializers.g.dart';
   Login401Response,
   Login401ResponseError,
   LoginRequest,
+  MonitorPair200Response,
+  MonitorPair200ResponseMonitor,
+  MonitorPairRequest,
   Pair200Response,
   PairRequest,
   ReorderVehiclesRequest,
@@ -75,6 +87,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListPersons200ResponseInner)]),
         () => ListBuilder<ListPersons200ResponseInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ListMonitors200ResponseInner)]),
+        () => ListBuilder<ListMonitors200ResponseInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListVehicles200ResponseInner)]),

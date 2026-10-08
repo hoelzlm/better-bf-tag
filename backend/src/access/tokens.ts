@@ -17,12 +17,28 @@ export interface SignablePerson {
   deviceId?: string;
 }
 
-export interface AccessTokenClaims {
-  personId: string;
-  permission: Permission;
-  /** Present for device (mobile) tokens; device table/checks land in T04-2. */
-  deviceId?: string;
+export interface SignableMonitor {
+  id: string;
 }
+
+/**
+ * Access-token claims (ADR 0012): a Person token carries no `kind` claim
+ * (or `kind: "person"`); a Monitor token carries `kind: "monitor"` and no
+ * `permission`. Discriminated so callers can't accidentally read
+ * `permission` off a monitor token.
+ */
+export type AccessTokenClaims =
+  | {
+      kind: 'person';
+      personId: string;
+      permission: Permission;
+      /** Present for device (mobile) tokens. */
+      deviceId?: string;
+    }
+  | {
+      kind: 'monitor';
+      monitorId: string;
+    };
 
 function secretKey(config: Config): Uint8Array {
   return new TextEncoder().encode(config.JWT_SECRET);
@@ -44,6 +60,22 @@ export async function signAccessToken(deps: TokenDeps, person: SignablePerson): 
     .sign(secretKey(deps.config));
 }
 
+/** Signs a Monitor access token (ADR 0012): `sub` = monitor id, claim `kind: "monitor"`, no `permission`. */
+export async function signMonitorAccessToken(
+  deps: TokenDeps,
+  monitor: SignableMonitor
+): Promise<string> {
+  const nowSeconds = Math.floor(deps.clock.now().getTime() / 1000);
+  const exp = nowSeconds + deps.config.ACCESS_TOKEN_TTL_SECONDS;
+
+  return new SignJWT({ kind: 'monitor' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(monitor.id)
+    .setIssuedAt(nowSeconds)
+    .setExpirationTime(exp)
+    .sign(secretKey(deps.config));
+}
+
 /** Verifies an access token against deps.clock.now() (not the system clock) and throws 401 on any failure. */
 export async function verifyAccessToken(
   deps: TokenDeps,
@@ -53,6 +85,15 @@ export async function verifyAccessToken(
     const { payload } = await jwtVerify(token, secretKey(deps.config), {
       currentDate: deps.clock.now(),
     });
+
+    if (payload['kind'] === 'monitor') {
+      const monitorId = payload.sub;
+      if (typeof monitorId !== 'string') {
+        throw new Error('monitor access token missing sub claim');
+      }
+      return { kind: 'monitor', monitorId };
+    }
+
     const personId = payload.sub;
     const permission = payload['permission'];
     if (typeof personId !== 'string' || typeof permission !== 'string') {
@@ -61,6 +102,7 @@ export async function verifyAccessToken(
     const deviceIdClaim = payload['device_id'];
     const deviceId = typeof deviceIdClaim === 'string' ? deviceIdClaim : undefined;
     return {
+      kind: 'person',
       personId,
       permission: permission as Permission,
       ...(deviceId !== undefined ? { deviceId } : {}),

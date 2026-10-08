@@ -14,7 +14,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/snapshot',
     {
-      preHandler: requireAuth,
+      preHandler: requireAuth({ allowMonitor: true }),
       schema: {
         operationId: 'getSnapshot',
         tags: ['snapshot'],

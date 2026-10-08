@@ -66,12 +66,20 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**deviceLogout**](doc/AuthApi.md#devicelogout) | **POST** /api/v1/auth/device/logout | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceRefresh**](doc/AuthApi.md#devicerefresh) | **POST** /api/v1/auth/device/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /api/v1/me | 
+[*AuthApi*](doc/AuthApi.md) | [**getMonitorMe**](doc/AuthApi.md#getmonitorme) | **GET** /api/v1/monitor/me | 
 [*AuthApi*](doc/AuthApi.md) | [**login**](doc/AuthApi.md#login) | **POST** /api/v1/auth/login | 
 [*AuthApi*](doc/AuthApi.md) | [**logout**](doc/AuthApi.md#logout) | **POST** /api/v1/auth/logout | 
+[*AuthApi*](doc/AuthApi.md) | [**monitorPair**](doc/AuthApi.md#monitorpair) | **POST** /api/v1/auth/monitor/pair | 
+[*AuthApi*](doc/AuthApi.md) | [**monitorRefresh**](doc/AuthApi.md#monitorrefresh) | **POST** /api/v1/auth/monitor/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
 [*DevicesApi*](doc/DevicesApi.md) | [**revokeDevice**](doc/DevicesApi.md#revokedevice) | **DELETE** /api/v1/devices/{id} | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
+[*MonitorsApi*](doc/MonitorsApi.md) | [**createMonitor**](doc/MonitorsApi.md#createmonitor) | **POST** /api/v1/monitors | 
+[*MonitorsApi*](doc/MonitorsApi.md) | [**createMonitorPairingCode**](doc/MonitorsApi.md#createmonitorpairingcode) | **POST** /api/v1/monitors/{id}/pairing-code | 
+[*MonitorsApi*](doc/MonitorsApi.md) | [**listMonitors**](doc/MonitorsApi.md#listmonitors) | **GET** /api/v1/monitors | 
+[*MonitorsApi*](doc/MonitorsApi.md) | [**revokeMonitor**](doc/MonitorsApi.md#revokemonitor) | **DELETE** /api/v1/monitors/{id} | 
+[*MonitorsApi*](doc/MonitorsApi.md) | [**updateMonitor**](doc/MonitorsApi.md#updatemonitor) | **PATCH** /api/v1/monitors/{id} | 
 [*PersonsApi*](doc/PersonsApi.md) | [**createPairingCode**](doc/PersonsApi.md#createpairingcode) | **POST** /api/v1/persons/{id}/pairing-code | 
 [*PersonsApi*](doc/PersonsApi.md) | [**createPairingCodes**](doc/PersonsApi.md#createpairingcodes) | **POST** /api/v1/persons/pairing-codes | 
 [*PersonsApi*](doc/PersonsApi.md) | [**createPerson**](doc/PersonsApi.md#createperson) | **POST** /api/v1/persons | 
@@ -92,6 +100,8 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)
+ - [CreateMonitorRequest](doc/CreateMonitorRequest.md)
  - [CreatePairingCode201Response](doc/CreatePairingCode201Response.md)
  - [CreatePairingCodes201Response](doc/CreatePairingCodes201Response.md)
  - [CreatePairingCodesRequest](doc/CreatePairingCodesRequest.md)
@@ -103,6 +113,7 @@ Class | Method | HTTP request | Description
  - [GetMe200Response](doc/GetMe200Response.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
  - [GetVehicleStatusHistory200ResponseInner](doc/GetVehicleStatusHistory200ResponseInner.md)
+ - [ListMonitors200ResponseInner](doc/ListMonitors200ResponseInner.md)
  - [ListPersonDevices200ResponseInner](doc/ListPersonDevices200ResponseInner.md)
  - [ListPersons200ResponseInner](doc/ListPersons200ResponseInner.md)
  - [ListVehicles200ResponseInner](doc/ListVehicles200ResponseInner.md)
@@ -111,6 +122,9 @@ Class | Method | HTTP request | Description
  - [Login401Response](doc/Login401Response.md)
  - [Login401ResponseError](doc/Login401ResponseError.md)
  - [LoginRequest](doc/LoginRequest.md)
+ - [MonitorPair200Response](doc/MonitorPair200Response.md)
+ - [MonitorPair200ResponseMonitor](doc/MonitorPair200ResponseMonitor.md)
+ - [MonitorPairRequest](doc/MonitorPairRequest.md)
  - [Pair200Response](doc/Pair200Response.md)
  - [PairRequest](doc/PairRequest.md)
  - [ReorderVehiclesRequest](doc/ReorderVehiclesRequest.md)
