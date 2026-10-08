@@ -6,7 +6,7 @@
 
 **Category:** enhancement
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] Backend startet mit PostgreSQL per Docker Compose lokal; Migrationen laufen beim Start
 - [ ] Health-Endpunkt antwortet, auch mit Prüfung der Datenbank
