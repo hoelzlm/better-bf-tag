@@ -100,6 +100,7 @@ class _MonitorStandbyScreenState extends ConsumerState<MonitorStandbyScreen> {
         ),
         const SizedBox(height: 32),
         const VehicleStatusBar(),
+        const _CrewPanel(),
       ],
     );
 
@@ -139,6 +140,116 @@ class _MonitorStandbyScreenState extends ConsumerState<MonitorStandbyScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Besatzungsanzeige (ADR 0013): below the vehicle status bar, shows the
+/// crew of the aktuelle Schicht per active Fahrzeug -- hidden when no
+/// BF-Tag is running or no shift is currently active.
+class _CrewPanel extends ConsumerWidget {
+  const _CrewPanel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bfDay = ref.watch(bfDayProvider).valueOrNull;
+    final shifts = ref.watch(shiftsProvider).valueOrNull ?? const <Shift>[];
+    final vehicles = ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
+    final now = ref.watch(monitorClockProvider).valueOrNull ?? DateTime.now();
+
+    if (bfDay == null || bfDay.state != BfDayState.running) {
+      return const SizedBox.shrink();
+    }
+    final shift = currentShift(shifts, now);
+    if (shift == null) {
+      return const SizedBox.shrink();
+    }
+
+    final start = shift.startsAt.toLocal();
+    final end = shift.endsAt.toLocal();
+    final heading = '${shift.name} · ${_twoDigits(start.hour)}:'
+        '${_twoDigits(start.minute)}–${_twoDigits(end.hour)}:'
+        '${_twoDigits(end.minute)}';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        children: [
+          Text(
+            heading,
+            key: const Key('crew-panel-heading'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            key: const Key('crew-panel-vehicles'),
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final vehicle in vehicles)
+                _CrewVehicleCard(
+                  vehicle: vehicle,
+                  crew: shift.crew
+                      .where((c) => c.vehicleId == vehicle.id)
+                      .toList(),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CrewVehicleCard extends StatelessWidget {
+  const _CrewVehicleCard({required this.vehicle, required this.crew});
+
+  final Vehicle vehicle;
+  final List<CrewAssignment> crew;
+
+  @override
+  Widget build(BuildContext context) {
+    final sortedCrew = List<CrewAssignment>.of(crew)
+      ..sort((a, b) => compareCrewFunctions(a.function, b.function));
+    return Container(
+      key: Key('crew-vehicle-${vehicle.id}'),
+      width: 200,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            vehicle.shortName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (sortedCrew.isEmpty)
+            const Text(
+              '—',
+              style: TextStyle(color: Colors.white70, fontSize: 18),
+            )
+          else
+            for (final assignment in sortedCrew)
+              Text(
+                '${assignment.function} ${assignment.displayName}',
+                style: const TextStyle(color: Colors.white70, fontSize: 18),
+              ),
+        ],
       ),
     );
   }

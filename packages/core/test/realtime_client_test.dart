@@ -122,6 +122,99 @@ Map<String, dynamic> _vehicleUpdatedEvent({
   };
 }
 
+BfDay _bfDay({
+  String id = 'day1',
+  String name = 'BF-Tag',
+  BfDayState state = BfDayState.running,
+}) {
+  return BfDay(
+    id: id,
+    name: name,
+    startsAt: DateTime.parse('2026-06-01T00:00:00Z'),
+    endsAt: DateTime.parse('2026-06-02T00:00:00Z'),
+    state: state,
+  );
+}
+
+Shift _shift({
+  String id = 'shift1',
+  String bfDayId = 'day1',
+  String name = 'Tagschicht',
+  List<CrewAssignment> crew = const [],
+}) {
+  return Shift(
+    id: id,
+    bfDayId: bfDayId,
+    name: name,
+    startsAt: DateTime.parse('2026-06-01T08:00:00Z'),
+    endsAt: DateTime.parse('2026-06-01T20:00:00Z'),
+    crew: crew,
+  );
+}
+
+Map<String, dynamic> _shiftJson(Shift shift) {
+  return {
+    'id': shift.id,
+    'bf_day_id': shift.bfDayId,
+    'name': shift.name,
+    'starts_at': shift.startsAt.toIso8601String(),
+    'ends_at': shift.endsAt.toIso8601String(),
+    'crew': shift.crew
+        .map(
+          (c) => {
+            'vehicle_id': c.vehicleId,
+            'person_id': c.personId,
+            'display_name': c.displayName,
+            'function': c.function,
+          },
+        )
+        .toList(),
+  };
+}
+
+Map<String, dynamic> _shiftCrewChangedEvent({
+  required int seq,
+  required Shift shift,
+}) {
+  return {
+    'seq': seq,
+    'type': 'shift.crew_changed',
+    'at': '2026-10-08T18:00:00Z',
+    'data': _shiftJson(shift),
+  };
+}
+
+Map<String, dynamic> _shiftDeletedEvent({
+  required int seq,
+  required String id,
+  required String bfDayId,
+}) {
+  return {
+    'seq': seq,
+    'type': 'shift.deleted',
+    'at': '2026-10-08T18:00:00Z',
+    'data': {'id': id, 'bf_day_id': bfDayId},
+  };
+}
+
+Map<String, dynamic> _bfDayUpdatedEvent({
+  required int seq,
+  required BfDay bfDay,
+}) {
+  return {
+    'seq': seq,
+    'type': 'bf_day.updated',
+    'at': '2026-10-08T18:00:00Z',
+    'data': {
+      'id': bfDay.id,
+      'name': bfDay.name,
+      'starts_at': bfDay.startsAt.toIso8601String(),
+      'ends_at': bfDay.endsAt.toIso8601String(),
+      'state': bfDay.state.name,
+    },
+  };
+}
+
 /// Builds a [RealtimeClient] wired to a fresh [_FakeConnector] and a
 /// snapshot loader whose completers are collected in [snapshotCompleters]
 /// (one appended per call, in order) so tests can control exactly when
@@ -533,6 +626,160 @@ void main() {
         expect(revokedCalls, 1);
         expect(states.last.status, ConnectionStatus.revoked);
         expect(connector.connections, hasLength(1), reason: 'no reconnect');
+
+        client.dispose();
+      });
+    });
+
+    test(
+      'shift.crew_changed upserts a shift belonging to the running BF-Tag',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(seq: 10, vehicles: const [], bfDay: _bfDay()),
+          );
+          async.flushMicrotasks();
+
+          final updatedShift = _shift(
+            crew: [
+              const CrewAssignment(
+                vehicleId: 'v1',
+                personId: 'p1',
+                displayName: 'Max Muster',
+                function: 'GF',
+              ),
+            ],
+          );
+          connector.connections.single.emit(
+            _shiftCrewChangedEvent(seq: 11, shift: updatedShift),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.shifts, hasLength(1));
+          expect(states.last.shifts.single.crew, hasLength(1));
+
+          client.dispose();
+        });
+      },
+    );
+
+    test(
+      'shift.crew_changed for a different BF-Tag is ignored',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(seq: 10, vehicles: const [], bfDay: _bfDay(id: 'day1')),
+          );
+          async.flushMicrotasks();
+
+          connector.connections.single.emit(
+            _shiftCrewChangedEvent(
+              seq: 11,
+              shift: _shift(bfDayId: 'other-day'),
+            ),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.shifts, isEmpty);
+          expect(states.last.seq, 11, reason: 'seq still advances');
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('shift.deleted removes the shift', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client = _buildClient(
+          snapshotCompleters: completers,
+          connector: connector,
+        );
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+        final shift = _shift();
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            shifts: [shift],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.shifts, hasLength(1));
+
+        connector.connections.single.emit(
+          _shiftDeletedEvent(seq: 11, id: shift.id, bfDayId: shift.bfDayId),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.shifts, isEmpty);
+
+        client.dispose();
+      });
+    });
+
+    test('bf_day.updated triggers a full snapshot reload', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client = _buildClient(
+          snapshotCompleters: completers,
+          connector: connector,
+        );
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(seq: 10, vehicles: const [], bfDay: _bfDay(id: 'day1')),
+        );
+        async.flushMicrotasks();
+
+        connector.connections.single.emit(
+          _bfDayUpdatedEvent(seq: 11, bfDay: _bfDay(id: 'day2')),
+        );
+        async.flushMicrotasks();
+
+        expect(completers, hasLength(2), reason: 'reloads the snapshot');
+        completers[1].complete(
+          Snapshot(
+            seq: 11,
+            vehicles: const [],
+            bfDay: _bfDay(id: 'day2'),
+          ),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.bfDay?.id, 'day2');
 
         client.dispose();
       });
