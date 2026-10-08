@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/dio_provider.dart';
 import '../domain/permission.dart';
 import '../domain/person.dart';
+import 'auth_session_binding.dart';
 
 /// The state of the current web session.
 ///
@@ -164,3 +165,28 @@ class SessionController extends Notifier<SessionState> {
 
 final sessionControllerProvider =
     NotifierProvider<SessionController, SessionState>(SessionController.new);
+
+class _SessionControllerAuthBinding implements AuthSessionBinding {
+  _SessionControllerAuthBinding(this._ref);
+
+  final Ref _ref;
+
+  @override
+  String? get accessToken {
+    final session = _ref.read(sessionControllerProvider);
+    return session is SessionSignedIn ? session.accessToken : null;
+  }
+
+  @override
+  Future<String?> refreshAccessToken() =>
+      _ref.read(sessionControllerProvider.notifier).refreshAccessToken();
+}
+
+/// The [AuthSessionBinding] used by [AuthInterceptor] to attach and refresh
+/// the `Authorization` header. Defaults to the web admin
+/// [SessionController]; mobile/monitor apps override this provider (in
+/// their own `ProviderScope`) with a binding backed by
+/// `PairedSessionController`.
+final authSessionBindingProvider = Provider<AuthSessionBinding>(
+  (ref) => _SessionControllerAuthBinding(ref),
+);

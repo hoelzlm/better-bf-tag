@@ -33,6 +33,8 @@ __pycache__/
 .env.*
 !.env.example
 infra/secrets/
+infra/restic.env
+!infra/restic.env.example
 *.p8
 *service-account*.json
 google-services.json

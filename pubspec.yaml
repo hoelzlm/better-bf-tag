@@ -8,3 +8,4 @@ workspace:
   - packages/api_client
   - packages/core
   - apps/web
+  - apps/mobile

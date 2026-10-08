@@ -1,0 +1,9 @@
+[Unit]
+Description=better-bf-tag nightly database backup (restic)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/bftag/restic.env
+ExecStart=/opt/bftag/backup.sh

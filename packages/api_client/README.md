@@ -50,10 +50,9 @@ import 'package:bftag_api_client/bftag_api_client.dart';
 final api = BftagApiClient().getAuthApi();
 
 try {
-    final response = await api.getMe();
-    print(response);
+    api.deviceLogout();
 } catch on DioException (e) {
-    print("Exception when calling AuthApi->getMe: $e\n");
+    print("Exception when calling AuthApi->deviceLogout: $e\n");
 }
 
 ```
@@ -64,13 +63,20 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*AuthApi*](doc/AuthApi.md) | [**deviceLogout**](doc/AuthApi.md#devicelogout) | **POST** /api/v1/auth/device/logout | 
+[*AuthApi*](doc/AuthApi.md) | [**deviceRefresh**](doc/AuthApi.md#devicerefresh) | **POST** /api/v1/auth/device/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /api/v1/me | 
 [*AuthApi*](doc/AuthApi.md) | [**login**](doc/AuthApi.md#login) | **POST** /api/v1/auth/login | 
 [*AuthApi*](doc/AuthApi.md) | [**logout**](doc/AuthApi.md#logout) | **POST** /api/v1/auth/logout | 
+[*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
+[*DevicesApi*](doc/DevicesApi.md) | [**revokeDevice**](doc/DevicesApi.md#revokedevice) | **DELETE** /api/v1/devices/{id} | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
+[*PersonsApi*](doc/PersonsApi.md) | [**createPairingCode**](doc/PersonsApi.md#createpairingcode) | **POST** /api/v1/persons/{id}/pairing-code | 
+[*PersonsApi*](doc/PersonsApi.md) | [**createPairingCodes**](doc/PersonsApi.md#createpairingcodes) | **POST** /api/v1/persons/pairing-codes | 
 [*PersonsApi*](doc/PersonsApi.md) | [**createPerson**](doc/PersonsApi.md#createperson) | **POST** /api/v1/persons | 
 [*PersonsApi*](doc/PersonsApi.md) | [**getPerson**](doc/PersonsApi.md#getperson) | **GET** /api/v1/persons/{id} | 
+[*PersonsApi*](doc/PersonsApi.md) | [**listPersonDevices**](doc/PersonsApi.md#listpersondevices) | **GET** /api/v1/persons/{id}/devices | 
 [*PersonsApi*](doc/PersonsApi.md) | [**listPersons**](doc/PersonsApi.md#listpersons) | **GET** /api/v1/persons | 
 [*PersonsApi*](doc/PersonsApi.md) | [**removeWebAccess**](doc/PersonsApi.md#removewebaccess) | **DELETE** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**setWebAccess**](doc/PersonsApi.md#setwebaccess) | **PUT** /api/v1/persons/{id}/web-access | 
@@ -86,13 +92,18 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [CreatePairingCode201Response](doc/CreatePairingCode201Response.md)
+ - [CreatePairingCodes201Response](doc/CreatePairingCodes201Response.md)
+ - [CreatePairingCodesRequest](doc/CreatePairingCodesRequest.md)
  - [CreatePersonRequest](doc/CreatePersonRequest.md)
  - [CreateVehicleRequest](doc/CreateVehicleRequest.md)
+ - [DeviceRefreshRequest](doc/DeviceRefreshRequest.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)
  - [GetMe200Response](doc/GetMe200Response.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
  - [GetVehicleStatusHistory200ResponseInner](doc/GetVehicleStatusHistory200ResponseInner.md)
+ - [ListPersonDevices200ResponseInner](doc/ListPersonDevices200ResponseInner.md)
  - [ListPersons200ResponseInner](doc/ListPersons200ResponseInner.md)
  - [ListVehicles200ResponseInner](doc/ListVehicles200ResponseInner.md)
  - [Login200Response](doc/Login200Response.md)
@@ -100,6 +111,8 @@ Class | Method | HTTP request | Description
  - [Login401Response](doc/Login401Response.md)
  - [Login401ResponseError](doc/Login401ResponseError.md)
  - [LoginRequest](doc/LoginRequest.md)
+ - [Pair200Response](doc/Pair200Response.md)
+ - [PairRequest](doc/PairRequest.md)
  - [ReorderVehiclesRequest](doc/ReorderVehiclesRequest.md)
  - [SetVehicleStatusRequest](doc/SetVehicleStatusRequest.md)
  - [SetWebAccessRequest](doc/SetWebAccessRequest.md)

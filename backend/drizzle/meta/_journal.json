@@ -15,6 +15,13 @@
       "when": 1791466643746,
       "tag": "0001_amused_old_lace",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791481630661,
+      "tag": "0002_whole_grandmaster",
+      "breakpoints": true
     }
   ]
 }

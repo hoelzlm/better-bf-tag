@@ -8,7 +8,10 @@ import 'snapshot.dart';
 import 'web_socket_connection.dart';
 
 /// Connection status exposed to the UI alongside the live vehicle list.
-enum ConnectionStatus { connecting, live, reconnecting }
+///
+/// [revoked] is terminal: reached after a `session.revoked` control message
+/// or close code 4403 (ADR 0010); the client stops and never reconnects.
+enum ConnectionStatus { connecting, live, reconnecting, revoked }
 
 /// A snapshot of realtime state: the current `seq`, the active vehicles
 /// (sorted by `sort_order`), and the connection status.
@@ -45,12 +48,16 @@ Duration defaultReconnectBackoff(int attempt, Random random) {
 ///   snapshot load),
 /// - on close code 4401 (token invalid), calls [refreshSession] before
 ///   reconnecting.
+/// - on the `session.revoked` control message (no `seq`, ADR 0010) or
+///   close code 4403, stops without reconnecting, calls [onRevoked] once,
+///   and exposes [ConnectionStatus.revoked].
 class RealtimeClient {
   RealtimeClient({
     required Uri wsEndpoint,
     required Future<Snapshot> Function() loadSnapshot,
     required Future<String?> Function() accessToken,
     required Future<void> Function() refreshSession,
+    void Function()? onRevoked,
     WebSocketConnector connector = connectWebSocket,
     this.heartbeatInterval = const Duration(seconds: 25),
     Random? random,
@@ -59,6 +66,7 @@ class RealtimeClient {
         _loadSnapshotFn = loadSnapshot,
         _accessToken = accessToken,
         _refreshSession = refreshSession,
+        _onRevoked = onRevoked,
         _connector = connector,
         _random = random ?? Random(),
         _backoff = backoff ?? defaultReconnectBackoff;
@@ -67,6 +75,7 @@ class RealtimeClient {
   final Future<Snapshot> Function() _loadSnapshotFn;
   final Future<String?> Function() _accessToken;
   final Future<void> Function() _refreshSession;
+  final void Function()? _onRevoked;
   final WebSocketConnector _connector;
   final Duration heartbeatInterval;
   final Random _random;
@@ -86,7 +95,7 @@ class RealtimeClient {
   /// true until the (initial or a reload-triggered) snapshot has loaded;
   /// incoming messages are buffered in [_messageQueue] while true.
   bool _awaitingSnapshot = true;
-  final List<dynamic> _messageQueue = <dynamic>[];
+  final List<Map<String, dynamic>> _messageQueue = <Map<String, dynamic>>[];
 
   WebSocketConnection? _connection;
   StreamSubscription<dynamic>? _subscription;
@@ -95,6 +104,10 @@ class RealtimeClient {
   int _reconnectAttempt = 0;
   bool _started = false;
   bool _disposed = false;
+
+  /// true once `session.revoked` or close code 4403 has been seen; the
+  /// client never reconnects afterwards.
+  bool _revoked = false;
 
   /// Tests only: how many times [loadSnapshot] has been called.
   int snapshotLoadCount = 0;
@@ -123,7 +136,7 @@ class RealtimeClient {
   }
 
   Future<void> _connect() async {
-    if (_disposed) return;
+    if (_disposed || _revoked) return;
     _status = ConnectionStatus.connecting;
 
     final token = await _accessToken();
@@ -174,30 +187,42 @@ class RealtimeClient {
 
   void _onMessage(dynamic raw) {
     _resetWatchdog();
-    if (_awaitingSnapshot) {
-      _messageQueue.add(raw);
+    if (_revoked) return;
+    final Map<String, dynamic> json;
+    try {
+      json = raw is String
+          ? jsonDecode(raw) as Map<String, dynamic>
+          : Map<String, dynamic>.from(raw as Map);
+    } catch (_) {
       return;
     }
-    _processMessage(raw);
+    // `session.revoked` carries no `seq` (ADR 0010) and is not buffered:
+    // it must take effect immediately, even mid-snapshot-reload.
+    if (json['type'] == 'session.revoked') {
+      _handleRevoked();
+      return;
+    }
+    if (_awaitingSnapshot) {
+      _messageQueue.add(json);
+      return;
+    }
+    _processMessage(json);
   }
 
   void _drainQueue() {
-    final queued = List<dynamic>.of(_messageQueue);
+    final queued = List<Map<String, dynamic>>.of(_messageQueue);
     _messageQueue.clear();
-    for (final raw in queued) {
+    for (final json in queued) {
       if (_awaitingSnapshot) {
         // A gap was detected mid-drain and a reload is already underway;
         // the remaining (stale) queue is irrelevant once it completes.
         break;
       }
-      _processMessage(raw);
+      _processMessage(json);
     }
   }
 
-  void _processMessage(dynamic raw) {
-    final Map<String, dynamic> json = raw is String
-        ? jsonDecode(raw) as Map<String, dynamic>
-        : Map<String, dynamic>.from(raw as Map);
+  void _processMessage(Map<String, dynamic> json) {
     final type = json['type'] as String?;
     final seq = json['seq'] as int?;
     if (seq == null) return;
@@ -252,6 +277,32 @@ class RealtimeClient {
     unawaited(_loadSnapshot());
   }
 
+  /// Handles the `session.revoked` control message: marks the client
+  /// revoked and closes the connection without reconnecting.
+  void _handleRevoked() {
+    if (_disposed || _revoked) return;
+    _markRevoked();
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    try {
+      _connection?.sink.close();
+    } catch (_) {
+      // Ignore: we're tearing down anyway.
+    }
+    _connection = null;
+  }
+
+  void _markRevoked() {
+    if (_revoked) return;
+    _revoked = true;
+    _watchdogTimer?.cancel();
+    _reconnectTimer?.cancel();
+    _messageQueue.clear();
+    _status = ConnectionStatus.revoked;
+    _emit();
+    _onRevoked?.call();
+  }
+
   List<Vehicle> get _sortedActiveVehicles {
     final vehicles = _vehiclesById.values.where((v) => v.active).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -300,7 +351,11 @@ class RealtimeClient {
   }
 
   void _onSocketClosed(int? closeCode) {
-    if (_disposed) return;
+    if (_disposed || _revoked) return;
+    if (closeCode == 4403) {
+      _markRevoked();
+      return;
+    }
     _awaitingSnapshot = true;
     _messageQueue.clear();
     _status = ConnectionStatus.reconnecting;
@@ -319,12 +374,12 @@ class RealtimeClient {
       // Best-effort: reconnect anyway, the server will reject again if the
       // refresh genuinely failed, re-triggering this path.
     }
-    if (_disposed) return;
+    if (_disposed || _revoked) return;
     _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
-    if (_disposed) return;
+    if (_disposed || _revoked) return;
     _reconnectTimer?.cancel();
     _status = ConnectionStatus.reconnecting;
     _emit();

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_config.dart';
 import '../api/dio_provider.dart';
+import '../auth/paired_session.dart';
 import '../auth/session.dart';
 import '../domain/fms_status.dart';
 import '../domain/vehicle.dart';
@@ -92,6 +93,63 @@ final vehiclesProvider = StreamProvider<List<Vehicle>>((ref) {
 /// The current realtime connection status.
 final realtimeConnectionProvider = StreamProvider<ConnectionStatus>((ref) {
   final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(ConnectionStatus.connecting);
+  }
+  return client.states.map((state) => state.status);
+});
+
+/// The [RealtimeClient] for the current paired device session (mobile app,
+/// or the web monitor via Ticket 03), or `null` when unpaired. Mirrors
+/// [realtimeClientProvider] but is bound to [pairedSessionControllerProvider]
+/// instead of the web admin [sessionControllerProvider]. On `session.revoked`
+/// / close code 4403, calls [PairedSessionController.onRevoked].
+final pairedRealtimeClientProvider = Provider<RealtimeClient?>((ref) {
+  final session = ref.watch(pairedSessionControllerProvider);
+  if (session is! Paired) {
+    return null;
+  }
+  final config = ref.watch(apiConfigProvider);
+  final apiClient = ref.watch(apiClientProvider);
+
+  final client = RealtimeClient(
+    wsEndpoint: wsEndpointFromApiConfig(config),
+    loadSnapshot: () async {
+      final response = await apiClient.getSnapshotApi().getSnapshot();
+      final data = response.data;
+      if (data == null) {
+        throw StateError('GET /snapshot returned no body');
+      }
+      return Snapshot(
+        seq: data.seq,
+        vehicles: data.vehicles.map(_vehicleFromApi).toList(),
+      );
+    },
+    accessToken: () async {
+      final current = ref.read(pairedSessionControllerProvider);
+      return current is Paired ? current.accessToken : null;
+    },
+    refreshSession: () async {
+      await ref.read(pairedSessionControllerProvider.notifier).refresh();
+    },
+    onRevoked: () {
+      unawaited(
+        ref.read(pairedSessionControllerProvider.notifier).onRevoked(),
+      );
+    },
+  );
+  client.start();
+  ref.onDispose(() {
+    unawaited(client.dispose());
+  });
+  return client;
+});
+
+/// The connection status of [pairedRealtimeClientProvider].
+final pairedRealtimeConnectionProvider = StreamProvider<ConnectionStatus>((
+  ref,
+) {
+  final client = ref.watch(pairedRealtimeClientProvider);
   if (client == null) {
     return Stream.value(ConnectionStatus.connecting);
   }

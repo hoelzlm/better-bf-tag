@@ -147,6 +147,30 @@ void main() {
       );
 
       expect(find.byKey(const Key('nav-fahrzeuge')), findsNothing);
+      expect(find.byKey(const Key('nav-persons')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'non-admin navigating to /admin/persons is redirected to /admin',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      final context = tester.element(find.text('Keine laufenden Einsätze'));
+      context.go('/admin/persons');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
     },
   );
 
