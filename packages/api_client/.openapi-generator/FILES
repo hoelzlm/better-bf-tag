@@ -1,6 +1,5 @@
 .gitignore
 README.md
-analysis_options.yaml
 lib/bftag_api_client.dart
 lib/src/api.dart
 lib/src/api/auth_api.dart
