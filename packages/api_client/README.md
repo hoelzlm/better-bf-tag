@@ -73,6 +73,14 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**monitorRefresh**](doc/AuthApi.md#monitorrefresh) | **POST** /api/v1/auth/monitor/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**createBfDay**](doc/BfDaysApi.md#createbfday) | **POST** /api/v1/bf-days | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**endBfDay**](doc/BfDaysApi.md#endbfday) | **POST** /api/v1/bf-days/{id}/end | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**getBfDay**](doc/BfDaysApi.md#getbfday) | **GET** /api/v1/bf-days/{day} | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**listBfDays**](doc/BfDaysApi.md#listbfdays) | **GET** /api/v1/bf-days | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**listParticipants**](doc/BfDaysApi.md#listparticipants) | **GET** /api/v1/bf-days/{day}/participants | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**setParticipants**](doc/BfDaysApi.md#setparticipants) | **PUT** /api/v1/bf-days/{day}/participants | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**startBfDay**](doc/BfDaysApi.md#startbfday) | **POST** /api/v1/bf-days/{id}/start | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**updateBfDay**](doc/BfDaysApi.md#updatebfday) | **PATCH** /api/v1/bf-days/{id} | 
 [*DevicesApi*](doc/DevicesApi.md) | [**revokeDevice**](doc/DevicesApi.md#revokedevice) | **DELETE** /api/v1/devices/{id} | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
 [*MonitorsApi*](doc/MonitorsApi.md) | [**createMonitor**](doc/MonitorsApi.md#createmonitor) | **POST** /api/v1/monitors | 
@@ -89,6 +97,14 @@ Class | Method | HTTP request | Description
 [*PersonsApi*](doc/PersonsApi.md) | [**removeWebAccess**](doc/PersonsApi.md#removewebaccess) | **DELETE** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**setWebAccess**](doc/PersonsApi.md#setwebaccess) | **PUT** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**updatePerson**](doc/PersonsApi.md#updateperson) | **PATCH** /api/v1/persons/{id} | 
+[*SlidesApi*](doc/SlidesApi.md) | [**createSlide**](doc/SlidesApi.md#createslide) | **POST** /api/v1/slides | 
+[*SlidesApi*](doc/SlidesApi.md) | [**deleteSlide**](doc/SlidesApi.md#deleteslide) | **DELETE** /api/v1/slides/{id} | 
+[*SlidesApi*](doc/SlidesApi.md) | [**deleteSlideImage**](doc/SlidesApi.md#deleteslideimage) | **DELETE** /api/v1/slides/{id}/image | 
+[*SlidesApi*](doc/SlidesApi.md) | [**getSlideImage**](doc/SlidesApi.md#getslideimage) | **GET** /api/v1/slides/{id}/image | 
+[*SlidesApi*](doc/SlidesApi.md) | [**listSlides**](doc/SlidesApi.md#listslides) | **GET** /api/v1/slides | 
+[*SlidesApi*](doc/SlidesApi.md) | [**reorderSlides**](doc/SlidesApi.md#reorderslides) | **PUT** /api/v1/slides/order | 
+[*SlidesApi*](doc/SlidesApi.md) | [**setSlideImage**](doc/SlidesApi.md#setslideimage) | **POST** /api/v1/slides/{id}/image | 
+[*SlidesApi*](doc/SlidesApi.md) | [**updateSlide**](doc/SlidesApi.md#updateslide) | **PATCH** /api/v1/slides/{id} | 
 [*SnapshotApi*](doc/SnapshotApi.md) | [**getSnapshot**](doc/SnapshotApi.md#getsnapshot) | **GET** /api/v1/snapshot | 
 [*VehiclesApi*](doc/VehiclesApi.md) | [**createVehicle**](doc/VehiclesApi.md#createvehicle) | **POST** /api/v1/vehicles | 
 [*VehiclesApi*](doc/VehiclesApi.md) | [**getVehicleStatusHistory**](doc/VehiclesApi.md#getvehiclestatushistory) | **GET** /api/v1/vehicles/{id}/status-history | 
@@ -100,20 +116,26 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)
  - [CreateMonitorRequest](doc/CreateMonitorRequest.md)
  - [CreatePairingCode201Response](doc/CreatePairingCode201Response.md)
  - [CreatePairingCodes201Response](doc/CreatePairingCodes201Response.md)
  - [CreatePairingCodesRequest](doc/CreatePairingCodesRequest.md)
  - [CreatePersonRequest](doc/CreatePersonRequest.md)
+ - [CreateSlideRequest](doc/CreateSlideRequest.md)
  - [CreateVehicleRequest](doc/CreateVehicleRequest.md)
  - [DeviceRefreshRequest](doc/DeviceRefreshRequest.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)
  - [GetMe200Response](doc/GetMe200Response.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
+ - [GetSnapshot200ResponseSlidesInner](doc/GetSnapshot200ResponseSlidesInner.md)
+ - [GetSnapshot200ResponseSlidesInnerImage](doc/GetSnapshot200ResponseSlidesInnerImage.md)
  - [GetVehicleStatusHistory200ResponseInner](doc/GetVehicleStatusHistory200ResponseInner.md)
+ - [ListBfDays200ResponseInner](doc/ListBfDays200ResponseInner.md)
  - [ListMonitors200ResponseInner](doc/ListMonitors200ResponseInner.md)
+ - [ListParticipants200ResponseInner](doc/ListParticipants200ResponseInner.md)
  - [ListPersonDevices200ResponseInner](doc/ListPersonDevices200ResponseInner.md)
  - [ListPersons200ResponseInner](doc/ListPersons200ResponseInner.md)
  - [ListVehicles200ResponseInner](doc/ListVehicles200ResponseInner.md)
@@ -127,10 +149,14 @@ Class | Method | HTTP request | Description
  - [MonitorPairRequest](doc/MonitorPairRequest.md)
  - [Pair200Response](doc/Pair200Response.md)
  - [PairRequest](doc/PairRequest.md)
+ - [ReorderSlidesRequest](doc/ReorderSlidesRequest.md)
  - [ReorderVehiclesRequest](doc/ReorderVehiclesRequest.md)
+ - [SetParticipantsRequest](doc/SetParticipantsRequest.md)
  - [SetVehicleStatusRequest](doc/SetVehicleStatusRequest.md)
  - [SetWebAccessRequest](doc/SetWebAccessRequest.md)
+ - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
  - [UpdatePersonRequest](doc/UpdatePersonRequest.md)
+ - [UpdateSlideRequest](doc/UpdateSlideRequest.md)
  - [UpdateVehicleRequest](doc/UpdateVehicleRequest.md)
 
 
