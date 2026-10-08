@@ -448,6 +448,95 @@ void main() {
         client.dispose();
       });
     });
+
+    test(
+      'session.revoked message stops the client without reconnecting',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          var revokedCalls = 0;
+          final client = RealtimeClient(
+            wsEndpoint: Uri.parse('ws://api.test/ws'),
+            loadSnapshot: () {
+              final completer = Completer<Snapshot>();
+              completers.add(completer);
+              return completer.future;
+            },
+            accessToken: () async => 'token-123',
+            refreshSession: () async {},
+            onRevoked: () => revokedCalls++,
+            connector: connector.call,
+            heartbeatInterval: const Duration(seconds: 10),
+            random: _ZeroRandom(),
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(Snapshot(seq: 10, vehicles: [_vehicle()]));
+          async.flushMicrotasks();
+
+          connector.connections.single.emit({'type': 'session.revoked'});
+          async.flushMicrotasks();
+
+          expect(revokedCalls, 1);
+          expect(states.last.status, ConnectionStatus.revoked);
+          expect((connector.connections.single.sink as _FakeSink).closed, isTrue);
+
+          // The server also closes with 4403; must stay revoked, no
+          // reconnect, and the callback must not fire a second time.
+          connector.connections.single.closeWithCode(4403);
+          async.flushMicrotasks();
+          async.elapse(const Duration(seconds: 60));
+
+          expect(revokedCalls, 1);
+          expect(connector.connections, hasLength(1));
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('close code 4403 (without a prior message) stops without reconnecting', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        var revokedCalls = 0;
+        final client = RealtimeClient(
+          wsEndpoint: Uri.parse('ws://api.test/ws'),
+          loadSnapshot: () {
+            final completer = Completer<Snapshot>();
+            completers.add(completer);
+            return completer.future;
+          },
+          accessToken: () async => 'token-123',
+          refreshSession: () async {},
+          onRevoked: () => revokedCalls++,
+          connector: connector.call,
+          heartbeatInterval: const Duration(seconds: 10),
+          random: _ZeroRandom(),
+        );
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(Snapshot(seq: 10, vehicles: []));
+        async.flushMicrotasks();
+
+        connector.connections.single.closeWithCode(4403);
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 60));
+
+        expect(revokedCalls, 1);
+        expect(states.last.status, ConnectionStatus.revoked);
+        expect(connector.connections, hasLength(1), reason: 'no reconnect');
+
+        client.dispose();
+      });
+    });
   });
 
   group('defaultReconnectBackoff', () {
