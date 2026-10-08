@@ -16,7 +16,7 @@ import type { Config } from './config.js';
 import type { Db } from './db/client.js';
 import type { Clock } from './clock.js';
 import type { PushSender } from './push/push-sender.js';
-import { createErrorHandler, createNotFoundHandler } from './errors.js';
+import { createErrorHandler, createNotFoundHandler, ApiError } from './errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
@@ -75,10 +75,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     hook: 'onRequest',
   });
 
-  // Rate limiting (global)
+  // Rate limiting: not applied globally; individual routes (auth) opt in via
+  // their route `config.rateLimit`, keyed by IP.
   await app.register(fastifyRateLimit, {
-    max: 100,
-    timeWindow: '1 minute',
+    global: false,
+    errorResponseBuilder: () =>
+      new ApiError(429, 'rate_limited', 'Zu viele Versuche. Bitte später erneut versuchen.'),
   });
 
   // Swagger/OpenAPI

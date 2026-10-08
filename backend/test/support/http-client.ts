@@ -66,6 +66,16 @@ export class HttpClient {
     return { status: response.status, body: parsedBody, headers: response.headers };
   }
 
+  /** Reads the currently stored raw cookie value (for black-box tests that need to inspect/replay it). */
+  getCookie(name: string): string | undefined {
+    return this.cookies.get(name)?.value;
+  }
+
+  /** Overrides the stored raw cookie value (for black-box tests replaying an old/stale token). */
+  setCookie(name: string, value: string): void {
+    this.cookies.set(name, { value });
+  }
+
   private buildCookieHeader(): string | undefined {
     const now = Date.now();
     const pairs: string[] = [];
