@@ -1,0 +1,465 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:bftag_core/bftag_core.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// A [Random] that always returns 0, so backoff delays in tests are exact
+/// (no jitter) and therefore trivially assertable.
+class _ZeroRandom implements Random {
+  @override
+  double nextDouble() => 0.0;
+
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  bool nextBool() => false;
+}
+
+class _FakeSink implements WebSocketConnectionSink {
+  bool closed = false;
+  int? closeCodeUsed;
+
+  @override
+  void add(dynamic data) {}
+
+  @override
+  Future<void> close([int? closeCode, String? closeReason]) async {
+    closed = true;
+    closeCodeUsed = closeCode;
+  }
+}
+
+class _FakeConnection implements WebSocketConnection {
+  final StreamController<dynamic> _controller =
+      StreamController<dynamic>.broadcast();
+  final _FakeSink _sink = _FakeSink();
+  int? _closeCode;
+
+  @override
+  Stream<dynamic> get stream => _controller.stream;
+
+  @override
+  WebSocketConnectionSink get sink => _sink;
+
+  @override
+  int? get closeCode => _closeCode;
+
+  void emit(Map<String, dynamic> message) {
+    _controller.add(message);
+  }
+
+  /// Simulates the server closing the connection with [code].
+  void closeWithCode(int code) {
+    _closeCode = code;
+    unawaited(_controller.close());
+  }
+}
+
+class _FakeConnector {
+  final List<_FakeConnection> connections = <_FakeConnection>[];
+
+  WebSocketConnection call(Uri uri) {
+    final connection = _FakeConnection();
+    connections.add(connection);
+    return connection;
+  }
+}
+
+Vehicle _vehicle({
+  String id = 'v1',
+  String callSign = 'Florian 1',
+  String shortName = 'HLF 1',
+  int status = 2,
+  int sortOrder = 1,
+  bool active = true,
+}) {
+  return Vehicle(
+    id: id,
+    callSign: callSign,
+    shortName: shortName,
+    type: 'HLF',
+    status: FmsStatus.fromCode(status),
+    statusChangedAt: null,
+    sortOrder: sortOrder,
+    active: active,
+  );
+}
+
+Map<String, dynamic> _statusChangedEvent({
+  required int seq,
+  required String vehicleId,
+  required int status,
+}) {
+  return {
+    'seq': seq,
+    'type': 'vehicle.status_changed',
+    'at': '2026-10-08T18:00:00Z',
+    'data': {'vehicle_id': vehicleId, 'status': status, 'source': 'app'},
+  };
+}
+
+Map<String, dynamic> _vehicleUpdatedEvent({
+  required int seq,
+  required Vehicle vehicle,
+}) {
+  return {
+    'seq': seq,
+    'type': 'vehicle.updated',
+    'at': '2026-10-08T18:00:00Z',
+    'data': {
+      'id': vehicle.id,
+      'call_sign': vehicle.callSign,
+      'short_name': vehicle.shortName,
+      'type': vehicle.type,
+      'status': vehicle.status.code,
+      'status_changed_at': null,
+      'sort_order': vehicle.sortOrder,
+      'active': vehicle.active,
+    },
+  };
+}
+
+/// Builds a [RealtimeClient] wired to a fresh [_FakeConnector] and a
+/// snapshot loader whose completers are collected in [snapshotCompleters]
+/// (one appended per call, in order) so tests can control exactly when
+/// each snapshot load resolves.
+RealtimeClient _buildClient({
+  required List<Completer<Snapshot>> snapshotCompleters,
+  required _FakeConnector connector,
+  Future<void> Function()? refreshSession,
+  Duration heartbeatInterval = const Duration(seconds: 10),
+  Duration Function(int, Random)? backoff,
+}) {
+  return RealtimeClient(
+    wsEndpoint: Uri.parse('ws://api.test/ws'),
+    loadSnapshot: () {
+      final completer = Completer<Snapshot>();
+      snapshotCompleters.add(completer);
+      return completer.future;
+    },
+    accessToken: () async => 'token-123',
+    refreshSession: refreshSession ?? () async {},
+    connector: connector.call,
+    heartbeatInterval: heartbeatInterval,
+    random: _ZeroRandom(),
+    backoff: backoff,
+  );
+}
+
+void main() {
+  group('RealtimeClient', () {
+    test(
+      'buffers pre-snapshot events, dedups by seq, applies status change',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client =
+              _buildClient(snapshotCompleters: completers, connector: connector);
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+
+          expect(connector.connections, hasLength(1));
+          final conn = connector.connections.single;
+
+          // Arrive before the snapshot resolves: must be buffered, not
+          // applied yet.
+          conn.emit({'type': 'hello', 'seq': 10});
+          conn.emit(
+            _statusChangedEvent(seq: 11, vehicleId: 'v1', status: 3),
+          );
+          // A duplicate of seq 11: once replayed after the snapshot, it
+          // must be dropped (already applied) rather than applied twice.
+          conn.emit(
+            _statusChangedEvent(seq: 11, vehicleId: 'v1', status: 5),
+          );
+          async.flushMicrotasks();
+
+          expect(states, isEmpty, reason: 'nothing applied before snapshot');
+
+          completers.single.complete(
+            Snapshot(seq: 10, vehicles: [_vehicle(status: 2)]),
+          );
+          async.flushMicrotasks();
+
+          expect(completers, hasLength(1));
+          final latest = states.last;
+          expect(latest.seq, 11);
+          expect(latest.status, ConnectionStatus.live);
+          expect(latest.vehicles.single.status, FmsStatus.s3);
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('gap reloads the snapshot exactly once', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0]
+            .complete(Snapshot(seq: 10, vehicles: [_vehicle(status: 2)]));
+        async.flushMicrotasks();
+        expect(completers, hasLength(1));
+
+        final conn = connector.connections.single;
+        // Gap: expected seq 11, this is 15. Multiple gap messages in a row
+        // must still only trigger a single reload.
+        conn.emit(_statusChangedEvent(seq: 15, vehicleId: 'v1', status: 3));
+        conn.emit(_statusChangedEvent(seq: 16, vehicleId: 'v1', status: 4));
+        async.flushMicrotasks();
+
+        expect(completers, hasLength(2), reason: 'exactly one reload');
+
+        completers[1]
+            .complete(Snapshot(seq: 15, vehicles: [_vehicle(status: 3)]));
+        async.flushMicrotasks();
+
+        // The second buffered message (seq 16) is a valid continuation of
+        // the reloaded snapshot (15+1) and is replayed after the reload.
+        expect(states.last.seq, 16);
+        expect(states.last.vehicles.single.status, FmsStatus.s4);
+
+        client.dispose();
+      });
+    });
+
+    test('skip advances seq without changing vehicles', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0]
+            .complete(Snapshot(seq: 10, vehicles: [_vehicle(status: 2)]));
+        async.flushMicrotasks();
+
+        connector.connections.single.emit({'seq': 11, 'type': 'skip'});
+        async.flushMicrotasks();
+
+        expect(completers, hasLength(1), reason: 'skip must not reload');
+        expect(states.last.seq, 11);
+        expect(states.last.vehicles.single.status, FmsStatus.s2);
+
+        client.dispose();
+      });
+    });
+
+    test('unknown event type advances seq without breaking it', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0]
+            .complete(Snapshot(seq: 10, vehicles: [_vehicle(status: 2)]));
+        async.flushMicrotasks();
+
+        connector.connections.single.emit({
+          'seq': 11,
+          'type': 'incident.closed',
+          'at': '2026-10-08T18:00:00Z',
+          'data': {'id': 'i1'},
+        });
+        async.flushMicrotasks();
+
+        expect(completers, hasLength(1), reason: 'unknown type must not reload');
+        expect(states.last.seq, 11);
+
+        client.dispose();
+      });
+    });
+
+    test('heartbeat seq mismatch reloads the snapshot', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0]
+            .complete(Snapshot(seq: 10, vehicles: [_vehicle(status: 2)]));
+        async.flushMicrotasks();
+
+        connector.connections.single.emit({'type': 'heartbeat', 'seq': 12});
+        async.flushMicrotasks();
+
+        expect(completers, hasLength(2));
+        completers[1].complete(Snapshot(seq: 12, vehicles: []));
+        async.flushMicrotasks();
+
+        client.dispose();
+      });
+    });
+
+    test('inactive vehicle.updated removes the vehicle', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: [
+              _vehicle(id: 'v1', sortOrder: 1),
+              _vehicle(id: 'v2', sortOrder: 2),
+            ],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.vehicles, hasLength(2));
+
+        connector.connections.single.emit(
+          _vehicleUpdatedEvent(
+            seq: 11,
+            vehicle: _vehicle(id: 'v1', sortOrder: 1, active: false),
+          ),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.vehicles, hasLength(1));
+        expect(states.last.vehicles.single.id, 'v2');
+
+        client.dispose();
+      });
+    });
+
+    test(
+      'silence for 2x heartbeatInterval triggers reconnect with growing, '
+      'capped backoff',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final delays = <int>[];
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+            heartbeatInterval: const Duration(seconds: 1),
+            backoff: (attempt, random) {
+              final seconds = attempt == 0
+                  ? 1
+                  : attempt == 1
+                      ? 2
+                      : attempt == 2
+                          ? 4
+                          : 30;
+              delays.add(seconds);
+              return Duration(seconds: seconds);
+            },
+          );
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(Snapshot(seq: 10, vehicles: []));
+          async.flushMicrotasks();
+          expect(connector.connections, hasLength(1));
+
+          // Silence for > 2x the 1s heartbeat interval: watchdog fires.
+          async.elapse(const Duration(seconds: 3));
+          expect(connector.connections, hasLength(2));
+          completers[1].complete(Snapshot(seq: 10, vehicles: []));
+          async.flushMicrotasks();
+
+          // Silence again: backoff attempt #2 (2s).
+          async.elapse(const Duration(seconds: 3));
+          expect(connector.connections, hasLength(3));
+          completers[2].complete(Snapshot(seq: 10, vehicles: []));
+          async.flushMicrotasks();
+
+          // A successful snapshot resets the backoff counter, so the next
+          // silence reconnect is attempt #0 (1s) again, not #2 (4s).
+          expect(delays, [1, 1]);
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('close code 4401 refreshes the session before reconnecting', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        var refreshCalls = 0;
+        final refreshCompleter = Completer<void>();
+        final client = _buildClient(
+          snapshotCompleters: completers,
+          connector: connector,
+          refreshSession: () {
+            refreshCalls++;
+            return refreshCompleter.future;
+          },
+        );
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(Snapshot(seq: 10, vehicles: []));
+        async.flushMicrotasks();
+
+        connector.connections.single.closeWithCode(4401);
+        async.flushMicrotasks();
+
+        expect(refreshCalls, 1);
+        expect(
+          connector.connections,
+          hasLength(1),
+          reason: 'must not reconnect before refreshSession resolves',
+        );
+
+        refreshCompleter.complete();
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 1));
+
+        expect(connector.connections, hasLength(2));
+        completers[1].complete(Snapshot(seq: 10, vehicles: []));
+        async.flushMicrotasks();
+
+        client.dispose();
+      });
+    });
+  });
+
+  group('defaultReconnectBackoff', () {
+    test('grows exponentially and caps at 30s (no jitter)', () {
+      final random = _ZeroRandom();
+      expect(defaultReconnectBackoff(0, random), const Duration(seconds: 1));
+      expect(defaultReconnectBackoff(1, random), const Duration(seconds: 2));
+      expect(defaultReconnectBackoff(2, random), const Duration(seconds: 4));
+      expect(defaultReconnectBackoff(3, random), const Duration(seconds: 8));
+      expect(defaultReconnectBackoff(4, random), const Duration(seconds: 16));
+      expect(defaultReconnectBackoff(5, random), const Duration(seconds: 30));
+      expect(defaultReconnectBackoff(10, random), const Duration(seconds: 30));
+    });
+  });
+}

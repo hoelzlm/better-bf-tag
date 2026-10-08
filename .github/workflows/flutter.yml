@@ -38,6 +38,10 @@ jobs:
       - name: Analyze (packages/api_client)
         run: dart analyze packages/api_client --no-fatal-warnings
 
+      - name: Test (packages/core)
+        working-directory: packages/core
+        run: flutter test
+
       - name: Test (apps/web)
         working-directory: apps/web
         run: flutter test
