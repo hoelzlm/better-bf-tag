@@ -12,6 +12,13 @@ class _FakeSessionController extends SessionController {
 
   @override
   SessionState build() => _initial;
+
+  @override
+  Future<void> restore() async {
+    // No-op: router_test exercises the router directly off a fixed initial
+    // state; restore() calling out to the real backend is covered in
+    // login_test.dart via a different fake.
+  }
 }
 
 Future<void> _pumpAppAt(

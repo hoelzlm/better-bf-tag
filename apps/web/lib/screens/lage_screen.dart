@@ -13,6 +13,10 @@ class LageScreen extends ConsumerWidget {
       SessionSignedIn(person: final person) => person.displayName,
       _ => '',
     };
+    final permissionLabel = switch (session) {
+      SessionSignedIn(person: final person) => person.permission.label,
+      _ => '',
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -21,7 +25,9 @@ class LageScreen extends ConsumerWidget {
           if (displayName.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Center(child: Text(displayName)),
+              child: Center(
+                child: Text('$displayName ($permissionLabel)'),
+              ),
             ),
           IconButton(
             key: const Key('logout'),

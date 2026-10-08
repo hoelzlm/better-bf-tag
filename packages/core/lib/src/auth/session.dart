@@ -1,5 +1,9 @@
+import 'package:bftag_api_client/bftag_api_client.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/dio_provider.dart';
+import '../domain/permission.dart';
 import '../domain/person.dart';
 
 /// The state of the current web session.
@@ -28,34 +32,133 @@ class SessionSignedIn extends SessionState {
   final String accessToken;
 }
 
+/// Thrown by [SessionController.login] when the login attempt failed, with a
+/// message safe to show to the user.
+class LoginFailure implements Exception {
+  const LoginFailure(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+PersonType _personTypeFromApi(Login200ResponsePersonPersonTypeEnum value) {
+  if (value == Login200ResponsePersonPersonTypeEnum.supervisor) {
+    return PersonType.supervisor;
+  }
+  return PersonType.youth;
+}
+
+Permission _permissionFromApi(Login200ResponsePersonPermissionEnum value) {
+  if (value == Login200ResponsePersonPermissionEnum.preparation) {
+    return Permission.preparation;
+  }
+  if (value == Login200ResponsePersonPermissionEnum.dispatch) {
+    return Permission.dispatch;
+  }
+  if (value == Login200ResponsePersonPermissionEnum.admin) {
+    return Permission.admin;
+  }
+  return Permission.crew;
+}
+
+Person _personFromApi(Login200ResponsePerson apiPerson) {
+  return Person(
+    id: apiPerson.id,
+    displayName: apiPerson.displayName,
+    personType: _personTypeFromApi(apiPerson.personType),
+    permission: _permissionFromApi(apiPerson.permission),
+  );
+}
+
 /// Owns the current [SessionState] and the login/logout/refresh flows.
-///
-/// Implemented as TODO stubs in this card; T01-7 fills in the real auth
-/// wiring against `bftag_api_client`'s `AuthApi`.
 class SessionController extends Notifier<SessionState> {
   @override
   SessionState build() => const SessionUnknown();
 
+  Future<String?>? _refreshInFlight;
+
   /// Restores a session from a stored refresh token, if any.
   Future<void> restore() async {
-    throw UnimplementedError('SessionController.restore: implemented in T01-7');
+    final api = ref.read(apiClientProvider).getAuthApi();
+    try {
+      final response = await api.refresh();
+      final data = response.data;
+      if (data == null) {
+        state = const SessionSignedOut();
+        return;
+      }
+      state = SessionSignedIn(_personFromApi(data.person), data.accessToken);
+    } catch (_) {
+      state = const SessionSignedOut();
+    }
   }
 
   /// Logs in with username/password and transitions to [SessionSignedIn].
   Future<void> login(String username, String password) async {
-    throw UnimplementedError('SessionController.login: implemented in T01-7');
+    final api = ref.read(apiClientProvider).getAuthApi();
+    try {
+      final response = await api.login(
+        loginRequest: LoginRequest(
+          (b) => b
+            ..username = username
+            ..password = password,
+        ),
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const LoginFailure('Server nicht erreichbar.');
+      }
+      state = SessionSignedIn(_personFromApi(data.person), data.accessToken);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        throw const LoginFailure('Benutzername oder Passwort falsch.');
+      }
+      if (error.response?.statusCode == 429) {
+        throw const LoginFailure(
+          'Zu viele Versuche. Bitte später erneut versuchen.',
+        );
+      }
+      throw const LoginFailure('Server nicht erreichbar.');
+    }
   }
 
   /// Logs out and transitions to [SessionSignedOut].
   Future<void> logout() async {
-    throw UnimplementedError('SessionController.logout: implemented in T01-7');
+    final api = ref.read(apiClientProvider).getAuthApi();
+    try {
+      await api.logout();
+    } catch (_) {
+      // Ignore errors; the session is considered over regardless.
+    }
+    state = const SessionSignedOut();
   }
 
   /// Refreshes the access token, returning the new token or null on failure.
-  Future<String?> refreshAccessToken() async {
-    throw UnimplementedError(
-      'SessionController.refreshAccessToken: implemented in T01-7',
-    );
+  ///
+  /// Concurrent calls share one in-flight request.
+  Future<String?> refreshAccessToken() {
+    return _refreshInFlight ??= _doRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
+
+  Future<String?> _doRefresh() async {
+    final api = ref.read(apiClientProvider).getAuthApi();
+    try {
+      final response = await api.refresh();
+      final data = response.data;
+      if (data == null) {
+        state = const SessionSignedOut();
+        return null;
+      }
+      state = SessionSignedIn(_personFromApi(data.person), data.accessToken);
+      return data.accessToken;
+    } catch (_) {
+      state = const SessionSignedOut();
+      return null;
+    }
   }
 }
 

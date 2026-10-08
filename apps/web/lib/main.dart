@@ -12,11 +12,24 @@ void main() {
   runApp(const ProviderScope(child: BftagWebApp()));
 }
 
-class BftagWebApp extends ConsumerWidget {
+class BftagWebApp extends ConsumerStatefulWidget {
   const BftagWebApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BftagWebApp> createState() => _BftagWebAppState();
+}
+
+class _BftagWebAppState extends ConsumerState<BftagWebApp> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref.read(sessionControllerProvider.notifier).restore(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
       title: 'BF-Tag',
