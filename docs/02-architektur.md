@@ -100,7 +100,7 @@ Details: [05 – Alarmierung und Push](05-alarmierung-push.md)
 | State-Management | Riverpod |
 | Routing | go_router |
 | HTTP-Client | dio + generierter OpenAPI-Client |
-| Backend | Node.js/TypeScript (Fastify) – Alternative Python (FastAPI), siehe ADR 0002 |
+| Backend | Node.js 24 LTS, TypeScript, Fastify, Drizzle ORM, pg-boss (ADR 0002) |
 | Datenbank | PostgreSQL 17 |
 | Push | FCM HTTP v1 (Android), APNs Token-Auth (iOS) |
 | Reverse Proxy | Caddy 2 |

@@ -11,7 +11,7 @@ Store-Formalitäten ab Tag 1 parallel, und der Umfang wird strikt auf das MVP au
 - [ ] Apple: Bundle-ID, Push-Capability, APNs-Key
 - [ ] Domain bzw. Subdomain einrichten, Hetzner-VPS bestellen, Grundhärtung
 - [ ] Testerliste sammeln (Google-Konten bzw. E-Mail-Adressen), Family-Link-Frage klären
-- [ ] Backend-Sprache final entscheiden ([ADR 0002](adr/0002-backend-sprache.md))
+- [x] Backend-Sprache final entscheiden: Node.js/TypeScript ([ADR 0002](adr/0002-backend-sprache.md))
 - [ ] Datenschutz mit dem Träger abklären, Elternformular vorbereiten
 
 ## Woche 1 – Backend und Admin

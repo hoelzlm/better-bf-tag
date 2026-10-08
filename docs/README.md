@@ -20,7 +20,7 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | ADR | Entscheidung | Status |
 |-----|--------------|--------|
 | [0001](adr/0001-monorepo.md) | Monorepo mit Dart Pub Workspaces | Angenommen |
-| [0002](adr/0002-backend-sprache.md) | Backend: Node.js/TypeScript vs. Python | Vorgeschlagen (Node.js) |
+| [0002](adr/0002-backend-sprache.md) | Backend: Node.js/TypeScript (Fastify, Drizzle, pg-boss) | Angenommen |
 | [0003](adr/0003-push.md) | Push über FCM (Android) und APNs direkt (iOS) | Vorgeschlagen |
 | [0004](adr/0004-flutter-web.md) | Admin und Monitor als eine Flutter-Web-App | Vorgeschlagen |
 | [0005](adr/0005-authentifizierung.md) | Login per QR-Code-Kopplung statt E-Mail für Personen | Vorgeschlagen |

@@ -12,7 +12,7 @@ und einer Android-App im Play Store.
 |------|---------|-------|
 | `apps/web` | Flutter Web | Admin-Oberfläche (`/admin`) und Alarmmonitor (`/monitor`) |
 | `apps/mobile` | Flutter (iOS + Android) | Push-Alarm, Quittierung, Fahrzeugstatus |
-| `backend` | Node.js/TypeScript **oder** Python (siehe [ADR 0002](docs/adr/0002-backend-sprache.md)) | REST-API, WebSocket, Push, geplante Alarme |
+| `backend` | Node.js/TypeScript, Fastify (siehe [ADR 0002](docs/adr/0002-backend-sprache.md)) | REST-API, WebSocket, Push, geplante Alarme |
 | `packages/core` | Dart | Gemeinsame Logik für alle Flutter-Apps (State, Repositories, Realtime) |
 | `packages/api_client` | Dart (generiert) | Aus der OpenAPI-Spezifikation generierter API-Client |
 | `infra` | Docker Compose, Caddy | Deployment auf einem Hetzner-VPS |

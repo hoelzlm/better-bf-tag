@@ -2,7 +2,7 @@
 
 **Status:** ready-for-agent
 
-Fachbegriffe: `CONTEXT.md`. Relevante ADRs: 0001 (Monorepo), 0002 (Backend-Sprache, noch offen),
+Fachbegriffe: `CONTEXT.md`. Relevante ADRs: 0001 (Monorepo), 0002 (Backend: Node.js/TypeScript),
 0003 (Push), 0004 (eine Flutter-Web-App), 0005 (Kopplung per QR-Code), 0006 (Quittierung),
 0007 (Personen dauerhaft, Anonymisierung).
 
@@ -154,7 +154,7 @@ Ein eigenes System auf unserem Hetzner-VPS mit drei Oberflächen:
 - REST unter `/api/v1` mit generierter OpenAPI-Spezifikation; WebSocket unter `/ws`. Eine Domain, Caddy liefert die Web-Builds aus und leitet `/api` und `/ws` an das Backend weiter.
 - Clients halten keinen eigenen Wahrheitszustand: Beim (Re-)Connect laden sie den Snapshot und wenden danach Events an; bei einer Lücke in `seq` laden sie den Snapshot neu.
 - Jede Änderung wird zuerst in PostgreSQL geschrieben, danach als Event verschickt.
-- Backend-Sprache ist laut ADR 0002 noch offen (Empfehlung Node.js/TypeScript mit Fastify, Drizzle und pg-boss; Alternative Python/FastAPI). Der Spec gilt für beide Varianten.
+- Backend: Node.js/TypeScript mit Fastify, zod (Validierung und OpenAPI), Drizzle ORM und pg-boss (ADR 0002).
 
 ### Schema (siehe docs/03-datenmodell.md)
 
@@ -254,4 +254,4 @@ Endpunkte siehe docs/04-api.md (Abschnitte MVP). Events im MVP: `incident.create
 - Zeitrahmen: 2 Wochen (docs/10-roadmap.md). Store-Accounts, Firebase-Projekt, APNs-Key und VPS sofort anlegen, weil es dabei Wartezeiten gibt.
 - Datenschutz vor dem Betrieb mit dem Träger klären und die Einwilligung der Eltern einholen (docs/09-datenschutz.md).
 - Family-Link-Konten können Play-Testtracks blockieren; früh testen, Plan B ist eine signierte APK.
-- ADR 0002 (Backend-Sprache) muss vor dem ersten Ticket entschieden werden.
+- ADR 0002 ist entschieden: Node.js/TypeScript.

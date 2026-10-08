@@ -1,7 +1,7 @@
 # ADR 0002 – Backend: Node.js/TypeScript vs. Python
 
-- **Status:** Vorgeschlagen (Empfehlung: Node.js/TypeScript mit Fastify)
-- **Datum:** 2026-10-07
+- **Status:** Angenommen (Node.js/TypeScript mit Fastify)
+- **Datum:** 2026-10-07, angenommen 2026-10-08
 
 ## Kontext
 
@@ -65,7 +65,7 @@ Skala: ++ sehr gut, + gut, o neutral, – schwächer
 | Lesbarkeit für Einsteiger | + | ++ | Python ist meist leichter zu lesen |
 | Nähe zu Dart/Flutter | + | o | TS-Syntax und Typsystem liegen näher an Dart |
 
-## Entscheidung (Vorschlag)
+## Entscheidung
 
 **Node.js/TypeScript mit Fastify, Drizzle und pg-boss.**
 
