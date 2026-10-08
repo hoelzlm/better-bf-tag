@@ -5,6 +5,7 @@
 # clobbering what `scripts/gen-api.sh` or we ourselves have edited.
 .openapi-generator-ignore
 pubspec.yaml
+analysis_options.yaml
 
 # We don't ship generated unit tests or markdown docs for the client;
 # skip generating them so they can't drift from analysis settings.
