@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'monitor/local_storage_token_store.dart';
+import 'monitor/monitor_session.dart';
 import 'screens/lage_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/monitor_placeholder_screen.dart';
+import 'screens/monitor_screen.dart';
 import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
 import 'screens/vehicles_screen.dart';
@@ -105,7 +107,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/monitor',
-        builder: (context, state) => const MonitorPlaceholderScreen(),
+        builder: (context, state) => ProviderScope(
+          overrides: monitorProviderOverrides(
+            tokenStore: LocalStorageTokenStore(),
+          ),
+          child: const MonitorScreen(),
+        ),
       ),
     ],
   );
