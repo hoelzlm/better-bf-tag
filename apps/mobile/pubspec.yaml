@@ -1,0 +1,31 @@
+name: bftag_mobile
+description: "BF-Tag Mobile-App für Jugendfeuerwehrangehörige: QR/Code-Kopplung, Status."
+publish_to: 'none'
+resolution: workspace
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+  mobile_scanner: ^6.0.2
+  flutter_secure_storage: ^9.2.2
+  package_info_plus: ^8.1.2
+  bftag_core:
+    path: ../../packages/core
+  bftag_api_client:
+    path: ../../packages/api_client
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

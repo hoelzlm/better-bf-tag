@@ -4,8 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/session.dart';
 import 'dio_provider.dart';
 
-/// Adds `Authorization: Bearer <token>` to outgoing requests when signed in,
+/// Adds `Authorization: Bearer *** to outgoing requests when signed in,
 /// and transparently refreshes+retries once on a 401 from a non-auth path.
+///
+/// Session-agnostic: reads/refreshes the token via
+/// [authSessionBindingProvider] (defaults to the web admin
+/// `SessionController`; mobile/monitor apps override that provider with a
+/// `PairedSessionController`-backed binding in their own `ProviderScope`).
 ///
 /// Takes a [Ref] rather than the controller directly so it can be
 /// constructed before the controller/provider graph exists, avoiding a
@@ -23,9 +28,9 @@ class AuthInterceptor extends QueuedInterceptor {
     RequestInterceptorHandler handler,
   ) {
     if (!_isAuthPath(options.path)) {
-      final session = _ref.read(sessionControllerProvider);
-      if (session is SessionSignedIn) {
-        options.headers['Authorization'] = 'Bearer ${session.accessToken}';
+      final token = _ref.read(authSessionBindingProvider).accessToken;
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
       }
     }
     handler.next(options);
@@ -49,9 +54,8 @@ class AuthInterceptor extends QueuedInterceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    final newToken = await _ref
-        .read(sessionControllerProvider.notifier)
-        .refreshAccessToken();
+    final newToken =
+        await _ref.read(authSessionBindingProvider).refreshAccessToken();
     if (newToken == null) {
       handler.next(err);
       return;
