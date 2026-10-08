@@ -122,14 +122,17 @@ void main() {
     expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
   });
 
-  testWidgets('/monitor shows the monitor placeholder', (tester) async {
+  testWidgets('/monitor shows the activation overlay', (tester) async {
     await _pumpAppAt(tester, session: const SessionSignedOut());
 
     final context = tester.element(find.byKey(const Key('login-submit')));
     context.go('/monitor');
     await tester.pumpAndSettle();
 
-    expect(find.text('Monitor – noch nicht gekoppelt'), findsOneWidget);
+    expect(
+      find.byKey(const Key('monitor-activation-overlay')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
