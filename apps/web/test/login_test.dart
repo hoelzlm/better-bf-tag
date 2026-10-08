@@ -43,6 +43,10 @@ Future<void> _pumpApp(WidgetTester tester) async {
     ProviderScope(
       overrides: [
         sessionControllerProvider.overrideWith(_FakeSessionController.new),
+        vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+        realtimeConnectionProvider.overrideWith(
+          (ref) => Stream.value(ConnectionStatus.live),
+        ),
       ],
       child: const BftagWebApp(),
     ),
