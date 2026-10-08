@@ -6,18 +6,18 @@
 
 **Category:** enhancement
 
-**Status:** in-progress
+**Status:** done
 
-- [ ] Backend startet mit PostgreSQL per Docker Compose lokal; Migrationen laufen beim Start
-- [ ] Health-Endpunkt antwortet, auch mit Prüfung der Datenbank
-- [ ] Der erste Administrator wird aus der Server-Konfiguration angelegt, falls noch keiner existiert
-- [ ] Web-Login mit Benutzername und Passwort (Argon2id): Access-Token 15 min, Refresh-Token als HttpOnly-Cookie, Refresh und Logout funktionieren; Rate-Limiting auf den Auth-Endpunkten
-- [ ] Die OpenAPI-Spezifikation wird aus dem Backend erzeugt, der Dart-API-Client daraus generiert
-- [ ] Flutter-Web-App mit Routen für Admin und Monitor (go_router); Login-Screen und leere Lage
-- [ ] Test-Infrastruktur: Black-Box-Tests gegen das gestartete Backend mit echter PostgreSQL (Testcontainer); Push-Fake und steuerbare Uhr lassen sich beim Start einschleusen
-- [ ] Tests: Login erfolgreich/fehlgeschlagen, Refresh, Logout, abgelaufenes Access-Token (über die steuerbare Uhr)
-- [ ] CI führt Backend-Tests und Flutter-Analyse/Build aus (pfadbasiert gefiltert)
-- [ ] Root-Befehle (just/make) für dev, test, gen-api
+- [x] Backend startet mit PostgreSQL per Docker Compose lokal; Migrationen laufen beim Start
+- [x] Health-Endpunkt antwortet, auch mit Prüfung der Datenbank
+- [x] Der erste Administrator wird aus der Server-Konfiguration angelegt, falls noch keiner existiert
+- [x] Web-Login mit Benutzername und Passwort (Argon2id): Access-Token 15 min, Refresh-Token als HttpOnly-Cookie, Refresh und Logout funktionieren; Rate-Limiting auf den Auth-Endpunkten
+- [x] Die OpenAPI-Spezifikation wird aus dem Backend erzeugt, der Dart-API-Client daraus generiert
+- [x] Flutter-Web-App mit Routen für Admin und Monitor (go_router); Login-Screen und leere Lage
+- [x] Test-Infrastruktur: Black-Box-Tests gegen das gestartete Backend mit echter PostgreSQL (Testcontainer); Push-Fake und steuerbare Uhr lassen sich beim Start einschleusen
+- [x] Tests: Login erfolgreich/fehlgeschlagen, Refresh, Logout, abgelaufenes Access-Token (über die steuerbare Uhr)
+- [x] CI führt Backend-Tests und Flutter-Analyse/Build aus (pfadbasiert gefiltert)
+- [x] Root-Befehle (just/make) für dev, test, gen-api
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`
 
@@ -51,15 +51,15 @@ Das Repo enthält nur Dokumentation (`docs/`, `CONTEXT.md`, ADRs) und leere Ordn
 - Begriffe aus `CONTEXT.md` verwenden, z. B. Person, Berechtigung, Personentyp, nicht „User“ oder „Role“.
 
 **Acceptance criteria:**
-- [ ] `docker compose up` startet Backend und PostgreSQL lokal, der Health-Endpunkt antwortet mit 200
-- [ ] Beim ersten Start existiert der Bootstrap-Administrator, beim zweiten Start wird kein weiterer angelegt
-- [ ] Tests: Login mit richtigem bzw. falschem Passwort, Refresh rotiert das Token, ein altes Refresh-Token wird abgelehnt, Logout widerruft
-- [ ] Test: Ein Access-Token ist nach 15 Minuten abgelaufen; die steuerbare Uhr ersetzt dabei das Warten
-- [ ] Test: Rate-Limit auf Login greift
-- [ ] Test: Das Constraint zwischen Administrator und Betreuer wird erzwungen
-- [ ] Die OpenAPI-Datei ist erzeugt, und `gen-api` erzeugt einen kompilierbaren Dart-Client
-- [ ] Die Web-App meldet sich gegen das lokale Backend an und zeigt die leere Lage; ein ungültiger Login zeigt eine Fehlermeldung
-- [ ] CI ist grün für Backend und Flutter
+- [x] `docker compose up` startet Backend und PostgreSQL lokal, der Health-Endpunkt antwortet mit 200
+- [x] Beim ersten Start existiert der Bootstrap-Administrator, beim zweiten Start wird kein weiterer angelegt
+- [x] Tests: Login mit richtigem bzw. falschem Passwort, Refresh rotiert das Token, ein altes Refresh-Token wird abgelehnt, Logout widerruft
+- [x] Test: Ein Access-Token ist nach 15 Minuten abgelaufen; die steuerbare Uhr ersetzt dabei das Warten
+- [x] Test: Rate-Limit auf Login greift
+- [x] Test: Das Constraint zwischen Administrator und Betreuer wird erzwungen
+- [x] Die OpenAPI-Datei ist erzeugt, und `gen-api` erzeugt einen kompilierbaren Dart-Client
+- [x] Die Web-App meldet sich gegen das lokale Backend an und zeigt die leere Lage; ein ungültiger Login zeigt eine Fehlermeldung
+- [x] CI ist grün für Backend und Flutter
 
 **Out of scope:**
 - Personenverwaltung im UI, Kopplung, Geräte (Ticket 04)
