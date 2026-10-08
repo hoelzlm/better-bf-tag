@@ -19,6 +19,10 @@ dependencies:
     path: ../../packages/core
   bftag_api_client:
     path: ../../packages/api_client
+  dio: ^5.7.0
+  qr_flutter: ^4.1.0
+  pdf: ^3.11.1
+  printing: ^5.13.4
 
 dev_dependencies:
   flutter_test:
