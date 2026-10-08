@@ -55,3 +55,7 @@ infra-smoke:
 # Automated local round-trip test for the nightly backup/restore scripts.
 infra-backup-test:
     ./infra/test/backup-restore.sh
+
+# Deploy a tag to the configured server (BFTAG_SSH, BFTAG_DOMAIN must be set).
+deploy tag="":
+    ./infra/deploy.sh {{tag}}
