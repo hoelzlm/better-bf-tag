@@ -8,10 +8,14 @@ part of 'serializers.dart';
 
 Serializers _$serializers =
     (Serializers().toBuilder()
+          ..add(CreatePairingCode201Response.serializer)
+          ..add(CreatePairingCodes201Response.serializer)
+          ..add(CreatePairingCodesRequest.serializer)
           ..add(CreatePersonRequest.serializer)
           ..add(CreatePersonRequestPermissionEnum.serializer)
           ..add(CreatePersonRequestPersonTypeEnum.serializer)
           ..add(CreateVehicleRequest.serializer)
+          ..add(DeviceRefreshRequest.serializer)
           ..add(GetHealth200Response.serializer)
           ..add(GetHealth200ResponseDatabaseEnum.serializer)
           ..add(GetHealth200ResponseStatusEnum.serializer)
@@ -22,6 +26,8 @@ Serializers _$serializers =
           ..add(GetSnapshot200Response.serializer)
           ..add(GetVehicleStatusHistory200ResponseInner.serializer)
           ..add(GetVehicleStatusHistory200ResponseInnerSource_Enum.serializer)
+          ..add(ListPersonDevices200ResponseInner.serializer)
+          ..add(ListPersonDevices200ResponseInnerPlatformEnum.serializer)
           ..add(ListPersons200ResponseInner.serializer)
           ..add(ListPersons200ResponseInnerPermissionEnum.serializer)
           ..add(ListPersons200ResponseInnerPersonTypeEnum.serializer)
@@ -33,6 +39,9 @@ Serializers _$serializers =
           ..add(Login401Response.serializer)
           ..add(Login401ResponseError.serializer)
           ..add(LoginRequest.serializer)
+          ..add(Pair200Response.serializer)
+          ..add(PairRequest.serializer)
+          ..add(PairRequestPlatformEnum.serializer)
           ..add(ReorderVehiclesRequest.serializer)
           ..add(SetVehicleStatusRequest.serializer)
           ..add(SetWebAccessRequest.serializer)
@@ -42,9 +51,19 @@ Serializers _$serializers =
           ..add(UpdateVehicleRequest.serializer)
           ..addBuilderFactory(
             const FullType(BuiltList, const [
+              const FullType(CreatePairingCode201Response),
+            ]),
+            () => ListBuilder<CreatePairingCode201Response>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
               const FullType(ListVehicles200ResponseInner),
             ]),
             () => ListBuilder<ListVehicles200ResponseInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [const FullType(String)]),

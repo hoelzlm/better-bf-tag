@@ -10,6 +10,7 @@ import 'package:bftag_api_client/src/auth/basic_auth.dart';
 import 'package:bftag_api_client/src/auth/bearer_auth.dart';
 import 'package:bftag_api_client/src/auth/oauth.dart';
 import 'package:bftag_api_client/src/api/auth_api.dart';
+import 'package:bftag_api_client/src/api/devices_api.dart';
 import 'package:bftag_api_client/src/api/health_api.dart';
 import 'package:bftag_api_client/src/api/persons_api.dart';
 import 'package:bftag_api_client/src/api/snapshot_api.dart';
@@ -73,6 +74,12 @@ class BftagApiClient {
   /// by doing that all interceptors will not be executed
   AuthApi getAuthApi() {
     return AuthApi(dio, serializers);
+  }
+
+  /// Get DevicesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  DevicesApi getDevicesApi() {
+    return DevicesApi(dio, serializers);
   }
 
   /// Get HealthApi instance, base route and serializer can be overridden by a given but be careful,

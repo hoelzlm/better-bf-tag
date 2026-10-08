@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { eq } from 'drizzle-orm';
-import { person } from '../db/schema.js';
+import { and, eq, isNull } from 'drizzle-orm';
+import { person, device } from '../db/schema.js';
 import { ApiError } from '../errors.js';
 import { verifyAccessToken } from './tokens.js';
 import type { Permission } from './types.js';
@@ -46,8 +46,16 @@ export async function requireAuth(request: FastifyRequest, _reply: FastifyReply)
     throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
   }
 
-  // TODO(T04-2): when claims.deviceId is present, also require the matching
-  // `device` row to exist with revoked_at null (device table added in T04-2).
+  if (claims.deviceId !== undefined) {
+    const [deviceRow] = await request.server.db
+      .select({ id: device.id })
+      .from(device)
+      .where(and(eq(device.id, claims.deviceId), isNull(device.revokedAt)))
+      .limit(1);
+    if (!deviceRow) {
+      throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
+    }
+  }
 
   request.auth = {
     personId: found.id,

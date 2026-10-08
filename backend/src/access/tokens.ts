@@ -13,6 +13,8 @@ export interface TokenDeps {
 export interface SignablePerson {
   id: string;
   permission: Permission;
+  /** Present for device (mobile) tokens; added to the token as claim `device_id`. */
+  deviceId?: string;
 }
 
 export interface AccessTokenClaims {
@@ -31,7 +33,10 @@ export async function signAccessToken(deps: TokenDeps, person: SignablePerson): 
   const nowSeconds = Math.floor(deps.clock.now().getTime() / 1000);
   const exp = nowSeconds + deps.config.ACCESS_TOKEN_TTL_SECONDS;
 
-  return new SignJWT({ permission: person.permission })
+  return new SignJWT({
+    permission: person.permission,
+    ...(person.deviceId !== undefined ? { device_id: person.deviceId } : {}),
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(person.id)
     .setIssuedAt(nowSeconds)
