@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: bftag
+      POSTGRES_USER: bftag
+      POSTGRES_PASSWORD: bftag
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bftag -d bftag"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://bftag:bftag@db:5432/bftag
+      # DEV ONLY - not for production use
+      JWT_SECRET: dev-secret-key-at-least-32-characters-long-change-in-production
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD: admin12345
+      CORS_ORIGINS: http://localhost:8081
+      COOKIE_SECURE: "false"
+
+volumes:
+  db_data:
