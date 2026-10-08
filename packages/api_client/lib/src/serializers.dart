@@ -28,6 +28,9 @@ import 'package:bftag_api_client/src/model/get_health200_response.dart';
 import 'package:bftag_api_client/src/model/get_health503_response.dart';
 import 'package:bftag_api_client/src/model/get_me200_response.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner_image.dart';
 import 'package:bftag_api_client/src/model/get_vehicle_status_history200_response_inner.dart';
@@ -50,6 +53,8 @@ import 'package:bftag_api_client/src/model/pair_request.dart';
 import 'package:bftag_api_client/src/model/reorder_slides_request.dart';
 import 'package:bftag_api_client/src/model/reorder_vehicles_request.dart';
 import 'package:bftag_api_client/src/model/set_participants_request.dart';
+import 'package:bftag_api_client/src/model/set_shift_crew_request.dart';
+import 'package:bftag_api_client/src/model/set_shift_crew_request_assignments_inner.dart';
 import 'package:bftag_api_client/src/model/set_vehicle_status_request.dart';
 import 'package:bftag_api_client/src/model/set_web_access_request.dart';
 import 'package:bftag_api_client/src/model/update_bf_day_request.dart';
@@ -74,6 +79,9 @@ part 'serializers.g.dart';
   GetHealth503Response,
   GetMe200Response,
   GetSnapshot200Response,
+  GetSnapshot200ResponseBfDay,
+  GetSnapshot200ResponseShiftsInner,
+  GetSnapshot200ResponseShiftsInnerCrewInner,
   GetSnapshot200ResponseSlidesInner,
   GetSnapshot200ResponseSlidesInnerImage,
   GetVehicleStatusHistory200ResponseInner,
@@ -96,6 +104,8 @@ part 'serializers.g.dart';
   ReorderSlidesRequest,
   ReorderVehiclesRequest,
   SetParticipantsRequest,
+  SetShiftCrewRequest,
+  SetShiftCrewRequestAssignmentsInner,
   SetVehicleStatusRequest,
   SetWebAccessRequest,
   UpdateBfDayRequest,
@@ -127,6 +137,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListVehicles200ResponseInner)]),
         () => ListBuilder<ListVehicles200ResponseInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GetSnapshot200ResponseShiftsInner)]),
+        () => ListBuilder<GetSnapshot200ResponseShiftsInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GetVehicleStatusHistory200ResponseInner)]),
