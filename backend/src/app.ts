@@ -23,9 +23,10 @@ import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
 import { vehicleRoutes } from './routes/vehicles.js';
 import { personRoutes } from './routes/persons.js';
+import { deviceRoutes } from './routes/devices.js';
 import { snapshotRoutes } from './routes/snapshot.js';
 import { Realtime } from './realtime/realtime.js';
-import { wsRoutes } from './realtime/ws.js';
+import { createWsPlugin } from './realtime/ws.js';
 import './access/authenticate.js';
 
 export interface AppDeps {
@@ -113,9 +114,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   // WebSocket transport (ADR 0009): `/ws`, not under `/api/v1`, hidden from
-  // the OpenAPI spec (see wsRoutes).
+  // the OpenAPI spec (see createWsPlugin). The hub is decorated on the
+  // top-level app *before* registering the plugin so every route
+  // (including those registered later under /api/v1) can reach
+  // `fastify.wsHub` — see the comment on `createWsPlugin` for why.
+  const { plugin: wsPlugin, hub: wsHub } = createWsPlugin();
+  app.decorate('wsHub', wsHub);
   await app.register(fastifyWebsocket);
-  await app.register(wsRoutes);
+  await app.register(wsPlugin);
 
   // Register routes under /api/v1
   await app.register(async function routes(fastify) {
@@ -124,6 +130,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await fastify.register(meRoutes, { prefix: '/api/v1' });
     await fastify.register(vehicleRoutes, { prefix: '/api/v1' });
     await fastify.register(personRoutes, { prefix: '/api/v1' });
+    await fastify.register(deviceRoutes, { prefix: '/api/v1' });
     await fastify.register(snapshotRoutes, { prefix: '/api/v1' });
 
     // The generated spec is served for the Dart client codegen; hidden from

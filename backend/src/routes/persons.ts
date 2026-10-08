@@ -1,15 +1,19 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { and, asc, eq, ne } from 'drizzle-orm';
-import { person, fireDepartment } from '../db/schema.js';
+import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { person, fireDepartment, device } from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import { errorResponseSchema } from '../access/schemas.js';
 import { hashPassword } from '../access/passwords.js';
 import { deactivatePersonSessions } from '../access/sessions.js';
+import { createPairingCodeForTarget, formatPairingCode } from '../access/pairing.js';
 import { personJsonSchema, toPersonJson, type PersonRow } from './person-schemas.js';
+import { deviceJsonSchema, toDeviceJson } from './device-schemas.js';
 import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
 import type { PersonType, Permission } from '../access/types.js';
+import type { Clock } from '../clock.js';
+import type { Config } from '../config.js';
 
 const personTypeSchema = z.enum(['youth', 'supervisor']);
 const permissionSchema = z.enum(['crew', 'preparation', 'dispatch', 'admin']);
@@ -39,8 +43,29 @@ const webAccessBodySchema = z.object({
 
 const personListResponseSchema = z.array(personJsonSchema);
 
+const pairingCodeResponseSchema = z.object({
+  person_id: z.string(),
+  display_name: z.string(),
+  code: z.string(),
+  expires_at: z.string(),
+});
+
+const createPairingCodesBodySchema = z.object({
+  person_ids: z.array(z.string().uuid()).optional(),
+});
+
+const pairingCodesResponseSchema = z.object({
+  items: z.array(pairingCodeResponseSchema),
+});
+
+const deviceListResponseSchema = z.array(deviceJsonSchema);
+
 function personNotFound(): ApiError {
   return new ApiError(404, 'not_found', 'Person nicht gefunden.');
+}
+
+function personInactive(): ApiError {
+  return new ApiError(409, 'person_inactive', 'Person ist deaktiviert.');
 }
 
 /** 400 admin_requires_supervisor: Administrator nur bei Personentyp Betreuer (ADR 0010). */
@@ -57,6 +82,24 @@ function assertAdminRequiresSupervisor(personType: PersonType, permission: Permi
 async function loadPerson(tx: Tx, id: string): Promise<PersonRow | undefined> {
   const [row] = await tx.select().from(person).where(eq(person.id, id)).limit(1);
   return row;
+}
+
+/** Creates+stores a pairing code for a person and shapes the response (ADR 0010). 409 person_inactive for an inactive person. */
+async function createPairingCodeResponse(
+  tx: Tx,
+  deps: { clock: Clock; config: Config },
+  target: PersonRow
+): Promise<{ person_id: string; display_name: string; code: string; expires_at: string }> {
+  if (!target.active) {
+    throw personInactive();
+  }
+  const { code, expiresAt } = await createPairingCodeForTarget(tx, deps, 'person', target.id);
+  return {
+    person_id: target.id,
+    display_name: target.displayName,
+    code: formatPairingCode(code),
+    expires_at: expiresAt.toISOString(),
+  };
 }
 
 /** 409 last_admin: the last active admin may not be demoted or deactivated. */
@@ -185,7 +228,8 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
       },
     },
     async request => {
-      return fastify.db.transaction(async tx => {
+      let revokedPersonId: string | undefined;
+      const result = await fastify.db.transaction(async tx => {
         const existing = await loadPerson(tx, request.params.id);
         if (!existing) {
           throw personNotFound();
@@ -232,12 +276,28 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
           throw personNotFound();
         }
 
-        if (becomesCrew || nextActive === false) {
-          await deactivatePersonSessions(tx, row.id, fastify.clock.now());
+        const becomesInactive = nextActive === false;
+        if (becomesCrew || becomesInactive) {
+          // Deactivation also locks the person's devices (ADR 0010); a mere
+          // permission downgrade to crew keeps the mobile app usable.
+          await deactivatePersonSessions(tx, row.id, fastify.clock.now(), {
+            revokeDevices: becomesInactive,
+          });
+        }
+        if (becomesInactive) {
+          revokedPersonId = row.id;
         }
 
         return toPersonJson(row);
       });
+
+      // session.revoked (ADR 0010) is sent after the transaction has
+      // committed, outside the DB transaction.
+      if (revokedPersonId !== undefined) {
+        fastify.wsHub.revokePerson(revokedPersonId);
+      }
+
+      return result;
     }
   );
 
@@ -331,4 +391,120 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   );
 
   // No DELETE route for persons: deactivation only (ADR 0010).
+
+  fastify.post(
+    '/persons/:id/pairing-code',
+    {
+      preHandler: [requireAuth, requirePermission('admin')],
+      schema: {
+        operationId: 'createPairingCode',
+        tags: ['persons'],
+        params: z.object({ id: z.string().uuid() }),
+        response: {
+          201: pairingCodeResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await fastify.db.transaction(async tx => {
+        const existing = await loadPerson(tx, request.params.id);
+        if (!existing) {
+          throw personNotFound();
+        }
+        return createPairingCodeResponse(
+          tx,
+          { clock: fastify.clock, config: fastify.config },
+          existing
+        );
+      });
+      return reply.status(201).send(result);
+    }
+  );
+
+  fastify.post(
+    '/persons/pairing-codes',
+    {
+      preHandler: [requireAuth, requirePermission('admin')],
+      schema: {
+        operationId: 'createPairingCodes',
+        tags: ['persons'],
+        body: createPairingCodesBodySchema,
+        response: {
+          201: pairingCodesResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const items = await fastify.db.transaction(async tx => {
+        let targets: PersonRow[];
+        const ids = request.body.person_ids;
+        if (ids !== undefined) {
+          const rows = await tx.select().from(person).where(inArray(person.id, ids));
+          const byId = new Map(rows.map(row => [row.id, row]));
+          targets = [];
+          for (const id of ids) {
+            const row = byId.get(id);
+            if (!row) {
+              throw personNotFound();
+            }
+            targets.push(row);
+          }
+        } else {
+          targets = await tx.select().from(person).where(eq(person.active, true));
+        }
+        targets.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+        const results = [];
+        for (const target of targets) {
+          results.push(
+            await createPairingCodeResponse(
+              tx,
+              { clock: fastify.clock, config: fastify.config },
+              target
+            )
+          );
+        }
+        return results;
+      });
+      return reply.status(201).send({ items });
+    }
+  );
+
+  fastify.get(
+    '/persons/:id/devices',
+    {
+      preHandler: [requireAuth, requirePermission('admin')],
+      schema: {
+        operationId: 'listPersonDevices',
+        tags: ['persons'],
+        params: z.object({ id: z.string().uuid() }),
+        response: {
+          200: deviceListResponseSchema,
+          404: errorResponseSchema,
+        },
+      },
+    },
+    async request => {
+      const [existing] = await fastify.db
+        .select({ id: person.id })
+        .from(person)
+        .where(eq(person.id, request.params.id))
+        .limit(1);
+      if (!existing) {
+        throw personNotFound();
+      }
+
+      const rows = await fastify.db
+        .select()
+        .from(device)
+        .where(eq(device.personId, request.params.id))
+        .orderBy(desc(device.createdAt));
+
+      return rows.map(toDeviceJson);
+    }
+  );
 };

@@ -7,6 +7,7 @@ import {
   pgEnum,
   check,
   uniqueIndex,
+  index,
   smallint,
   integer,
   bigint,
@@ -15,6 +16,8 @@ import { sql } from 'drizzle-orm';
 
 export const personTypeEnum = pgEnum('person_type', ['youth', 'supervisor']);
 export const permissionEnum = pgEnum('permission', ['crew', 'preparation', 'dispatch', 'admin']);
+export const devicePlatformEnum = pgEnum('device_platform', ['android', 'ios']);
+export const pairingTargetTypeEnum = pgEnum('pairing_target_type', ['person', 'monitor']);
 export const vehicleStatusEventKindEnum = pgEnum('vehicle_status_event_kind', [
   'status',
   'talk_request',
@@ -71,6 +74,34 @@ export const webSession = pgTable('web_session', {
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 });
+
+export const device = pgTable('device', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  personId: uuid('person_id')
+    .notNull()
+    .references(() => person.id, { onDelete: 'cascade' }),
+  platform: devicePlatformEnum('platform').notNull(),
+  deviceName: text('device_name'),
+  appVersion: text('app_version').notNull(),
+  pushToken: text('push_token'),
+  refreshTokenHash: text('refresh_token_hash').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+});
+
+export const pairingCode = pgTable(
+  'pairing_code',
+  {
+    codeHash: text('code_hash').primaryKey(),
+    targetType: pairingTargetTypeEnum('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+  },
+  table => [index('pairing_code_target_idx').on(table.targetType, table.targetId)]
+);
 
 export const vehicle = pgTable(
   'vehicle',

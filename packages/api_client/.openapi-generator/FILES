@@ -3,6 +3,7 @@ README.md
 lib/bftag_api_client.dart
 lib/src/api.dart
 lib/src/api/auth_api.dart
+lib/src/api/devices_api.dart
 lib/src/api/health_api.dart
 lib/src/api/persons_api.dart
 lib/src/api/snapshot_api.dart
@@ -14,14 +15,19 @@ lib/src/auth/basic_auth.dart
 lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/date_serializer.dart
+lib/src/model/create_pairing_code201_response.dart
+lib/src/model/create_pairing_codes201_response.dart
+lib/src/model/create_pairing_codes_request.dart
 lib/src/model/create_person_request.dart
 lib/src/model/create_vehicle_request.dart
 lib/src/model/date.dart
+lib/src/model/device_refresh_request.dart
 lib/src/model/get_health200_response.dart
 lib/src/model/get_health503_response.dart
 lib/src/model/get_me200_response.dart
 lib/src/model/get_snapshot200_response.dart
 lib/src/model/get_vehicle_status_history200_response_inner.dart
+lib/src/model/list_person_devices200_response_inner.dart
 lib/src/model/list_persons200_response_inner.dart
 lib/src/model/list_vehicles200_response_inner.dart
 lib/src/model/login200_response.dart
@@ -29,6 +35,8 @@ lib/src/model/login200_response_person.dart
 lib/src/model/login401_response.dart
 lib/src/model/login401_response_error.dart
 lib/src/model/login_request.dart
+lib/src/model/pair200_response.dart
+lib/src/model/pair_request.dart
 lib/src/model/reorder_vehicles_request.dart
 lib/src/model/set_vehicle_status_request.dart
 lib/src/model/set_web_access_request.dart

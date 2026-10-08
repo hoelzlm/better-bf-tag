@@ -1,11 +1,14 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { and, eq, gt, isNull, ne } from 'drizzle-orm';
-import { person, webSession } from '../db/schema.js';
+import { person, webSession, device, pairingCode } from '../db/schema.js';
 import { verifyPassword } from '../access/passwords.js';
 import { hashRefreshToken, newRefreshToken, signAccessToken } from '../access/tokens.js';
 import { personSummarySchema, errorResponseSchema } from '../access/schemas.js';
+import { hashPairingCode } from '../access/pairing.js';
+import { requireAuth } from '../access/authenticate.js';
 import { ApiError } from '../errors.js';
+import type { PersonType, Permission } from '../access/types.js';
 
 const loginBodySchema = z.object({
   username: z.string().min(1),
@@ -18,6 +21,25 @@ const sessionResponseSchema = z.object({
   person: personSummarySchema,
 });
 
+const pairBodySchema = z.object({
+  code: z.string().min(1),
+  platform: z.enum(['android', 'ios']),
+  app_version: z.string().min(1),
+  device_name: z.string().optional(),
+});
+
+const deviceRefreshBodySchema = z.object({
+  refresh_token: z.string().min(1),
+});
+
+const deviceSessionResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+  expires_in: z.number(),
+  device_id: z.string(),
+  person: personSummarySchema,
+});
+
 const REFRESH_COOKIE_NAME = 'bftag_refresh';
 const REFRESH_COOKIE_PATH = '/api/v1/auth';
 
@@ -27,6 +49,30 @@ function invalidCredentials(): ApiError {
 
 function invalidRefreshToken(): ApiError {
   return new ApiError(401, 'invalid_refresh_token', 'Ungültiges oder abgelaufenes Refresh-Token.');
+}
+
+function invalidPairingCode(): ApiError {
+  return new ApiError(
+    401,
+    'invalid_pairing_code',
+    'Ungültiger, abgelaufener oder bereits benutzter Kopplungscode.'
+  );
+}
+
+interface PersonSummarySource {
+  id: string;
+  displayName: string;
+  personType: PersonType;
+  permission: Permission;
+}
+
+function toPersonSummary(row: PersonSummarySource) {
+  return {
+    id: row.id,
+    display_name: row.displayName,
+    person_type: row.personType,
+    permission: row.permission,
+  };
 }
 
 export const authRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -233,6 +279,192 @@ export const authRoutes: FastifyPluginAsyncZod = async fastify => {
       }
 
       clearRefreshCookie(reply);
+      return reply.status(204).send();
+    }
+  );
+
+  fastify.post(
+    '/auth/pair',
+    {
+      config: rateLimitConfig(),
+      schema: {
+        operationId: 'pair',
+        tags: ['auth'],
+        body: pairBodySchema,
+        response: {
+          200: deviceSessionResponseSchema,
+          401: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const codeHash = hashPairingCode(request.body.code);
+      const now = fastify.clock.now();
+
+      const result = await fastify.db.transaction(async tx => {
+        const [row] = await tx
+          .select()
+          .from(pairingCode)
+          .where(eq(pairingCode.codeHash, codeHash))
+          .limit(1);
+        if (!row) {
+          throw invalidPairingCode();
+        }
+        // Monitor pairing lands in Ticket 03; for now any monitor code is
+        // rejected the same way an invalid code would be.
+        if (row.targetType !== 'person') {
+          throw invalidPairingCode();
+        }
+        if (row.usedAt !== null || row.expiresAt <= now) {
+          throw invalidPairingCode();
+        }
+
+        // Conditional update (`used_at IS NULL`): under READ COMMITTED,
+        // a concurrent redemption that already committed its own update
+        // makes this UPDATE affect 0 rows once it re-evaluates the WHERE
+        // clause after the row lock is released, so exactly one caller
+        // wins (ADR 0010).
+        const updated = await tx
+          .update(pairingCode)
+          .set({ usedAt: now })
+          .where(and(eq(pairingCode.codeHash, codeHash), isNull(pairingCode.usedAt)))
+          .returning({ codeHash: pairingCode.codeHash });
+        if (updated.length === 0) {
+          throw invalidPairingCode();
+        }
+
+        const [personRow] = await tx
+          .select()
+          .from(person)
+          .where(eq(person.id, row.targetId))
+          .limit(1);
+        if (!personRow || !personRow.active) {
+          throw invalidPairingCode();
+        }
+
+        const { token: refreshToken, hash: refreshTokenHash } = newRefreshToken();
+        const [deviceRow] = await tx
+          .insert(device)
+          .values({
+            personId: personRow.id,
+            platform: request.body.platform,
+            deviceName: request.body.device_name ?? null,
+            appVersion: request.body.app_version,
+            pushToken: null,
+            refreshTokenHash,
+            createdAt: now,
+            lastSeenAt: now,
+            revokedAt: null,
+          })
+          .returning();
+        if (!deviceRow) {
+          throw new Error('pair: insert device returned no row');
+        }
+
+        const accessToken = await signAccessToken(
+          { config: fastify.config, clock: fastify.clock },
+          { id: personRow.id, permission: personRow.permission, deviceId: deviceRow.id }
+        );
+
+        return {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_in: fastify.config.ACCESS_TOKEN_TTL_SECONDS,
+          device_id: deviceRow.id,
+          person: toPersonSummary(personRow),
+        };
+      });
+
+      return reply.status(200).send(result);
+    }
+  );
+
+  fastify.post(
+    '/auth/device/refresh',
+    {
+      config: rateLimitConfig(),
+      schema: {
+        operationId: 'deviceRefresh',
+        tags: ['auth'],
+        body: deviceRefreshBodySchema,
+        response: {
+          200: deviceSessionResponseSchema,
+          401: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const oldHash = hashRefreshToken(request.body.refresh_token);
+      const now = fastify.clock.now();
+
+      const result = await fastify.db.transaction(async tx => {
+        const [row] = await tx
+          .select({ device, person })
+          .from(device)
+          .innerJoin(person, eq(device.personId, person.id))
+          .where(
+            and(
+              eq(device.refreshTokenHash, oldHash),
+              isNull(device.revokedAt),
+              eq(person.active, true)
+            )
+          )
+          .limit(1);
+        if (!row) {
+          throw invalidRefreshToken();
+        }
+
+        const { token: newToken, hash: newHash } = newRefreshToken();
+        const updated = await tx
+          .update(device)
+          .set({ refreshTokenHash: newHash, lastSeenAt: now })
+          .where(eq(device.refreshTokenHash, oldHash))
+          .returning({ id: device.id });
+        if (updated.length === 0) {
+          throw invalidRefreshToken();
+        }
+
+        const accessToken = await signAccessToken(
+          { config: fastify.config, clock: fastify.clock },
+          { id: row.person.id, permission: row.person.permission, deviceId: row.device.id }
+        );
+
+        return {
+          access_token: accessToken,
+          refresh_token: newToken,
+          expires_in: fastify.config.ACCESS_TOKEN_TTL_SECONDS,
+          device_id: row.device.id,
+          person: toPersonSummary(row.person),
+        };
+      });
+
+      return reply.status(200).send(result);
+    }
+  );
+
+  fastify.post(
+    '/auth/device/logout',
+    {
+      config: rateLimitConfig(),
+      preHandler: [requireAuth],
+      schema: {
+        operationId: 'deviceLogout',
+        tags: ['auth'],
+      },
+    },
+    async (request, reply) => {
+      const auth = request.auth;
+      if (!auth?.deviceId) {
+        throw new ApiError(400, 'not_a_device_session', 'Kein Geräte-Zugriffstoken.');
+      }
+
+      await fastify.db
+        .update(device)
+        .set({ revokedAt: fastify.clock.now() })
+        .where(and(eq(device.id, auth.deviceId), isNull(device.revokedAt)));
+
+      fastify.wsHub.revokeDevice(auth.deviceId);
+
       return reply.status(204).send();
     }
   );

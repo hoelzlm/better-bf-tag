@@ -19,9 +19,11 @@ Das JWT enthält `sub` (Person- oder Monitor-ID), `permission` und `device_id`.
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
 | POST | `/auth/login` | Web-Login |
-| POST | `/auth/pair` | Code einlösen → Tokens |
-| POST | `/auth/refresh` | Token erneuern |
-| POST | `/auth/logout` | Refresh-Token widerrufen |
+| POST | `/auth/pair` | Code einlösen → Tokens (Gerät) |
+| POST | `/auth/refresh` | Web-Token erneuern (Cookie) |
+| POST | `/auth/logout` | Web-Refresh-Token widerrufen |
+| POST | `/auth/device/refresh` | Geräte-Refresh-Token erneuern (rotierend) |
+| POST | `/auth/device/logout` | eigenes Gerät abmelden/widerrufen |
 
 ## Berechtigungen
 
@@ -52,6 +54,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | GET/POST/PATCH | `/persons[/{id}]` |
 | PUT/DELETE | `/persons/{id}/web-access` |
 | POST | `/persons/{id}/pairing-code` |
+| POST | `/persons/pairing-codes` (Body `{ person_ids? }`, ohne Angabe: alle aktiven Personen) |
 | GET | `/persons/{id}/devices` |
 | DELETE | `/devices/{id}` |
 | GET/POST/PATCH/DELETE | `/vehicles[/{id}]` |
@@ -143,7 +146,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | `vehicle.status_changed` | `{ vehicle_id, status, at }` | alle |
 | `shift.crew_changed` | Schicht + Besatzungen | alle |
 | `slides.changed` | – | Monitore |
-| `session.revoked` | – | betroffenes Gerät |
+| `session.revoked` | – | betroffenes Gerät (kein `seq`, Verbindung wird danach mit Close-Code **4403** geschlossen) |
 | später: `announcement.created`, `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 
 ## Fehlerformat
