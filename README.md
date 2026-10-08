@@ -36,6 +36,20 @@ better-bf-tag/
 
 Einstieg: [docs/README.md](docs/README.md) · Glossar: [CONTEXT.md](CONTEXT.md)
 
+## Entwicklung
+
+Voraussetzungen: Docker, Node.js ≥ 24, Dart 3.9+/Flutter, [`just`](https://github.com/casey/just).
+
+| Befehl | Zweck |
+|---|---|
+| `just dev` | Lokalen Stack (Datenbank + Backend) per Docker Compose starten |
+| `just test` | Backend-Tests ausführen |
+| `just gen-api` | `backend/openapi.json` neu erzeugen und den Dart-Client in `packages/api_client` neu generieren |
+| `just analyze` | Statische Analyse der Dart-Pakete |
+
+`just gen-api` setzt einen laufenden Docker-Daemon voraus (Generator läuft als Container, kein
+lokales Java nötig). Siehe [ADR 0008](docs/adr/0008-grundgeruest-konventionen.md).
+
 ## Wichtiger Hinweis
 
 Die Software dient **ausschließlich der Übung bzw. Simulation** im Rahmen der Jugendfeuerwehr.

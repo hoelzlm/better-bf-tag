@@ -108,6 +108,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await fastify.register(healthRoutes, { prefix: '/api/v1' });
     await fastify.register(authRoutes, { prefix: '/api/v1' });
     await fastify.register(meRoutes, { prefix: '/api/v1' });
+
+    // The generated spec is served for the Dart client codegen; hidden from
+    // the spec itself to avoid a self-referential entry.
+    fastify.get('/api/v1/openapi.json', { schema: { hide: true } }, async () => app.swagger());
   });
 
   return app;
