@@ -22,7 +22,7 @@ export interface PushSender {
 }
 
 export const noopPushSender: PushSender = {
-  async send(_messages: PushMessage[]): Promise<PushResult[]> {
-    return [];
+  async send(messages: PushMessage[]): Promise<PushResult[]> {
+    return messages.map(message => ({ deviceId: message.deviceId, outcome: 'delivered' }));
   },
 };
