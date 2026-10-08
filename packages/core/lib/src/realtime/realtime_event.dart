@@ -1,4 +1,5 @@
 import '../domain/fms_status.dart';
+import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 
 /// Server->client WebSocket event, per ADR 0009 ("Client-Protokoll") and
@@ -48,6 +49,16 @@ sealed class RealtimeEvent {
           at: at,
           vehicle: Vehicle.fromJson(map),
         );
+      case 'slides.changed':
+        final map = data as Map<String, dynamic>;
+        final slidesJson = map['slides'] as List<dynamic>;
+        return SlidesChanged(
+          seq: seq,
+          at: at,
+          slides: slidesJson
+              .map((e) => Slide.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
     }
@@ -81,6 +92,20 @@ class VehicleUpdated extends RealtimeEvent {
   });
 
   final Vehicle vehicle;
+}
+
+/// `slides.changed` (ADR 0014): any change to Folien (create, edit, delete,
+/// reorder, image set/cleared). Carries the full, replacement list of
+/// active Folien, sorted by `sort_order` -- the client replaces its list
+/// wholesale rather than merging.
+class SlidesChanged extends RealtimeEvent {
+  const SlidesChanged({
+    required super.seq,
+    required super.at,
+    required this.slides,
+  });
+
+  final List<Slide> slides;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

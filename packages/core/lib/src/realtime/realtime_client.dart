@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 import 'realtime_event.dart';
 import 'snapshot.dart';
@@ -14,16 +15,19 @@ import 'web_socket_connection.dart';
 enum ConnectionStatus { connecting, live, reconnecting, revoked }
 
 /// A snapshot of realtime state: the current `seq`, the active vehicles
-/// (sorted by `sort_order`), and the connection status.
+/// (sorted by `sort_order`), the active Folien (ADR 0014, in `sort_order`),
+/// and the connection status.
 class RealtimeState {
   const RealtimeState({
     required this.seq,
     required this.vehicles,
     required this.status,
+    this.slides = const <Slide>[],
   });
 
   final int seq;
   final List<Vehicle> vehicles;
+  final List<Slide> slides;
   final ConnectionStatus status;
 }
 
@@ -90,6 +94,7 @@ class RealtimeClient {
 
   int _lastSeq = 0;
   final Map<String, Vehicle> _vehiclesById = <String, Vehicle>{};
+  List<Slide> _slides = <Slide>[];
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -174,6 +179,7 @@ class RealtimeClient {
       _vehiclesById
         ..clear()
         ..addEntries(snapshot.vehicles.map((v) => MapEntry(v.id, v)));
+      _slides = List.of(snapshot.slides);
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -261,6 +267,8 @@ class RealtimeClient {
           _vehiclesById[vehicleId] =
               existing.copyWith(status: status, statusChangedAt: at);
         }
+      case SlidesChanged(:final slides):
+        _slides = List.of(slides);
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
         break;
@@ -315,6 +323,7 @@ class RealtimeClient {
       RealtimeState(
         seq: _lastSeq,
         vehicles: _sortedActiveVehicles,
+        slides: List.of(_slides),
         status: _status,
       ),
     );

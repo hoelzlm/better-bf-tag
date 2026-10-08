@@ -6,15 +6,17 @@ import 'package:intl/intl.dart';
 
 import '../monitor/monitor_clock.dart';
 import '../monitor/monitor_session.dart';
+import '../widgets/slide_rotator.dart';
 import '../widgets/vehicle_status_bar.dart';
 
 String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
 bool _dateFormattingInitialized = false;
 
-/// Standby screen (ADR 0012, "Monitor im Browser"): large clock, German
-/// date, monitor name, connection banner, and the live Fahrzeugstatus-Leiste
-/// -- scaled for viewing from across a room on a TV.
+/// Standby screen (ADR 0012, "Monitor im Browser"; ADR 0014, "Monitor"):
+/// large clock, German date, monitor name, connection banner, the live
+/// Fahrzeugstatus-Leiste, and (when there are active Folien) a rotating
+/// slide area -- scaled for viewing from across a room on a TV.
 class MonitorStandbyScreen extends ConsumerStatefulWidget {
   const MonitorStandbyScreen({super.key});
 
@@ -45,6 +47,7 @@ class _MonitorStandbyScreenState extends ConsumerState<MonitorStandbyScreen> {
     final name = session is MonitorPaired ? session.name : '';
     final connection = ref.watch(realtimeConnectionProvider).valueOrNull;
     final now = ref.watch(monitorClockProvider).valueOrNull ?? DateTime.now();
+    final slides = ref.watch(slidesProvider).valueOrNull ?? const <Slide>[];
 
     final time =
         '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}';
@@ -52,6 +55,53 @@ class _MonitorStandbyScreenState extends ConsumerState<MonitorStandbyScreen> {
     final date = _ready
         ? DateFormat('EEEE, d. MMMM y', 'de').format(now)
         : '';
+
+    final clockAndStatus = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                time,
+                key: const Key('monitor-clock-time'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 160,
+                  fontWeight: FontWeight.bold,
+                  height: 1,
+                ),
+              ),
+              Text(
+                ':$seconds',
+                key: const Key('monitor-clock-seconds'),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 64,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          date,
+          key: const Key('monitor-date'),
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 32,
+          ),
+        ),
+        const SizedBox(height: 32),
+        const VehicleStatusBar(),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -71,53 +121,19 @@ class _MonitorStandbyScreenState extends ConsumerState<MonitorStandbyScreen> {
                       style: const TextStyle(color: Colors.white54, fontSize: 20),
                     ),
                   ),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  if (slides.isEmpty)
+                    Center(child: clockAndStatus)
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                time,
-                                key: const Key('monitor-clock-time'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 160,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1,
-                                ),
-                              ),
-                              Text(
-                                ':$seconds',
-                                key: const Key('monitor-clock-seconds'),
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 64,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
+                        Expanded(flex: 2, child: Center(child: clockAndStatus)),
+                        Expanded(
+                          flex: 3,
+                          child: SlideRotator(slides: slides),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          date,
-                          key: const Key('monitor-date'),
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const VehicleStatusBar(),
                       ],
                     ),
-                  ),
                 ],
               ),
             ),

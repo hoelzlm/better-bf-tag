@@ -318,6 +318,46 @@ void main() {
     expect(find.text('HLF 1'), findsOneWidget);
   });
 
+  testWidgets(
+    'standby shows a slide from a fake snapshot (image loader is faked)',
+    (tester) async {
+      final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
+      env.adapter.pairBody = _pairResponseBody(
+        accessToken: 'at1',
+        refreshToken: 'rt1',
+        monitorId: 'mon1',
+      );
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'slides': [
+          {
+            'id': 'sl1',
+            'title': 'Hinweis',
+            'body': 'Willkommen beim **BF-Tag**',
+            'duration_seconds': 10,
+            'sort_order': 1,
+            'active': true,
+            'created_at': '2026-10-01T00:00:00Z',
+            'updated_at': '2026-10-01T00:00:00Z',
+          },
+        ],
+      };
+      await _pumpMonitor(tester, env);
+      await _activate(tester);
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'abcd-efgh',
+      );
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('slide-sl1')), findsOneWidget);
+      expect(find.text('Hinweis'), findsOneWidget);
+      expect(find.textContaining('Willkommen beim'), findsOneWidget);
+    },
+  );
+
   testWidgets('revoked signal shows the pairing screen with the gesperrt '
       'text and clears the store', (tester) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
