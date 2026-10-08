@@ -122,7 +122,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/persons',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'listPersons',
         tags: ['persons'],
@@ -140,7 +140,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/persons/:id',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'getPerson',
         tags: ['persons'],
@@ -167,7 +167,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.post(
     '/persons',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'createPerson',
         tags: ['persons'],
@@ -213,7 +213,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.patch(
     '/persons/:id',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'updatePerson',
         tags: ['persons'],
@@ -304,7 +304,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.put(
     '/persons/:id/web-access',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'setWebAccess',
         tags: ['persons'],
@@ -364,7 +364,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.delete(
     '/persons/:id/web-access',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'removeWebAccess',
         tags: ['persons'],
@@ -395,7 +395,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.post(
     '/persons/:id/pairing-code',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'createPairingCode',
         tags: ['persons'],
@@ -426,7 +426,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.post(
     '/persons/pairing-codes',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'createPairingCodes',
         tags: ['persons'],
@@ -477,7 +477,7 @@ export const personRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/persons/:id/devices',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'listPersonDevices',
         tags: ['persons'],

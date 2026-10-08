@@ -52,7 +52,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/vehicles',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'listVehicles',
         tags: ['vehicles'],
@@ -70,7 +70,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.post(
     '/vehicles',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'createVehicle',
         tags: ['vehicles'],
@@ -125,7 +125,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.patch(
     '/vehicles/:id',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'updateVehicle',
         tags: ['vehicles'],
@@ -169,7 +169,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.put(
     '/vehicles/order',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'reorderVehicles',
         tags: ['vehicles'],
@@ -229,7 +229,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.put(
     '/vehicles/:id/status',
     {
-      preHandler: [requireAuth, requirePermission('dispatch')],
+      preHandler: [requireAuth(), requirePermission('dispatch')],
       schema: {
         operationId: 'setVehicleStatus',
         tags: ['vehicles'],
@@ -244,7 +244,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
     },
     async request => {
       const auth = request.auth;
-      if (!auth) {
+      if (!auth || auth.kind !== 'person') {
         throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
       }
 
@@ -292,7 +292,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/vehicles/:id/status-history',
     {
-      preHandler: [requireAuth, requirePermission('dispatch')],
+      preHandler: [requireAuth(), requirePermission('dispatch')],
       schema: {
         operationId: 'getVehicleStatusHistory',
         tags: ['vehicles'],

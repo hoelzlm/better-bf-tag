@@ -16,7 +16,7 @@ export const deviceRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.delete(
     '/devices/:id',
     {
-      preHandler: [requireAuth, requirePermission('admin')],
+      preHandler: [requireAuth(), requirePermission('admin')],
       schema: {
         operationId: 'revokeDevice',
         tags: ['devices'],

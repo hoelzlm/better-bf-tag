@@ -12,9 +12,12 @@ Entscheidung: [ADR 0005](adr/0005-authentifizierung.md)
 |--------|-------|-------|
 | Web (Admin/Leitstelle/Einsatzvorbereitung) | `POST /auth/login` mit Benutzername + Passwort | Access-Token (15 min) + Refresh-Token als HttpOnly-Cookie |
 | Mobile-App | `POST /auth/pair` mit Kopplungscode | Access-Token + langlebiges Refresh-Token (Secure Storage) |
-| Monitor | `POST /auth/pair` mit Kopplungscode | wie App, nur lesend |
+| Monitor | `POST /auth/monitor/pair` mit Kopplungscode | Access-Token + langlebiges Refresh-Token (eigene, von Person/Gerät getrennte Session), nur lesend |
 
-Das JWT enthält `sub` (Person- oder Monitor-ID), `permission` und `device_id`.
+Das JWT enthält `sub` (Person- oder Monitor-ID); bei Personen zusätzlich `permission` und ggf.
+`device_id`, bei Monitoren stattdessen `kind: "monitor"` und kein `permission`.
+**Monitor-Tokens dürfen nur die dafür freigegebenen Lese-Routen aufrufen** (`GET /snapshot`,
+`GET /monitor/me`, `/ws`); jede andere Route antwortet einem Monitor-Token mit 403 `forbidden`.
 
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
@@ -24,6 +27,9 @@ Das JWT enthält `sub` (Person- oder Monitor-ID), `permission` und `device_id`.
 | POST | `/auth/logout` | Web-Refresh-Token widerrufen |
 | POST | `/auth/device/refresh` | Geräte-Refresh-Token erneuern (rotierend) |
 | POST | `/auth/device/logout` | eigenes Gerät abmelden/widerrufen |
+| POST | `/auth/monitor/pair` | Monitor-Kopplungscode einlösen → Tokens (Monitor); löst eine vorherige Monitor-Session ab |
+| POST | `/auth/monitor/refresh` | Monitor-Refresh-Token erneuern (rotierend) |
+| GET | `/monitor/me` | eigener Monitor (`{ id, name }`), nur mit Monitor-Token |
 
 ## Berechtigungen
 
@@ -58,7 +64,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | GET | `/persons/{id}/devices` |
 | DELETE | `/devices/{id}` |
 | GET/POST/PATCH/DELETE | `/vehicles[/{id}]` |
-| GET/POST/DELETE | `/monitors[/{id}]`, `POST /monitors/{id}/pairing-code` |
+| GET/POST/PATCH/DELETE | `/monitors[/{id}]`, `POST /monitors/{id}/pairing-code` |
 | GET/POST/PATCH/DELETE | `/slides[/{id}]`, `POST /slides/{id}/image` |
 | GET/POST/PATCH | `/bf-days[/{id}]` |
 | POST | `/bf-days/{id}/anonymize` (auch Leitstelle) |

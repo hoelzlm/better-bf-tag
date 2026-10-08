@@ -90,6 +90,16 @@ export const device = pgTable('device', {
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 });
 
+export const monitorDisplay = pgTable('monitor_display', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  refreshTokenHash: text('refresh_token_hash').unique(),
+  pairedAt: timestamp('paired_at', { withTimezone: true }),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+});
+
 export const pairingCode = pgTable(
   'pairing_code',
   {
