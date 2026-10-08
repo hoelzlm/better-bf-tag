@@ -15,6 +15,7 @@ import 'package:bftag_api_client/src/api/devices_api.dart';
 import 'package:bftag_api_client/src/api/health_api.dart';
 import 'package:bftag_api_client/src/api/monitors_api.dart';
 import 'package:bftag_api_client/src/api/persons_api.dart';
+import 'package:bftag_api_client/src/api/shifts_api.dart';
 import 'package:bftag_api_client/src/api/slides_api.dart';
 import 'package:bftag_api_client/src/api/snapshot_api.dart';
 import 'package:bftag_api_client/src/api/vehicles_api.dart';
@@ -107,6 +108,12 @@ class BftagApiClient {
   /// by doing that all interceptors will not be executed
   PersonsApi getPersonsApi() {
     return PersonsApi(dio, serializers);
+  }
+
+  /// Get ShiftsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ShiftsApi getShiftsApi() {
+    return ShiftsApi(dio, serializers);
   }
 
   /// Get SlidesApi instance, base route and serializer can be overridden by a given but be careful,

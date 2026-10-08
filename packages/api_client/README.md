@@ -97,6 +97,11 @@ Class | Method | HTTP request | Description
 [*PersonsApi*](doc/PersonsApi.md) | [**removeWebAccess**](doc/PersonsApi.md#removewebaccess) | **DELETE** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**setWebAccess**](doc/PersonsApi.md#setwebaccess) | **PUT** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**updatePerson**](doc/PersonsApi.md#updateperson) | **PATCH** /api/v1/persons/{id} | 
+[*ShiftsApi*](doc/ShiftsApi.md) | [**createShift**](doc/ShiftsApi.md#createshift) | **POST** /api/v1/bf-days/{day}/shifts | 
+[*ShiftsApi*](doc/ShiftsApi.md) | [**deleteShift**](doc/ShiftsApi.md#deleteshift) | **DELETE** /api/v1/bf-days/{day}/shifts/{id} | 
+[*ShiftsApi*](doc/ShiftsApi.md) | [**listShifts**](doc/ShiftsApi.md#listshifts) | **GET** /api/v1/bf-days/{day}/shifts | 
+[*ShiftsApi*](doc/ShiftsApi.md) | [**setShiftCrew**](doc/ShiftsApi.md#setshiftcrew) | **PUT** /api/v1/shifts/{id}/crew | 
+[*ShiftsApi*](doc/ShiftsApi.md) | [**updateShift**](doc/ShiftsApi.md#updateshift) | **PATCH** /api/v1/bf-days/{day}/shifts/{id} | 
 [*SlidesApi*](doc/SlidesApi.md) | [**createSlide**](doc/SlidesApi.md#createslide) | **POST** /api/v1/slides | 
 [*SlidesApi*](doc/SlidesApi.md) | [**deleteSlide**](doc/SlidesApi.md#deleteslide) | **DELETE** /api/v1/slides/{id} | 
 [*SlidesApi*](doc/SlidesApi.md) | [**deleteSlideImage**](doc/SlidesApi.md#deleteslideimage) | **DELETE** /api/v1/slides/{id}/image | 
@@ -130,6 +135,9 @@ Class | Method | HTTP request | Description
  - [GetHealth503Response](doc/GetHealth503Response.md)
  - [GetMe200Response](doc/GetMe200Response.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
+ - [GetSnapshot200ResponseBfDay](doc/GetSnapshot200ResponseBfDay.md)
+ - [GetSnapshot200ResponseShiftsInner](doc/GetSnapshot200ResponseShiftsInner.md)
+ - [GetSnapshot200ResponseShiftsInnerCrewInner](doc/GetSnapshot200ResponseShiftsInnerCrewInner.md)
  - [GetSnapshot200ResponseSlidesInner](doc/GetSnapshot200ResponseSlidesInner.md)
  - [GetSnapshot200ResponseSlidesInnerImage](doc/GetSnapshot200ResponseSlidesInnerImage.md)
  - [GetVehicleStatusHistory200ResponseInner](doc/GetVehicleStatusHistory200ResponseInner.md)
@@ -152,6 +160,8 @@ Class | Method | HTTP request | Description
  - [ReorderSlidesRequest](doc/ReorderSlidesRequest.md)
  - [ReorderVehiclesRequest](doc/ReorderVehiclesRequest.md)
  - [SetParticipantsRequest](doc/SetParticipantsRequest.md)
+ - [SetShiftCrewRequest](doc/SetShiftCrewRequest.md)
+ - [SetShiftCrewRequestAssignmentsInner](doc/SetShiftCrewRequestAssignmentsInner.md)
  - [SetVehicleStatusRequest](doc/SetVehicleStatusRequest.md)
  - [SetWebAccessRequest](doc/SetWebAccessRequest.md)
  - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
