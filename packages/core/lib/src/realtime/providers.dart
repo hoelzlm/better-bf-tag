@@ -8,6 +8,7 @@ import '../api/dio_provider.dart';
 import '../auth/paired_session.dart';
 import '../auth/session.dart';
 import '../domain/fms_status.dart';
+import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 import 'realtime_client.dart';
 import 'snapshot.dart';
@@ -24,6 +25,25 @@ Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
         statusChangedAtRaw == null ? null : DateTime.parse(statusChangedAtRaw),
     sortOrder: v.sortOrder,
     active: v.active,
+  );
+}
+
+Slide _slideFromApi(GetSnapshot200ResponseSlidesInner s) {
+  final image = s.image;
+  return Slide(
+    id: s.id,
+    title: s.title,
+    body: s.body,
+    durationSeconds: s.durationSeconds,
+    sortOrder: s.sortOrder,
+    active: s.active,
+    image: image == null
+        ? null
+        : SlideImage(
+            contentType: image.contentType,
+            sizeBytes: image.sizeBytes,
+            version: image.version,
+          ),
   );
 }
 
@@ -63,6 +83,7 @@ final realtimeClientProvider = Provider<RealtimeClient?>((ref) {
       return Snapshot(
         seq: data.seq,
         vehicles: data.vehicles.map(_vehicleFromApi).toList(),
+        slides: data.slides.map(_slideFromApi).toList(),
       );
     },
     accessToken: () async {
@@ -88,6 +109,16 @@ final vehiclesProvider = StreamProvider<List<Vehicle>>((ref) {
     return Stream.value(const <Vehicle>[]);
   }
   return client.states.map((state) => state.vehicles);
+});
+
+/// The live, sorted, active Folien (ADR 0014) -- empty while signed out,
+/// before the first snapshot has loaded, or when there are none.
+final slidesProvider = StreamProvider<List<Slide>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Slide>[]);
+  }
+  return client.states.map((state) => state.slides);
 });
 
 /// The current realtime connection status.
@@ -123,6 +154,7 @@ final pairedRealtimeClientProvider = Provider<RealtimeClient?>((ref) {
       return Snapshot(
         seq: data.seq,
         vehicles: data.vehicles.map(_vehicleFromApi).toList(),
+        slides: data.slides.map(_slideFromApi).toList(),
       );
     },
     accessToken: () async {

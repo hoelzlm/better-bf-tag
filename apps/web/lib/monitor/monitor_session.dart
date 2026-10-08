@@ -251,6 +251,25 @@ Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
   );
 }
 
+Slide _slideFromApi(GetSnapshot200ResponseSlidesInner s) {
+  final image = s.image;
+  return Slide(
+    id: s.id,
+    title: s.title,
+    body: s.body,
+    durationSeconds: s.durationSeconds,
+    sortOrder: s.sortOrder,
+    active: s.active,
+    image: image == null
+        ? null
+        : SlideImage(
+            contentType: image.contentType,
+            sizeBytes: image.sizeBytes,
+            version: image.version,
+          ),
+  );
+}
+
 /// The [WebSocketConnector] used by the monitor's [RealtimeClient].
 /// Production uses the real [connectWebSocket]; tests override this with a
 /// fake connector instead of hitting the network.
@@ -279,6 +298,7 @@ RealtimeClient? _buildMonitorRealtimeClient(Ref ref) {
       return Snapshot(
         seq: data.seq,
         vehicles: data.vehicles.map(_vehicleFromApi).toList(),
+        slides: data.slides.map(_slideFromApi).toList(),
       );
     },
     accessToken: () async {
@@ -307,6 +327,14 @@ Stream<List<Vehicle>> _buildMonitorVehicles(Ref ref) {
     return Stream.value(const <Vehicle>[]);
   }
   return client.states.map((state) => state.vehicles);
+}
+
+Stream<List<Slide>> _buildMonitorSlides(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Slide>[]);
+  }
+  return client.states.map((state) => state.slides);
 }
 
 Stream<ConnectionStatus> _buildMonitorConnection(Ref ref) {
@@ -356,6 +384,7 @@ List<Override> monitorProviderOverrides({
     ),
     realtimeClientProvider.overrideWith(_buildMonitorRealtimeClient),
     vehiclesProvider.overrideWith(_buildMonitorVehicles),
+    slidesProvider.overrideWith(_buildMonitorSlides),
     realtimeConnectionProvider.overrideWith(_buildMonitorConnection),
   ];
 }
