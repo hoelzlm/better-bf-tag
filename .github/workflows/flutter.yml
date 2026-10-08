@@ -1,0 +1,47 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/flutter.yml'
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/flutter.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze (apps/web, packages/core)
+        run: flutter analyze apps/web packages/core
+
+      - name: Analyze (packages/api_client)
+        run: dart analyze packages/api_client --no-fatal-warnings
+
+      - name: Test (apps/web)
+        working-directory: apps/web
+        run: flutter test
+
+      - name: Build web (apps/web)
+        working-directory: apps/web
+        run: flutter build web --release
