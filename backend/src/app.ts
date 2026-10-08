@@ -11,6 +11,7 @@ import { fastifySwaggerUi } from '@fastify/swagger-ui';
 import { fastifyCors } from '@fastify/cors';
 import { fastifyCookie } from '@fastify/cookie';
 import { fastifyRateLimit } from '@fastify/rate-limit';
+import fastifyWebsocket from '@fastify/websocket';
 
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
@@ -23,6 +24,7 @@ import { meRoutes } from './routes/me.js';
 import { vehicleRoutes } from './routes/vehicles.js';
 import { snapshotRoutes } from './routes/snapshot.js';
 import { Realtime } from './realtime/realtime.js';
+import { wsRoutes } from './realtime/ws.js';
 import './access/authenticate.js';
 
 export interface AppDeps {
@@ -108,6 +110,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       deepLinking: false,
     },
   });
+
+  // WebSocket transport (ADR 0009): `/ws`, not under `/api/v1`, hidden from
+  // the OpenAPI spec (see wsRoutes).
+  await app.register(fastifyWebsocket);
+  await app.register(wsRoutes);
 
   // Register routes under /api/v1
   await app.register(async function routes(fastify) {

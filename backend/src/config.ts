@@ -33,6 +33,7 @@ export const configSchema = z.object({
     .transform(s => (s ? s.split(',').map(o => o.trim()) : [])),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  WS_HEARTBEAT_MS: z.coerce.number().int().positive().default(25000),
   BOOTSTRAP_ADMIN_USERNAME: z.string().optional(),
   BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
   OWN_FIRE_DEPARTMENT_NAME: z.string().default('Eigene Feuerwehr'),
