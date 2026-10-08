@@ -17,6 +17,14 @@ gen-api:
     cd backend && npm run openapi
     ./scripts/gen-api.sh
 
-# Static analysis for the Dart packages. T01-6 extends this to apps/web and packages/core.
+# Static analysis for the Dart packages.
 analyze:
-    dart analyze packages/api_client
+    dart analyze packages/api_client && flutter analyze apps/web packages/core
+
+# Build the web app for production.
+build-web:
+    cd apps/web && flutter build web --release
+
+# Run the web app locally against a local backend.
+web:
+    cd apps/web && flutter run -d web-server --web-port 8081 --dart-define=API_BASE_URL=http://localhost:8080
