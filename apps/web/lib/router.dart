@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'monitor/local_storage_token_store.dart';
 import 'monitor/monitor_session.dart';
+import 'screens/bf_days_screen.dart';
 import 'screens/lage_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
@@ -69,7 +70,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           final isPersonsRoute = state.matchedLocation == '/admin/persons';
           final isMonitorsRoute =
               state.matchedLocation == '/admin/monitors';
-          if ((isFahrzeugeRoute || isPersonsRoute || isMonitorsRoute) &&
+          final isBfTageRoute = state.matchedLocation == '/admin/bf-tage';
+          if ((isFahrzeugeRoute ||
+                  isPersonsRoute ||
+                  isMonitorsRoute ||
+                  isBfTageRoute) &&
               person.permission != Permission.admin) {
             return '/admin';
           }
@@ -104,6 +109,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/monitors',
         builder: (context, state) =>
             const _SessionGate(child: MonitorsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/bf-tage',
+        builder: (context, state) =>
+            const _SessionGate(child: BfDaysScreen()),
       ),
       GoRoute(
         path: '/monitor',

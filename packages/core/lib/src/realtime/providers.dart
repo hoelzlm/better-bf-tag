@@ -7,7 +7,9 @@ import '../api/api_config.dart';
 import '../api/dio_provider.dart';
 import '../auth/paired_session.dart';
 import '../auth/session.dart';
+import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
+import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 import 'realtime_client.dart';
@@ -47,6 +49,48 @@ Slide _slideFromApi(GetSnapshot200ResponseSlidesInner s) {
   );
 }
 
+BfDay? _bfDayFromApi(GetSnapshot200ResponseBfDay? day) {
+  if (day == null) return null;
+  return BfDay(
+    id: day.id,
+    name: day.name,
+    startsAt: DateTime.parse(day.startsAt),
+    endsAt: DateTime.parse(day.endsAt),
+    state: BfDayState.fromWire(day.state.name),
+  );
+}
+
+Shift _shiftFromApi(GetSnapshot200ResponseShiftsInner s) {
+  return Shift(
+    id: s.id,
+    bfDayId: s.bfDayId,
+    name: s.name,
+    startsAt: DateTime.parse(s.startsAt),
+    endsAt: DateTime.parse(s.endsAt),
+    crew: s.crew
+        .map(
+          (c) => CrewAssignment(
+            vehicleId: c.vehicleId,
+            personId: c.personId,
+            displayName: c.displayName,
+            function: c.function_,
+          ),
+        )
+        .toList(),
+  );
+}
+
+Snapshot _snapshotFromApi(GetSnapshot200Response data) {
+  return Snapshot(
+    seq: data.seq,
+    vehicles: data.vehicles.map(_vehicleFromApi).toList(),
+    slides: data.slides.map(_slideFromApi).toList(),
+    bfDay: _bfDayFromApi(data.bfDay),
+    shifts: data.shifts.map(_shiftFromApi).toList(),
+    currentShiftId: data.currentShiftId,
+  );
+}
+
 /// Derives the `/ws` endpoint (without the `?token=` query parameter, added
 /// per-connection by [RealtimeClient]) from [config].
 ///
@@ -80,11 +124,7 @@ final realtimeClientProvider = Provider<RealtimeClient?>((ref) {
       if (data == null) {
         throw StateError('GET /snapshot returned no body');
       }
-      return Snapshot(
-        seq: data.seq,
-        vehicles: data.vehicles.map(_vehicleFromApi).toList(),
-        slides: data.slides.map(_slideFromApi).toList(),
-      );
+      return _snapshotFromApi(data);
     },
     accessToken: () async {
       final current = ref.read(sessionControllerProvider);
@@ -130,6 +170,27 @@ final realtimeConnectionProvider = StreamProvider<ConnectionStatus>((ref) {
   return client.states.map((state) => state.status);
 });
 
+/// The currently running BF-Tag (ADR 0013), or `null` -- empty while signed
+/// out, before the first snapshot has loaded, or when no BF-Tag is running.
+final bfDayProvider = StreamProvider<BfDay?>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(null);
+  }
+  return client.states.map((state) => state.bfDay);
+});
+
+/// The shifts of the currently running BF-Tag (ADR 0013), with crew --
+/// empty while signed out, before the first snapshot has loaded, or when
+/// no BF-Tag is running.
+final shiftsProvider = StreamProvider<List<Shift>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Shift>[]);
+  }
+  return client.states.map((state) => state.shifts);
+});
+
 /// The [RealtimeClient] for the current paired device session (mobile app,
 /// or the web monitor via Ticket 03), or `null` when unpaired. Mirrors
 /// [realtimeClientProvider] but is bound to [pairedSessionControllerProvider]
@@ -151,11 +212,7 @@ final pairedRealtimeClientProvider = Provider<RealtimeClient?>((ref) {
       if (data == null) {
         throw StateError('GET /snapshot returned no body');
       }
-      return Snapshot(
-        seq: data.seq,
-        vehicles: data.vehicles.map(_vehicleFromApi).toList(),
-        slides: data.slides.map(_slideFromApi).toList(),
-      );
+      return _snapshotFromApi(data);
     },
     accessToken: () async {
       final current = ref.read(pairedSessionControllerProvider);

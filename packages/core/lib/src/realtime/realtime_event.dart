@@ -1,4 +1,6 @@
+import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
+import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 
@@ -59,6 +61,28 @@ sealed class RealtimeEvent {
               .map((e) => Slide.fromJson(e as Map<String, dynamic>))
               .toList(),
         );
+      case 'shift.crew_changed':
+        final map = data as Map<String, dynamic>;
+        return ShiftCrewChanged(
+          seq: seq,
+          at: at,
+          shift: Shift.fromJson(map),
+        );
+      case 'shift.deleted':
+        final map = data as Map<String, dynamic>;
+        return ShiftDeleted(
+          seq: seq,
+          at: at,
+          id: map['id'] as String,
+          bfDayId: map['bf_day_id'] as String,
+        );
+      case 'bf_day.updated':
+        final map = data as Map<String, dynamic>;
+        return BfDayUpdated(
+          seq: seq,
+          at: at,
+          bfDay: BfDay.fromJson(map),
+        );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
     }
@@ -106,6 +130,44 @@ class SlidesChanged extends RealtimeEvent {
   });
 
   final List<Slide> slides;
+}
+
+/// `shift.crew_changed` (ADR 0013): a shift was created/edited or its crew
+/// was replaced, or a participant removal cleared some of its crew.
+/// Carries the full shift with crew.
+class ShiftCrewChanged extends RealtimeEvent {
+  const ShiftCrewChanged({
+    required super.seq,
+    required super.at,
+    required this.shift,
+  });
+
+  final Shift shift;
+}
+
+/// `shift.deleted` (ADR 0013): a shift was deleted.
+class ShiftDeleted extends RealtimeEvent {
+  const ShiftDeleted({
+    required super.seq,
+    required super.at,
+    required this.id,
+    required this.bfDayId,
+  });
+
+  final String id;
+  final String bfDayId;
+}
+
+/// `bf_day.updated` (ADR 0013): a BF-Tag was created, edited, started, or
+/// ended. Carries the full BF-Tag.
+class BfDayUpdated extends RealtimeEvent {
+  const BfDayUpdated({
+    required super.seq,
+    required super.at,
+    required this.bfDay,
+  });
+
+  final BfDay bfDay;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).
