@@ -1,15 +1,15 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import { and, eq, isNull } from 'drizzle-orm';
-import { person, device } from '../db/schema.js';
 import { verifyAccessToken } from '../access/tokens.js';
+import { resolvePrincipal } from '../access/authenticate.js';
 import type { Permission } from '../access/types.js';
 import type { RealtimeEvent, RealtimeSubscriber } from './realtime.js';
 
-/** Revokes matching live `/ws` connections (ADR 0010 `session.revoked`). */
+/** Revokes matching live `/ws` connections (ADR 0010/0012 `session.revoked`). */
 export interface WsHub {
   revokeDevice(deviceId: string): void;
   revokePerson(personId: string): void;
+  revokeMonitor(monitorId: string): void;
 }
 
 declare module 'fastify' {
@@ -20,8 +20,9 @@ declare module 'fastify' {
 
 interface ConnectionMeta {
   socket: WebSocket;
-  personId: string;
+  personId?: string;
   deviceId?: string;
+  monitorId?: string;
 }
 
 /**
@@ -33,7 +34,8 @@ interface ConnectionMeta {
  * with `fastify.decorate(...)` from inside a registered plugin is only
  * visible to that plugin's own context and its children, never to sibling
  * route registrations (e.g. `routes/devices.ts`, `routes/auth.ts`,
- * `routes/persons.ts`) that also need to call `app.wsHub`.
+ * `routes/persons.ts`, `routes/monitors.ts`) that also need to call
+ * `app.wsHub`.
  */
 export function createWsPlugin(): { plugin: FastifyPluginAsync; hub: WsHub } {
   // Tracks every live connection so the `onClose` hook below can terminate
@@ -41,8 +43,9 @@ export function createWsPlugin(): { plugin: FastifyPluginAsync; hub: WsHub } {
   // `preClose` (which calls the graceful, handshake-based `socket.close()`
   // and could otherwise make `app.close()` linger in tests).
   const connections = new Set<WebSocket>();
-  // Per-connection personId/deviceId, so session.revoked (ADR 0010) can
-  // target exactly the connections of a revoked device or person.
+  // Per-connection personId/deviceId/monitorId, so session.revoked (ADR
+  // 0010/0012) can target exactly the connections of a revoked device,
+  // person, or monitor.
   const meta = new Map<WebSocket, ConnectionMeta>();
 
   function sendRevoked(socket: WebSocket): void {
@@ -63,6 +66,13 @@ export function createWsPlugin(): { plugin: FastifyPluginAsync; hub: WsHub } {
     revokePerson(personId: string): void {
       for (const m of meta.values()) {
         if (m.personId === personId) {
+          sendRevoked(m.socket);
+        }
+      }
+    },
+    revokeMonitor(monitorId: string): void {
+      for (const m of meta.values()) {
+        if (m.monitorId === monitorId) {
           sendRevoked(m.socket);
         }
       }
@@ -108,47 +118,40 @@ async function handleConnection(
     return;
   }
 
+  // `/ws` is an opt-in monitor route (ADR 0012): both Person and Monitor
+  // tokens are accepted here, with the same DB re-check requireAuth does
+  // on every HTTP request ("Prüfung bei jeder Anfrage").
   let permission: Permission;
-  let personId: string;
+  let personId: string | undefined;
   let deviceId: string | undefined;
+  let monitorId: string | undefined;
   try {
     const claims = await verifyAccessToken({ config: app.config, clock: app.clock }, token);
+    const principal = await resolvePrincipal({ db: app.db }, claims);
 
-    // ADR 0010 "Prüfung bei jeder Anfrage": the same person (and, for
-    // device tokens, device) check requireAuth does on every HTTP request
-    // applies at connection time for /ws too.
-    const [found] = await app.db
-      .select({ id: person.id, permission: person.permission, active: person.active })
-      .from(person)
-      .where(eq(person.id, claims.personId))
-      .limit(1);
-    if (!found || !found.active) {
-      socket.close(4401, 'unauthorized');
-      return;
+    if (principal.kind === 'monitor') {
+      monitorId = principal.monitorId;
+      // Monitors see what Mannschaft sees (ADR 0012); reusing the
+      // permission-based audience filter below with 'crew' is exact as
+      // long as no event restricts audience below crew.
+      permission = 'crew';
+    } else {
+      personId = principal.personId;
+      deviceId = principal.deviceId;
+      permission = principal.permission;
     }
-
-    if (claims.deviceId !== undefined) {
-      const [deviceRow] = await app.db
-        .select({ id: device.id })
-        .from(device)
-        .where(and(eq(device.id, claims.deviceId), isNull(device.revokedAt)))
-        .limit(1);
-      if (!deviceRow) {
-        socket.close(4401, 'unauthorized');
-        return;
-      }
-    }
-
-    permission = found.permission;
-    personId = found.id;
-    deviceId = claims.deviceId;
   } catch {
     socket.close(4401, 'unauthorized');
     return;
   }
 
   connections.add(socket);
-  meta.set(socket, { socket, personId, ...(deviceId !== undefined ? { deviceId } : {}) });
+  meta.set(socket, {
+    socket,
+    ...(personId !== undefined ? { personId } : {}),
+    ...(deviceId !== undefined ? { deviceId } : {}),
+    ...(monitorId !== undefined ? { monitorId } : {}),
+  });
 
   // Delivers every event to this connection in `seq` order. Events whose
   // `audience` excludes this connection's permission become a `skip`

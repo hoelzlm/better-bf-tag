@@ -14,7 +14,7 @@ export const meRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/me',
     {
-      preHandler: requireAuth,
+      preHandler: requireAuth(),
       schema: {
         operationId: 'getMe',
         tags: ['auth'],
@@ -25,7 +25,7 @@ export const meRoutes: FastifyPluginAsyncZod = async fastify => {
     },
     async request => {
       const auth = request.auth;
-      if (!auth) {
+      if (!auth || auth.kind !== 'person') {
         throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
       }
 

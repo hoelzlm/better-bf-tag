@@ -8,6 +8,8 @@ part of 'serializers.dart';
 
 Serializers _$serializers =
     (Serializers().toBuilder()
+          ..add(CreateMonitorPairingCode201Response.serializer)
+          ..add(CreateMonitorRequest.serializer)
           ..add(CreatePairingCode201Response.serializer)
           ..add(CreatePairingCodes201Response.serializer)
           ..add(CreatePairingCodesRequest.serializer)
@@ -26,6 +28,7 @@ Serializers _$serializers =
           ..add(GetSnapshot200Response.serializer)
           ..add(GetVehicleStatusHistory200ResponseInner.serializer)
           ..add(GetVehicleStatusHistory200ResponseInnerSource_Enum.serializer)
+          ..add(ListMonitors200ResponseInner.serializer)
           ..add(ListPersonDevices200ResponseInner.serializer)
           ..add(ListPersonDevices200ResponseInnerPlatformEnum.serializer)
           ..add(ListPersons200ResponseInner.serializer)
@@ -39,6 +42,9 @@ Serializers _$serializers =
           ..add(Login401Response.serializer)
           ..add(Login401ResponseError.serializer)
           ..add(LoginRequest.serializer)
+          ..add(MonitorPair200Response.serializer)
+          ..add(MonitorPair200ResponseMonitor.serializer)
+          ..add(MonitorPairRequest.serializer)
           ..add(Pair200Response.serializer)
           ..add(PairRequest.serializer)
           ..add(PairRequestPlatformEnum.serializer)
