@@ -26,6 +26,7 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [0005](adr/0005-authentifizierung.md) | Login per QR-Code-Kopplung statt E-Mail für Personen | Vorgeschlagen |
 | [0006](adr/0006-quittierung-statt-rueckmeldung.md) | Quittierung statt „komme / komme nicht“ | Angenommen |
 | [0007](adr/0007-personen-dauerhaft-anonymisierung.md) | Personen dauerhaft, Anonymisierung nach 8 Wochen | Angenommen |
+| [0008](adr/0008-grundgeruest-konventionen.md) | Konventionen für das Grundgerüst (Backend, Tests, Web-Login, Codegen) | Angenommen |
 
 Neue ADRs nach dem Muster `adr/NNNN-titel.md` anlegen (Kontext → Entscheidung → Konsequenzen).
 

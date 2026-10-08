@@ -1,0 +1,14 @@
+analyzer:
+  language:
+    strict-inference: true
+    strict-raw-types: true
+    strict-casts: false
+  exclude:
+    - test/*.dart
+  errors:
+    deprecated_member_use_from_same_package: ignore
+    # openapi-generator's dart-dio templates emit a handful of imports (e.g.
+    # json_object, error response models) that aren't referenced by every
+    # generated file; treat it as a non-issue rather than hand-editing
+    # generated code.
+    unused_import: ignore

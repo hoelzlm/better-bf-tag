@@ -1,0 +1,6 @@
+dist/
+drizzle/
+openapi.json
+node_modules/
+*.log
+*.tsbuildinfo
