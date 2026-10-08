@@ -50,6 +50,26 @@ class _FakeVehicleAdminRepository implements VehicleAdminRepository {
   Future<void> setStatus(String id, int status) => throw UnimplementedError();
 }
 
+class _FakeMonitorAdminRepository implements MonitorAdminRepository {
+  @override
+  Future<List<Monitor>> listMonitors() async => const [];
+
+  @override
+  Future<Monitor> createMonitor({required String name}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Monitor> updateMonitor(String id, {required String name}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> revokeMonitor(String id) => throw UnimplementedError();
+
+  @override
+  Future<MonitorPairingCode> createPairingCode(String id) =>
+      throw UnimplementedError();
+}
+
 Future<void> _pumpAppAt(
   WidgetTester tester, {
   required SessionState session,
@@ -69,6 +89,9 @@ Future<void> _pumpAppAt(
         ),
         vehicleAdminRepositoryProvider.overrideWithValue(
           _FakeVehicleAdminRepository(),
+        ),
+        monitorAdminRepositoryProvider.overrideWithValue(
+          _FakeMonitorAdminRepository(),
         ),
       ],
       child: const BftagWebApp(),
@@ -125,6 +148,29 @@ void main() {
 
       final context = tester.element(find.text('Keine laufenden Einsätze'));
       context.go('/admin/fahrzeuge');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'non-admin navigating to /admin/monitors is redirected to /admin',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      final context = tester.element(find.text('Keine laufenden Einsätze'));
+      context.go('/admin/monitors');
       await tester.pumpAndSettle();
 
       expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
