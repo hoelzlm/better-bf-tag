@@ -1,5 +1,6 @@
 import { loadConfig } from './config.js';
-import { createDb, runMigrations, type Db } from './db/client.js';
+import { createDb, type Db } from './db/client.js';
+import { prepare } from './startup.js';
 import { buildApp, type AppDeps } from './app.js';
 import { systemClock } from './clock.js';
 import { noopPushSender } from './push/push-sender.js';
@@ -9,7 +10,7 @@ async function main(): Promise<void> {
 
   const { db, pool } = createDb(config.DATABASE_URL);
 
-  await runMigrations(db);
+  await prepare({ config, db: db as Db, pool });
 
   const deps: AppDeps = {
     config,
