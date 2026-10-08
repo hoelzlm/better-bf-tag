@@ -21,6 +21,35 @@ class _FakeSessionController extends SessionController {
   }
 }
 
+class _FakeVehicleAdminRepository implements VehicleAdminRepository {
+  @override
+  Future<List<Vehicle>> listAll() async => const [];
+
+  @override
+  Future<Vehicle> create({
+    required String callSign,
+    required String shortName,
+    required String type,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Vehicle> update(
+    String id, {
+    String? callSign,
+    String? shortName,
+    String? type,
+    bool? active,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> reorder(List<String> vehicleIds) => throw UnimplementedError();
+
+  @override
+  Future<void> setStatus(String id, int status) => throw UnimplementedError();
+}
+
 Future<void> _pumpAppAt(
   WidgetTester tester, {
   required SessionState session,
@@ -30,6 +59,16 @@ Future<void> _pumpAppAt(
       overrides: [
         sessionControllerProvider.overrideWith(
           () => _FakeSessionController(session),
+        ),
+        // LageScreen embeds VehicleStatusBar, which otherwise pulls in the
+        // real RealtimeClient (and a real WebSocket connection attempt).
+        // These tests only exercise routing/redirects, so stub it out.
+        vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+        realtimeConnectionProvider.overrideWith(
+          (ref) => Stream.value(ConnectionStatus.live),
+        ),
+        vehicleAdminRepositoryProvider.overrideWithValue(
+          _FakeVehicleAdminRepository(),
         ),
       ],
       child: const BftagWebApp(),
@@ -69,4 +108,68 @@ void main() {
 
     expect(find.text('Monitor – noch nicht gekoppelt'), findsOneWidget);
   });
+
+  testWidgets(
+    'non-admin navigating to /admin/fahrzeuge is redirected to /admin',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      final context = tester.element(find.text('Keine laufenden Einsätze'));
+      context.go('/admin/fahrzeuge');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the Fahrzeuge nav entry is hidden for non-admin permissions',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-fahrzeuge')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'admin can navigate to /admin/fahrzeuge via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.admin,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-fahrzeuge')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-fahrzeuge')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fahrzeuge'), findsOneWidget);
+    },
+  );
 }
