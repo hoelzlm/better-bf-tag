@@ -301,6 +301,47 @@ Shift _shiftFromApi(GetSnapshot200ResponseShiftsInner s) {
   );
 }
 
+Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
+  return Incident.fromJson({
+    'id': i.id,
+    'bf_day_id': i.bfDayId,
+    'number': i.number,
+    'keyword': i.keyword,
+    'address': i.address,
+    'report': i.report,
+    'state': i.state.name,
+    'created_at': i.createdAt,
+    'updated_at': i.updatedAt,
+    if (i.script != null) 'script': i.script,
+  });
+}
+
+AlarmRecipient _alarmRecipientFromApi(
+  GetSnapshot200ResponseAlarmsInnerRecipientsInner r,
+) {
+  return AlarmRecipient(
+    personId: r.personId,
+    displayName: r.displayName,
+    vehicleId: r.vehicleId,
+    function: r.function_,
+    hasDevice: r.hasDevice,
+    acknowledgedAt:
+        r.acknowledgedAt == null ? null : DateTime.parse(r.acknowledgedAt!),
+  );
+}
+
+Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
+  return Alarm(
+    id: a.id,
+    incidentId: a.incidentId,
+    state: AlarmState.fromWire(a.state.name),
+    scheduledAt: a.scheduledAt == null ? null : DateTime.parse(a.scheduledAt!),
+    triggeredAt: a.triggeredAt == null ? null : DateTime.parse(a.triggeredAt!),
+    vehicleIds: a.vehicleIds.toList(),
+    recipients: a.recipients.map(_alarmRecipientFromApi).toList(),
+  );
+}
+
 /// The [WebSocketConnector] used by the monitor's [RealtimeClient].
 /// Production uses the real [connectWebSocket]; tests override this with a
 /// fake connector instead of hitting the network.
@@ -333,6 +374,8 @@ RealtimeClient? _buildMonitorRealtimeClient(Ref ref) {
         bfDay: _bfDayFromApi(data.bfDay),
         shifts: data.shifts.map(_shiftFromApi).toList(),
         currentShiftId: data.currentShiftId,
+        incidents: data.incidents.map(_incidentFromApi).toList(),
+        alarms: data.alarms.map(_alarmFromApi).toList(),
       );
     },
     accessToken: () async {
@@ -395,6 +438,30 @@ Stream<ConnectionStatus> _buildMonitorConnection(Ref ref) {
   return client.states.map((state) => state.status);
 }
 
+Stream<List<Incident>> _buildMonitorIncidents(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Incident>[]);
+  }
+  return client.states.map((state) => state.incidents);
+}
+
+Stream<List<Alarm>> _buildMonitorAlarms(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Alarm>[]);
+  }
+  return client.states.map((state) => state.alarms);
+}
+
+Stream<Alarm> _buildMonitorLiveAlarmTriggered(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return const Stream<Alarm>.empty();
+  }
+  return client.liveAlarmTriggered;
+}
+
 /// The provider overrides that wire the `/monitor` `ProviderScope` to its
 /// own session, own `Dio`/`RealtimeClient`, and keep the admin web session
 /// out of the picture entirely -- so `VehicleStatusBar`
@@ -438,5 +505,8 @@ List<Override> monitorProviderOverrides({
     bfDayProvider.overrideWith(_buildMonitorBfDay),
     shiftsProvider.overrideWith(_buildMonitorShifts),
     realtimeConnectionProvider.overrideWith(_buildMonitorConnection),
+    incidentsProvider.overrideWith(_buildMonitorIncidents),
+    alarmsProvider.overrideWith(_buildMonitorAlarms),
+    liveAlarmTriggeredProvider.overrideWith(_buildMonitorLiveAlarmTriggered),
   ];
 }
