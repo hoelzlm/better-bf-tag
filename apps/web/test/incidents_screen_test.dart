@@ -245,6 +245,32 @@ class _FakeAlarmRepository implements AlarmRepository {
 
   @override
   Future<void> acknowledge(String alarmId) => throw UnimplementedError();
+
+  @override
+  Future<Alarm> plan(
+    String incidentId,
+    List<String> vehicleIds, {
+    String? id,
+    DateTime? scheduledAt,
+    int? offsetMinutes,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Alarm> update(
+    String alarmId, {
+    DateTime? scheduledAt,
+    int? offsetMinutes,
+    List<String>? vehicleIds,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Alarm> discard(String alarmId) => throw UnimplementedError();
+
+  @override
+  Future<TriggerAlarmResult> triggerNow(String alarmId) =>
+      throw UnimplementedError();
 }
 
 Future<_FakeIncidentRepository> _pump(

@@ -132,6 +132,32 @@ class _FakeAlarmRepository implements AlarmRepository {
     List<String> vehicleIds, {
     required String id,
   }) => throw UnimplementedError();
+
+  @override
+  Future<Alarm> plan(
+    String incidentId,
+    List<String> vehicleIds, {
+    String? id,
+    DateTime? scheduledAt,
+    int? offsetMinutes,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Alarm> update(
+    String alarmId, {
+    DateTime? scheduledAt,
+    int? offsetMinutes,
+    List<String>? vehicleIds,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Alarm> discard(String alarmId) => throw UnimplementedError();
+
+  @override
+  Future<TriggerAlarmResult> triggerNow(String alarmId) =>
+      throw UnimplementedError();
 }
 
 class _FakePairedSessionController extends PairedSessionController {

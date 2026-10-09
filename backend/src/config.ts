@@ -47,6 +47,9 @@ export const configSchema = z.object({
   APNS_TEAM_ID: z.string().optional(),
   APNS_BUNDLE_ID: z.string().optional(),
   APNS_PRODUCTION: strictBooleanEnv(false),
+  // AlarmScheduler (ADR 0022): real-time interval between `runDue()` ticks;
+  // `0` disables the timer (tests call `runDue()` explicitly instead).
+  ALARM_SCHEDULER_INTERVAL_MS: z.coerce.number().int().min(0).default(1000),
 });
 
 export type Config = z.infer<typeof configSchema>;

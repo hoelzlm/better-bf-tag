@@ -107,6 +107,30 @@ sealed class RealtimeEvent {
           incident: Incident.fromJson(map['incident'] as Map<String, dynamic>),
           alarm: Alarm.fromJson(map['alarm'] as Map<String, dynamic>),
         );
+      case 'alarm.planned':
+        final map = data as Map<String, dynamic>;
+        return AlarmPlanned(
+          seq: seq,
+          at: at,
+          incident: Incident.fromJson(map['incident'] as Map<String, dynamic>),
+          alarm: Alarm.fromJson(map['alarm'] as Map<String, dynamic>),
+        );
+      case 'alarm.missed':
+        final map = data as Map<String, dynamic>;
+        return AlarmMissed(
+          seq: seq,
+          at: at,
+          incident: Incident.fromJson(map['incident'] as Map<String, dynamic>),
+          alarm: Alarm.fromJson(map['alarm'] as Map<String, dynamic>),
+        );
+      case 'alarm.discarded':
+        final map = data as Map<String, dynamic>;
+        return AlarmDiscarded(
+          seq: seq,
+          at: at,
+          alarmId: map['alarm_id'] as String,
+          incidentId: map['incident_id'] as String,
+        );
       case 'alarm.acknowledged':
         final map = data as Map<String, dynamic>;
         return AlarmAcknowledged(
@@ -273,6 +297,54 @@ class AlarmTriggered extends RealtimeEvent {
 
   final Incident incident;
   final Alarm alarm;
+}
+
+/// `alarm.planned` (ADR 0022): a Alarmierung was neu geplant oder
+/// geändert (Zeitpunkt/Fahrzeuge). Upsert-Semantik -- also fires for a
+/// re-plan and for the recalculation of dependent relative Alarmierungen.
+/// Audience `preparation`/`dispatch`/`admin` only (Mannschaft/Monitor
+/// erfahren nichts davon).
+class AlarmPlanned extends RealtimeEvent {
+  const AlarmPlanned({
+    required super.seq,
+    required super.at,
+    required this.incident,
+    required this.alarm,
+  });
+
+  final Incident incident;
+  final Alarm alarm;
+}
+
+/// `alarm.missed` (ADR 0022): a geplante Alarmierung wurde verpasst (mehr
+/// als 10 Minuten nach `scheduled_at`, oder nicht mehr auslösbar).
+/// Audience `preparation`/`dispatch`/`admin` only.
+class AlarmMissed extends RealtimeEvent {
+  const AlarmMissed({
+    required super.seq,
+    required super.at,
+    required this.incident,
+    required this.alarm,
+  });
+
+  final Incident incident;
+  final Alarm alarm;
+}
+
+/// `alarm.discarded` (ADR 0022): a geplante oder verpasste Alarmierung
+/// wurde verworfen (auch als Kaskade einer verworfenen Basis-Alarmierung,
+/// oder beim Schließen/Verwerfen des Einsatzes). Audience
+/// `preparation`/`dispatch`/`admin` only.
+class AlarmDiscarded extends RealtimeEvent {
+  const AlarmDiscarded({
+    required super.seq,
+    required super.at,
+    required this.alarmId,
+    required this.incidentId,
+  });
+
+  final String alarmId;
+  final String incidentId;
 }
 
 /// `alarm.acknowledged` (ADR 0017): a recipient quittierte ihre

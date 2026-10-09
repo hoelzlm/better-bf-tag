@@ -108,6 +108,8 @@ AlarmRecipient _recipient({
 Alarm _alarm({
   String id = 'a1',
   String incidentId = 'i1',
+  AlarmState state = AlarmState.triggered,
+  DateTime? scheduledAt,
   DateTime? triggeredAt,
   List<String> vehicleIds = const ['v1'],
   List<AlarmRecipient> recipients = const [],
@@ -115,8 +117,11 @@ Alarm _alarm({
   return Alarm(
     id: id,
     incidentId: incidentId,
-    state: AlarmState.triggered,
-    triggeredAt: triggeredAt ?? DateTime.parse('2026-10-09T08:00:00Z'),
+    state: state,
+    scheduledAt: scheduledAt,
+    triggeredAt: state == AlarmState.triggered
+        ? (triggeredAt ?? DateTime.parse('2026-10-09T08:00:00Z'))
+        : triggeredAt,
     vehicleIds: vehicleIds,
     recipients: recipients,
   );
@@ -199,6 +204,54 @@ Map<String, dynamic> _alarmPushReportedEvent({
       'incident_id': incidentId,
       'push_delivered': pushDelivered,
       'push_rejected': pushRejected,
+    },
+  };
+}
+
+Map<String, dynamic> _alarmPlannedEvent({
+  required int seq,
+  required Incident incident,
+  required Alarm alarm,
+}) {
+  return {
+    'seq': seq,
+    'type': 'alarm.planned',
+    'at': '2026-10-09T08:00:00Z',
+    'data': {
+      'incident': incident.toJson(),
+      'alarm': _alarmJson(alarm),
+    },
+  };
+}
+
+Map<String, dynamic> _alarmMissedEvent({
+  required int seq,
+  required Incident incident,
+  required Alarm alarm,
+}) {
+  return {
+    'seq': seq,
+    'type': 'alarm.missed',
+    'at': '2026-10-09T08:00:00Z',
+    'data': {
+      'incident': incident.toJson(),
+      'alarm': _alarmJson(alarm),
+    },
+  };
+}
+
+Map<String, dynamic> _alarmDiscardedEvent({
+  required int seq,
+  required String alarmId,
+  required String incidentId,
+}) {
+  return {
+    'seq': seq,
+    'type': 'alarm.discarded',
+    'at': '2026-10-09T08:00:00Z',
+    'data': {
+      'alarm_id': alarmId,
+      'incident_id': incidentId,
     },
   };
 }
@@ -516,6 +569,319 @@ void main() {
         final unchanged = states.last.alarms.single;
         expect(unchanged.pushDelivered, 0);
         expect(unchanged.pushRejected, 0);
+
+        client.dispose();
+      });
+    });
+
+    test('alarm.planned upserts into scheduledAlarms', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [_incident(state: IncidentState.draft)],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.scheduledAlarms, isEmpty);
+
+        final incident = _incident(state: IncidentState.draft);
+        final alarm = _alarm(
+          state: AlarmState.planned,
+          scheduledAt: DateTime.parse('2026-10-09T08:08:00Z'),
+        );
+        connector.connections.single.emit(
+          _alarmPlannedEvent(seq: 11, incident: incident, alarm: alarm),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.scheduledAlarms, hasLength(1));
+        expect(states.last.scheduledAlarms.single.alarm.id, 'a1');
+        expect(states.last.scheduledAlarms.single.incident.id, 'i1');
+
+        client.dispose();
+      });
+    });
+
+    test(
+      'alarm.planned re-plan with a new time re-sorts scheduledAlarms',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          final incident = _incident(state: IncidentState.draft);
+          final a1 = _alarm(
+            id: 'a1',
+            state: AlarmState.planned,
+            scheduledAt: DateTime.parse('2026-10-09T08:05:00Z'),
+          );
+          final a2 = _alarm(
+            id: 'a2',
+            state: AlarmState.planned,
+            scheduledAt: DateTime.parse('2026-10-09T08:10:00Z'),
+          );
+          completers[0].complete(
+            Snapshot(
+              seq: 10,
+              vehicles: const [],
+              bfDay: _bfDay(),
+              incidents: [incident],
+              scheduledAlarms: [
+                ScheduledAlarm(incident: incident, alarm: a1),
+                ScheduledAlarm(incident: incident, alarm: a2),
+              ],
+            ),
+          );
+          async.flushMicrotasks();
+          expect(
+            states.last.scheduledAlarms.map((sa) => sa.alarm.id),
+            ['a1', 'a2'],
+          );
+
+          // Re-plan a1 to a later time than a2 -> must re-sort.
+          final a1Replanned = _alarm(
+            id: 'a1',
+            state: AlarmState.planned,
+            scheduledAt: DateTime.parse('2026-10-09T08:20:00Z'),
+          );
+          connector.connections.single.emit(
+            _alarmPlannedEvent(seq: 11, incident: incident, alarm: a1Replanned),
+          );
+          async.flushMicrotasks();
+
+          expect(
+            states.last.scheduledAlarms.map((sa) => sa.alarm.id),
+            ['a2', 'a1'],
+          );
+          expect(
+            states.last.scheduledAlarms.last.alarm.scheduledAt,
+            DateTime.parse('2026-10-09T08:20:00Z'),
+          );
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('alarm.missed upserts into scheduledAlarms', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        final incident = _incident(state: IncidentState.draft);
+        final alarm = _alarm(
+          state: AlarmState.planned,
+          scheduledAt: DateTime.parse('2026-10-09T08:00:00Z'),
+        );
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [incident],
+            scheduledAlarms: [ScheduledAlarm(incident: incident, alarm: alarm)],
+          ),
+        );
+        async.flushMicrotasks();
+
+        final missedAlarm = _alarm(state: AlarmState.missed);
+        connector.connections.single.emit(
+          _alarmMissedEvent(seq: 11, incident: incident, alarm: missedAlarm),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.scheduledAlarms, hasLength(1));
+        expect(states.last.scheduledAlarms.single.alarm.state, AlarmState.missed);
+
+        client.dispose();
+      });
+    });
+
+    test('alarm.discarded removes the matching entry from scheduledAlarms',
+        () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        final incident = _incident(state: IncidentState.draft);
+        final alarm = _alarm(state: AlarmState.planned);
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [incident],
+            scheduledAlarms: [ScheduledAlarm(incident: incident, alarm: alarm)],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.scheduledAlarms, hasLength(1));
+
+        connector.connections.single.emit(
+          _alarmDiscardedEvent(
+            seq: 11,
+            alarmId: alarm.id,
+            incidentId: incident.id,
+          ),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.scheduledAlarms, isEmpty);
+
+        client.dispose();
+      });
+    });
+
+    test('alarm.triggered removes the matching id from scheduledAlarms', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        final incident = _incident(state: IncidentState.draft);
+        final planned = _alarm(state: AlarmState.planned);
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [incident],
+            scheduledAlarms: [
+              ScheduledAlarm(incident: incident, alarm: planned),
+            ],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.scheduledAlarms, hasLength(1));
+
+        final triggered = _alarm(id: planned.id, state: AlarmState.triggered);
+        connector.connections.single.emit(
+          _alarmTriggeredEvent(
+            seq: 11,
+            incident: _incident(state: IncidentState.running),
+            alarm: triggered,
+          ),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.scheduledAlarms, isEmpty);
+        expect(states.last.alarms, hasLength(1));
+        expect(states.last.alarms.single.id, planned.id);
+
+        client.dispose();
+      });
+    });
+
+    test('incident closed removes its scheduled alarms', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        final incident = _incident(state: IncidentState.draft);
+        final alarm = _alarm(state: AlarmState.planned);
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [incident],
+            scheduledAlarms: [ScheduledAlarm(incident: incident, alarm: alarm)],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.scheduledAlarms, hasLength(1));
+
+        connector.connections.single.emit({
+          'seq': 11,
+          'type': 'incident.updated',
+          'at': '2026-10-09T08:00:00Z',
+          'data': _incident(state: IncidentState.closed).toJson(),
+        });
+        async.flushMicrotasks();
+
+        expect(states.last.scheduledAlarms, isEmpty);
+
+        client.dispose();
+      });
+    });
+
+    test('incident discarded removes its scheduled alarms', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        final incident = _incident(state: IncidentState.draft);
+        final alarm = _alarm(state: AlarmState.planned);
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [incident],
+            scheduledAlarms: [ScheduledAlarm(incident: incident, alarm: alarm)],
+          ),
+        );
+        async.flushMicrotasks();
+        expect(states.last.scheduledAlarms, hasLength(1));
+
+        connector.connections.single.emit({
+          'seq': 11,
+          'type': 'incident.updated',
+          'at': '2026-10-09T08:00:00Z',
+          'data': _incident(state: IncidentState.discarded).toJson(),
+        });
+        async.flushMicrotasks();
+
+        expect(states.last.scheduledAlarms, isEmpty);
 
         client.dispose();
       });

@@ -35,6 +35,7 @@ class RealtimeState {
     this.incidents = const <Incident>[],
     this.alarms = const <Alarm>[],
     this.closeSuggestedIncidentIds = const <String>{},
+    this.scheduledAlarms = const <ScheduledAlarm>[],
   });
 
   final int seq;
@@ -49,6 +50,10 @@ class RealtimeState {
   /// Ids of `running` Einsätze that are abschlussreif (ADR 0019), computed
   /// for `dispatch`/`admin` only -- always empty for other Berechtigungen.
   final Set<String> closeSuggestedIncidentIds;
+
+  /// `planned`/`missed` Alarmierungen (ADR 0022), sorted by
+  /// `scheduled_at`, `id` -- only for callers with Drehbuch permission.
+  final List<ScheduledAlarm> scheduledAlarms;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -129,6 +134,8 @@ class RealtimeClient {
   final Map<String, Incident> _incidentsById = <String, Incident>{};
   final Map<String, Alarm> _alarmsById = <String, Alarm>{};
   final Set<String> _closeSuggestedIncidentIds = <String>{};
+  final Map<String, ScheduledAlarm> _scheduledAlarmsById =
+      <String, ScheduledAlarm>{};
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -228,6 +235,11 @@ class RealtimeClient {
       _closeSuggestedIncidentIds
         ..clear()
         ..addAll(snapshot.closeSuggestedIncidentIds);
+      _scheduledAlarmsById
+        ..clear()
+        ..addEntries(
+          snapshot.scheduledAlarms.map((sa) => MapEntry(sa.alarm.id, sa)),
+        );
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -332,7 +344,16 @@ class RealtimeClient {
       case AlarmTriggered(:final incident, :final alarm):
         _applyIncident(incident);
         _alarmsById[alarm.id] = alarm;
+        _scheduledAlarmsById.remove(alarm.id);
         _liveAlarmTriggeredController.add(alarm);
+      case AlarmPlanned(:final incident, :final alarm):
+        _scheduledAlarmsById[alarm.id] =
+            ScheduledAlarm(incident: incident, alarm: alarm);
+      case AlarmMissed(:final incident, :final alarm):
+        _scheduledAlarmsById[alarm.id] =
+            ScheduledAlarm(incident: incident, alarm: alarm);
+      case AlarmDiscarded(:final alarmId):
+        _scheduledAlarmsById.remove(alarmId);
       case AlarmAcknowledged(:final alarmId, :final personId, :final acknowledgedAt):
         _applyAlarmAcknowledged(alarmId, personId, acknowledgedAt);
       case AlarmPushReported(:final alarmId, :final pushDelivered, :final pushRejected):
@@ -372,6 +393,16 @@ class RealtimeClient {
       _incidentsById.remove(incident.id);
       _alarmsById.removeWhere((_, alarm) => alarm.incidentId == incident.id);
       _closeSuggestedIncidentIds.remove(incident.id);
+    }
+    // Ein Einsatz, der `draft`/`running` verlässt (also `closed` oder
+    // `discarded` wird), nimmt seine geplanten/verpassten Alarmierungen
+    // mit sich (ADR 0022) -- `draft` bleibt unberührt, da dort weiterhin
+    // geplant werden darf.
+    if (incident.state == IncidentState.closed ||
+        incident.state == IncidentState.discarded) {
+      _scheduledAlarmsById.removeWhere(
+        (_, scheduled) => scheduled.incident.id == incident.id,
+      );
     }
   }
 
@@ -479,6 +510,20 @@ class RealtimeClient {
     return alarms;
   }
 
+  List<ScheduledAlarm> get _sortedScheduledAlarms {
+    final scheduled = _scheduledAlarmsById.values.toList()
+      ..sort((a, b) {
+        final at = a.alarm.scheduledAt;
+        final bt = b.alarm.scheduledAt;
+        if (at == null && bt == null) return a.alarm.id.compareTo(b.alarm.id);
+        if (at == null) return -1;
+        if (bt == null) return 1;
+        final byScheduledAt = at.compareTo(bt);
+        return byScheduledAt != 0 ? byScheduledAt : a.alarm.id.compareTo(b.alarm.id);
+      });
+    return scheduled;
+  }
+
   void _emit() {
     if (_disposed) return;
     _controller.add(
@@ -492,6 +537,7 @@ class RealtimeClient {
         incidents: _sortedIncidents,
         alarms: _sortedAlarms,
         closeSuggestedIncidentIds: Set.of(_closeSuggestedIncidentIds),
+        scheduledAlarms: _sortedScheduledAlarms,
       ),
     );
   }

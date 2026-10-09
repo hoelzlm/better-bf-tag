@@ -31,6 +31,7 @@ import {
   updateAlarmBodySchema,
   updateAlarmResponseSchema,
   discardAlarmResponseSchema,
+  triggerAlarmResponseSchema,
   loadAlarms,
   type AlarmRow,
 } from './alarm-schemas.js';
@@ -106,6 +107,21 @@ async function loadAndValidateVehicles(tx: Tx, vehicleIds: string[]): Promise<vo
       throw new ApiError(409, 'vehicle_inactive', 'Fahrzeug ist deaktiviert.');
     }
   }
+}
+
+/**
+ * Vehicles already bound to a `triggered` alarm of the given incident
+ * (ADR 0022: used by manual `POST /alarms/{id}/trigger` and the
+ * scheduler — narrower than `loadAlreadyAlarmedVehicleIds`, which also
+ * counts `planned`).
+ */
+async function loadAlreadyTriggeredVehicleIds(tx: Tx, incidentId: string): Promise<Set<string>> {
+  const rows = await tx
+    .select({ vehicleId: alarmVehicle.vehicleId })
+    .from(alarmVehicle)
+    .innerJoin(alarm, eq(alarmVehicle.alarmId, alarm.id))
+    .where(and(eq(alarm.incidentId, incidentId), eq(alarm.state, 'triggered')));
+  return new Set(rows.map(r => r.vehicleId));
 }
 
 interface AlarmBaseRow {
@@ -630,6 +646,100 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
         }
         return { alarm: alarmJson };
       });
+    }
+  );
+
+  fastify.post(
+    '/alarms/:id/trigger',
+    {
+      preHandler: [requireAuth(), requirePermission('dispatch')],
+      schema: {
+        operationId: 'triggerAlarm',
+        tags: ['alarms'],
+        params: alarmIdParamsSchema,
+        response: {
+          200: triggerAlarmResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await fastify.realtime.mutate(async (tx, emit) => {
+        const existing = await loadAlarmRow(tx, request.params.id);
+        if (!existing) {
+          throw alarmNotFound();
+        }
+        if (existing.state !== 'planned' && existing.state !== 'missed') {
+          throw new ApiError(
+            409,
+            'invalid_state_transition',
+            'Alarmierung kann nicht mehr ausgelöst werden.'
+          );
+        }
+
+        const incidentRow = await loadIncidentRow(tx, existing.incidentId);
+        if (!incidentRow) {
+          throw incidentNotFound();
+        }
+
+        const [bfDayRow] = await tx
+          .select({ state: bfDay.state })
+          .from(bfDay)
+          .where(eq(bfDay.id, incidentRow.bfDayId))
+          .limit(1);
+        if (!bfDayRow || bfDayRow.state !== 'running') {
+          throw new ApiError(409, 'bf_day_not_running', 'BF-Tag läuft nicht.');
+        }
+
+        if (incidentRow.state !== 'draft' && incidentRow.state !== 'running') {
+          throw incidentNotAlarmable();
+        }
+
+        const vehicleIds = await tx
+          .select({ vehicleId: alarmVehicle.vehicleId })
+          .from(alarmVehicle)
+          .where(eq(alarmVehicle.alarmId, existing.id));
+        const alreadyTriggeredVehicleIds = await loadAlreadyTriggeredVehicleIds(tx, incidentRow.id);
+        for (const { vehicleId } of vehicleIds) {
+          if (alreadyTriggeredVehicleIds.has(vehicleId)) {
+            throw new ApiError(
+              409,
+              'vehicle_already_alarmed',
+              'Fahrzeug ist bereits bei diesem Einsatz alarmiert.'
+            );
+          }
+        }
+
+        const closeSuggestedBefore = await computeCloseSuggested(tx, [incidentRow.id]);
+        const { alarm: alarmJson, doubleCrewed } = await triggerAlarm(
+          tx,
+          emit,
+          { clock: fastify.clock, pushSender: fastify.pushSender, log: fastify.log },
+          existing.id,
+          closeSuggestedBefore
+        );
+
+        return { alarm: alarmJson, double_crewed: doubleCrewed };
+      });
+
+      await dispatchAlarmPushes(
+        {
+          db: fastify.db,
+          pushSender: fastify.pushSender,
+          realtime: fastify.realtime,
+          log: fastify.log,
+        },
+        result.alarm.id
+      );
+      const [reloaded] = await fastify.db.transaction(tx =>
+        loadAlarms(tx, { alarmIds: [result.alarm.id] })
+      );
+      if (reloaded) {
+        result.alarm = reloaded;
+      }
+
+      return reply.status(200).send(result);
     }
   );
 

@@ -18,6 +18,7 @@ import type { Db } from './db/client.js';
 import type { Clock } from './clock.js';
 import type { PushSender } from './push/push-sender.js';
 import { TestAlarmScheduler } from './push/test-alarm.js';
+import { AlarmScheduler } from './alarms/scheduler.js';
 import { createErrorHandler, createNotFoundHandler, ApiError } from './errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
@@ -63,6 +64,7 @@ declare module 'fastify' {
     pushSender: PushSender;
     realtime: Realtime;
     testAlarmScheduler: TestAlarmScheduler;
+    alarmScheduler: AlarmScheduler;
   }
 }
 
@@ -83,6 +85,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.decorate('pushSender', pushSender);
   app.decorate('realtime', new Realtime(db, clock));
   app.decorate(
+    'alarmScheduler',
+    new AlarmScheduler(
+      { db, realtime: app.realtime, clock, pushSender, log: app.log },
+      config.ALARM_SCHEDULER_INTERVAL_MS
+    )
+  );
+  app.decorate(
     'testAlarmScheduler',
     new TestAlarmScheduler({
       db,
@@ -96,7 +105,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // ADR 0018: real push senders (ApnsPushSender via PlatformPushSender) hold
   // a reusable HTTP/2 session; close it on shutdown if the configured
   // sender supports it (noopPushSender / test fakes don't).
+  // ADR 0022: the AlarmScheduler's startup catch-up (`runDue()` once) must
+  // happen after everything else is wired up but before the app is ready
+  // to accept traffic — `onReady` is exactly that point. `onClose` stops
+  // its real-time interval timer again.
+  app.addHook('onReady', async () => {
+    await app.alarmScheduler.start();
+  });
+
   app.addHook('onClose', async () => {
+    app.alarmScheduler.stop();
     app.testAlarmScheduler.close();
     const closable = pushSender as PushSender & { close?: () => Promise<void> };
     if (closable.close) {

@@ -23,17 +23,23 @@ Alarm _alarm({
   String id = 'a1',
   String incidentId = 'i1',
   AlarmState state = AlarmState.triggered,
+  DateTime? scheduledAt,
   DateTime? triggeredAt,
   List<String> vehicleIds = const ['v1'],
   List<AlarmRecipient> recipients = const [],
+  String? relativeToAlarmId,
+  int? offsetMinutes,
 }) {
   return Alarm(
     id: id,
     incidentId: incidentId,
     state: state,
+    scheduledAt: scheduledAt,
     triggeredAt: triggeredAt,
     vehicleIds: vehicleIds,
     recipients: recipients,
+    relativeToAlarmId: relativeToAlarmId,
+    offsetMinutes: offsetMinutes,
   );
 }
 
@@ -280,6 +286,142 @@ void main() {
     test('alarmSequenceLabel falls back to "Alarmierung" for a planned alarm', () {
       final planned = _alarm(id: 'a1', state: AlarmState.planned);
       expect(alarmSequenceLabel(planned, [planned]), 'Alarmierung');
+    });
+  });
+
+  group('Alarm.fromJson relative_to_alarm_id / offset_minutes (ADR 0022)', () {
+    test('absent -> null (older servers/tests)', () {
+      final json = {
+        'id': 'a1',
+        'incident_id': 'i1',
+        'state': 'triggered',
+        'scheduled_at': null,
+        'triggered_at': '2026-10-09T10:00:00Z',
+        'vehicle_ids': ['v1'],
+        'recipients': const <Map<String, dynamic>>[],
+      };
+      final alarm = Alarm.fromJson(json);
+      expect(alarm.relativeToAlarmId, isNull);
+      expect(alarm.offsetMinutes, isNull);
+    });
+
+    test('present -> parsed', () {
+      final json = {
+        'id': 'a2',
+        'incident_id': 'i1',
+        'state': 'planned',
+        'scheduled_at': '2026-10-09T10:08:00Z',
+        'triggered_at': null,
+        'vehicle_ids': ['v2'],
+        'recipients': const <Map<String, dynamic>>[],
+        'relative_to_alarm_id': 'a1',
+        'offset_minutes': 8,
+      };
+      final alarm = Alarm.fromJson(json);
+      expect(alarm.relativeToAlarmId, 'a1');
+      expect(alarm.offsetMinutes, 8);
+    });
+  });
+
+  group('Alarm.isPlanned / isMissed (ADR 0022)', () {
+    test('isPlanned true only for state planned', () {
+      expect(_alarm(state: AlarmState.planned).isPlanned, isTrue);
+      expect(_alarm(state: AlarmState.triggered).isPlanned, isFalse);
+      expect(_alarm(state: AlarmState.missed).isPlanned, isFalse);
+    });
+
+    test('isMissed true only for state missed', () {
+      expect(_alarm(state: AlarmState.missed).isMissed, isTrue);
+      expect(_alarm(state: AlarmState.planned).isMissed, isFalse);
+      expect(_alarm(state: AlarmState.triggered).isMissed, isFalse);
+    });
+  });
+
+  group('countdown (ADR 0022)', () {
+    test('null without scheduledAt', () {
+      final alarm = _alarm(state: AlarmState.triggered, scheduledAt: null);
+      expect(countdown(alarm, DateTime.parse('2026-10-09T10:00:00Z')), isNull);
+    });
+
+    test('positive before scheduledAt', () {
+      final alarm = _alarm(
+        state: AlarmState.planned,
+        scheduledAt: DateTime.parse('2026-10-09T10:08:00Z'),
+      );
+      expect(
+        countdown(alarm, DateTime.parse('2026-10-09T10:00:00Z')),
+        const Duration(minutes: 8),
+      );
+    });
+
+    test('negative after scheduledAt has passed', () {
+      final alarm = _alarm(
+        state: AlarmState.missed,
+        scheduledAt: DateTime.parse('2026-10-09T10:00:00Z'),
+      );
+      expect(
+        countdown(alarm, DateTime.parse('2026-10-09T10:15:00Z')),
+        const Duration(minutes: -15),
+      );
+    });
+  });
+
+  group('scheduledAlarmTimeLabel (ADR 0022)', () {
+    test('relative Alarmierung -> "+N min nach Erstalarm"', () {
+      final alarm = _alarm(
+        state: AlarmState.planned,
+        scheduledAt: DateTime.parse('2026-10-09T10:08:00Z'),
+        relativeToAlarmId: 'a1',
+        offsetMinutes: 8,
+      );
+      expect(scheduledAlarmTimeLabel(alarm), '+8 min nach Erstalarm');
+    });
+
+    test('absolute Alarmierung -> HH:MM', () {
+      final alarm = _alarm(
+        state: AlarmState.planned,
+        scheduledAt: DateTime.parse('2026-10-09T10:08:00Z').toUtc(),
+      );
+      expect(
+        scheduledAlarmTimeLabel(alarm),
+        '${DateTime.parse('2026-10-09T10:08:00Z').toLocal().hour.toString().padLeft(2, '0')}:'
+        '${DateTime.parse('2026-10-09T10:08:00Z').toLocal().minute.toString().padLeft(2, '0')}',
+      );
+    });
+
+    test('no scheduledAt -> empty string', () {
+      final alarm = _alarm(state: AlarmState.triggered, scheduledAt: null);
+      expect(scheduledAlarmTimeLabel(alarm), '');
+    });
+  });
+
+  group('ScheduledAlarm (ADR 0022)', () {
+    Incident incident({String id = 'i1'}) {
+      return Incident(
+        id: id,
+        bfDayId: 'day1',
+        number: 1,
+        keyword: 'Verkehrsunfall',
+        address: 'Hauptstraße 1',
+        report: 'PKW gegen Baum',
+        script: null,
+        state: IncidentState.draft,
+        createdAt: DateTime.parse('2026-10-09T08:00:00Z'),
+        updatedAt: DateTime.parse('2026-10-09T08:00:00Z'),
+      );
+    }
+
+    test('equality is value-based', () {
+      final a = ScheduledAlarm(
+        incident: incident(),
+        alarm: _alarm(state: AlarmState.planned),
+      );
+      final b = ScheduledAlarm(
+        incident: incident(),
+        alarm: _alarm(state: AlarmState.planned),
+      );
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
     });
   });
 }

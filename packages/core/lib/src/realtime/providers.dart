@@ -125,6 +125,19 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
     triggeredAt: a.triggeredAt == null ? null : DateTime.parse(a.triggeredAt!),
     vehicleIds: a.vehicleIds.toList(),
     recipients: a.recipients.map(_alarmRecipientFromApi).toList(),
+    pushDelivered: a.pushDelivered,
+    pushRejected: a.pushRejected,
+    relativeToAlarmId: a.relativeToAlarmId,
+    offsetMinutes: a.offsetMinutes,
+  );
+}
+
+ScheduledAlarm _scheduledAlarmFromApi(
+  GetSnapshot200ResponseScheduledAlarmsInner sa,
+) {
+  return ScheduledAlarm(
+    incident: _incidentFromApi(sa.incident),
+    alarm: _alarmFromApi(sa.alarm),
   );
 }
 
@@ -139,6 +152,7 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     incidents: data.incidents.map(_incidentFromApi).toList(),
     alarms: data.alarms.map(_alarmFromApi).toList(),
     closeSuggestedIncidentIds: data.closeSuggestedIncidentIds.toSet(),
+    scheduledAlarms: data.scheduledAlarms.map(_scheduledAlarmFromApi).toList(),
   );
 }
 
@@ -284,6 +298,38 @@ final closeSuggestedIncidentIdsProvider = StreamProvider<Set<String>>((ref) {
     return Stream.value(const <String>{});
   }
   return client.states.map((state) => state.closeSuggestedIncidentIds);
+});
+
+/// The `planned`/`missed` Alarmierungen of the `draft`/`running` Einsätze
+/// of the currently running BF-Tag (ADR 0022), sorted by `scheduled_at`,
+/// `id` -- empty while signed out, before the first snapshot has loaded,
+/// when there are none, or for Berechtigungen without Drehbuch-Sicht
+/// (Mannschaft/Monitor).
+final scheduledAlarmsProvider = StreamProvider<List<ScheduledAlarm>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ScheduledAlarm>[]);
+  }
+  return client.states.map((state) => state.scheduledAlarms);
+});
+
+/// Only the `planned` entries of [scheduledAlarmsProvider], ascending by
+/// `scheduled_at` -- "nächste zuerst" for the Lage section "Geplante
+/// Alarmierungen" (ADR 0022).
+final nextPlannedAlarmsProvider = Provider<List<ScheduledAlarm>>((ref) {
+  final scheduled =
+      ref.watch(scheduledAlarmsProvider).valueOrNull ??
+      const <ScheduledAlarm>[];
+  return scheduled.where((sa) => sa.alarm.isPlanned).toList();
+});
+
+/// Only the `missed` entries of [scheduledAlarmsProvider] -- for the Lage
+/// section "Verpasste Alarmierungen" (ADR 0022).
+final missedAlarmsProvider = Provider<List<ScheduledAlarm>>((ref) {
+  final scheduled =
+      ref.watch(scheduledAlarmsProvider).valueOrNull ??
+      const <ScheduledAlarm>[];
+  return scheduled.where((sa) => sa.alarm.isMissed).toList();
 });
 
 /// The [RealtimeClient] for the current paired device session (mobile app,
