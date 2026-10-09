@@ -60,6 +60,14 @@ String describeIncidentError(
   return fallback;
 }
 
+/// Whether [error] is the 404 `not_found` the backend returns for
+/// `GET /bf-days/current/incidents` (and `.../current`) when no BF-Tag is
+/// running (ADR 0016 via `resolveBfDay`). Lets callers show "Kein
+/// laufender BF-Tag." instead of a generic error message.
+bool isNoRunningBfDayError(Object error) {
+  return error is DioException && error.response?.statusCode == 404;
+}
+
 /// Access to Einsätze (ADR 0016): `GET/POST /bf-days/{day}/incidents`,
 /// `GET/PATCH /incidents/{id}`, `POST /incidents/{id}/discard`.
 ///

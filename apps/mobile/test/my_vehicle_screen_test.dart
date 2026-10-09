@@ -90,6 +90,18 @@ Future<void> _pump(
   required List<MyCrewAssignment> assignments,
   _FakeVehicleAdminRepository? repository,
 }) async {
+  // The screen now has a bottom NavigationBar (T07-3); grow the test
+  // surface so the FMS keys stay within the visible/tappable area at
+  // the default test window size.
+  final originalSize = tester.view.physicalSize;
+  final originalDpr = tester.view.devicePixelRatio;
+  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.physicalSize = originalSize;
+    tester.view.devicePixelRatio = originalDpr;
+  });
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
