@@ -77,6 +77,7 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**monitorRefresh**](doc/AuthApi.md#monitorrefresh) | **POST** /api/v1/auth/monitor/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
+[*AuthApi*](doc/AuthApi.md) | [**triggerTestAlarm**](doc/AuthApi.md#triggertestalarm) | **POST** /api/v1/me/device/test-alarm | 
 [*AuthApi*](doc/AuthApi.md) | [**updatePushToken**](doc/AuthApi.md#updatepushtoken) | **PUT** /api/v1/me/device/push-token | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**anonymizeBfDay**](doc/BfDaysApi.md#anonymizebfday) | **POST** /api/v1/bf-days/{id}/anonymize | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**createBfDay**](doc/BfDaysApi.md#createbfday) | **POST** /api/v1/bf-days | 
@@ -190,6 +191,9 @@ Class | Method | HTTP request | Description
  - [TriggerAlarm200Response](doc/TriggerAlarm200Response.md)
  - [TriggerAlarm200ResponseDoubleCrewedInner](doc/TriggerAlarm200ResponseDoubleCrewedInner.md)
  - [TriggerAlarmRequest](doc/TriggerAlarmRequest.md)
+ - [TriggerTestAlarm200Response](doc/TriggerTestAlarm200Response.md)
+ - [TriggerTestAlarm202Response](doc/TriggerTestAlarm202Response.md)
+ - [TriggerTestAlarmRequest](doc/TriggerTestAlarmRequest.md)
  - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
  - [UpdateIncidentRequest](doc/UpdateIncidentRequest.md)
  - [UpdatePersonRequest](doc/UpdatePersonRequest.md)

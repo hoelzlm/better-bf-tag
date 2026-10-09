@@ -50,19 +50,33 @@ export class ApnsPushSender implements PushSender {
   }
 
   private async sendOne(message: PushMessage, jwt: string): Promise<PushResult> {
-    const body = JSON.stringify({
-      aps: {
-        alert: {
-          title: message.data.keyword,
-          body: message.data.address,
-        },
-        sound: 'alarm.wav',
-        'interruption-level': 'time-sensitive',
-        'thread-id': `incident-${message.data.incident_id}`,
-      },
-      incident_id: message.data.incident_id,
-      alarm_id: message.data.alarm_id,
-    });
+    const body =
+      message.data.type === 'test_alarm'
+        ? JSON.stringify({
+            aps: {
+              alert: {
+                title: 'Testalarm',
+                body: 'Wenn du das hörst, funktioniert der Alarm.',
+              },
+              sound: 'alarm.wav',
+              'interruption-level': 'time-sensitive',
+              'thread-id': 'test-alarm',
+            },
+            type: 'test_alarm',
+          })
+        : JSON.stringify({
+            aps: {
+              alert: {
+                title: message.data.keyword,
+                body: message.data.address,
+              },
+              sound: 'alarm.wav',
+              'interruption-level': 'time-sensitive',
+              'thread-id': `incident-${message.data.incident_id}`,
+            },
+            incident_id: message.data.incident_id,
+            alarm_id: message.data.alarm_id,
+          });
 
     try {
       const { status, body: responseBody } = await this.request(message.token, jwt, body);

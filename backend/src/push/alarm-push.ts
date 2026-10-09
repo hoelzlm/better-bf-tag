@@ -65,6 +65,7 @@ export async function dispatchAlarmPushes(
     platform: target.platform,
     token: target.token,
     data: {
+      type: 'alarm.triggered',
       incident_id: alarmRow.incidentId,
       alarm_id: alarmId,
       keyword: incidentRow.keyword,

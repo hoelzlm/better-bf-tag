@@ -70,6 +70,9 @@ import 'package:bftag_api_client/src/model/set_web_access_request.dart';
 import 'package:bftag_api_client/src/model/trigger_alarm200_response.dart';
 import 'package:bftag_api_client/src/model/trigger_alarm200_response_double_crewed_inner.dart';
 import 'package:bftag_api_client/src/model/trigger_alarm_request.dart';
+import 'package:bftag_api_client/src/model/trigger_test_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/trigger_test_alarm202_response.dart';
+import 'package:bftag_api_client/src/model/trigger_test_alarm_request.dart';
 import 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/update_incident_request.dart';
 import 'package:bftag_api_client/src/model/update_person_request.dart';
@@ -136,6 +139,9 @@ part 'serializers.g.dart';
   TriggerAlarm200Response,
   TriggerAlarm200ResponseDoubleCrewedInner,
   TriggerAlarmRequest,
+  TriggerTestAlarm200Response,
+  TriggerTestAlarm202Response,
+  TriggerTestAlarmRequest,
   UpdateBfDayRequest,
   UpdateIncidentRequest,
   UpdatePersonRequest,

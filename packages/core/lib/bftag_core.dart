@@ -13,6 +13,7 @@ export 'src/api/push_token_repository.dart';
 export 'src/api/shift_repository.dart';
 export 'src/api/slide_admin_repository.dart';
 export 'src/api/slide_image_loader.dart';
+export 'src/api/test_alarm_repository.dart';
 export 'src/api/vehicle_admin_repository.dart';
 export 'src/auth/auth_session_binding.dart';
 export 'src/auth/paired_session.dart';

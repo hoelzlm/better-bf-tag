@@ -9,6 +9,7 @@ import { createDb, type Db } from '../../src/db/client.js';
 import { prepare } from '../../src/startup.js';
 import { FakeClock } from './fake-clock.js';
 import { RecordingPushSender } from './recording-push-sender.js';
+import { ManualTimerRegistry } from './manual-timer.js';
 import { HttpClient } from './http-client.js';
 
 export interface TestAppOptions {
@@ -22,6 +23,8 @@ export interface TestApp {
   databaseUrl: string;
   clock: FakeClock;
   push: RecordingPushSender;
+  /** Fires pending Testalarm-Scheduler timers deterministically (ADR 0021). */
+  testAlarmTimer: ManualTimerRegistry;
   client(): HttpClient;
   restart(config?: Partial<Config>): Promise<TestApp>;
   close(): Promise<void>;
@@ -60,6 +63,7 @@ async function start(databaseUrl: string, config: Config): Promise<TestApp> {
 
   const clock = new FakeClock();
   const push = new RecordingPushSender();
+  const testAlarmTimer = new ManualTimerRegistry();
 
   const deps: AppDeps = {
     config,
@@ -67,6 +71,10 @@ async function start(databaseUrl: string, config: Config): Promise<TestApp> {
     pool,
     clock,
     pushSender: push,
+    testAlarmTimer: {
+      setTimer: testAlarmTimer.setTimer,
+      clearTimer: testAlarmTimer.clearTimer,
+    },
   };
 
   const app: FastifyInstance = await buildApp(deps);
@@ -83,6 +91,7 @@ async function start(databaseUrl: string, config: Config): Promise<TestApp> {
     databaseUrl,
     clock,
     push,
+    testAlarmTimer,
     client(): HttpClient {
       return new HttpClient(baseUrl);
     },
