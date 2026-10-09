@@ -135,7 +135,8 @@ Antwort 201 (200 bei Wiederholung über `id`):
 { "alarm": { "id": "…", "incident_id": "…", "state": "triggered", "scheduled_at": null,
              "triggered_at": "…", "vehicle_ids": ["…"],
              "recipients": [{ "person_id": "…", "display_name": "…", "vehicle_id": "…",
-                              "function": "GF", "has_device": true, "acknowledged_at": null }] },
+                              "function": "GF", "has_device": true, "acknowledged_at": null }],
+             "push_delivered": 3, "push_rejected": 1 },
   "double_crewed": [{ "person_id": "…", "display_name": "…", "vehicle_ids": ["…", "…"] }] }
 ```
 
@@ -143,6 +144,11 @@ Antwort 201 (200 bei Wiederholung über `id`):
 (Standardreihenfolge wie `shift-json.ts`), `display_name`. `double_crewed` listet Personen, die
 auf mehr als einem der alarmierten Fahrzeuge sitzen (bei Wiederholung über `id` leer). Ein
 `Alarm` enthält nie das Drehbuch.
+
+`push_delivered`/`push_rejected` ([ADR 0018](adr/0018-push-alarm-zustellung.md)): Der Handler
+wartet den Push-Versand an alle Empfänger-Geräte ab (Gesamt-Timeout 10 s) und liefert die
+Antwort erst danach mit den aktuellen Zählern aus. Bei der idempotenten Wiederholung (200) wird
+nicht erneut gesendet, die Zähler bleiben die des ersten Versands.
 
 #### Quittierung: `POST /alarms/{id}/acknowledge` (ADR 0017)
 
@@ -169,7 +175,7 @@ ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form w
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
-| PUT | `/me/device/push-token` | Push-Token aktualisieren |
+| PUT | `/me/device/push-token` | Push-Token aktualisieren ([ADR 0018](adr/0018-push-alarm-zustellung.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ token: string (1–4096) }` → 204. Setzt `device.push_token` des eigenen Geräts; trägt ein anderes Gerät dasselbe Token, wird es dort auf `null` gesetzt |
 | GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
 ## WebSocket `/ws`
@@ -198,6 +204,7 @@ ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form w
 | `incident.created` / `incident.updated` | Einsatz, Drehbuch nur für Einsatzvorbereitung/Leitstelle/Admin | Einsatzvorbereitung, Leitstelle, Admin immer; zusätzlich alle, wenn `state ∈ {running, closed}` (ohne Drehbuch) |
 | `alarm.triggered` (ADR 0017) | `{ incident, alarm }` – `incident` pro Verbindung projiziert (Drehbuch nur mit Berechtigung), `alarm` ein `Alarm` (nie mit Drehbuch) | alle; läuft im selben `Realtime.mutate` direkt nach `incident.updated` |
 | `alarm.acknowledged` (ADR 0017) | `{ alarm_id, incident_id, person_id, display_name, acknowledged_at }`, nur beim ersten Mal | alle |
+| `alarm.push_reported` (ADR 0018) | `{ alarm_id, incident_id, push_delivered, push_rejected }`, nach Abschluss des Push-Versands (keine Personendaten); bei null Zielgeräten wird kein Event ausgelöst | alle |
 | `alarm.planned` / `alarm.discarded` / `alarm.missed` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin (später, Ticket 11) |
 | `incident.close_suggested` | `{ id }` | Leitstelle |
 | `incident.closed` | `{ id }` | alle |

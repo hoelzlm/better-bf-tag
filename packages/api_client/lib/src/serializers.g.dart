@@ -86,6 +86,7 @@ Serializers _$serializers =
           ..add(UpdatePersonRequest.serializer)
           ..add(UpdatePersonRequestPermissionEnum.serializer)
           ..add(UpdatePersonRequestPersonTypeEnum.serializer)
+          ..add(UpdatePushTokenRequest.serializer)
           ..add(UpdateSlideRequest.serializer)
           ..add(UpdateVehicleRequest.serializer)
           ..addBuilderFactory(

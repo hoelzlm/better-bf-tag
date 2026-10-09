@@ -194,6 +194,8 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | scheduled_at | timestamptz null | null = sofort |
 | triggered_at | timestamptz null | |
 | created_at | timestamptz not null | |
+| push_delivered | int not null default 0 | zugestellte Pushes ([ADR 0018](adr/0018-push-alarm-zustellung.md)), gesetzt nach Abschluss des Versands |
+| push_rejected | int not null default 0 | abgelehnte/ungültige Pushes, gesetzt nach Abschluss des Versands |
 
 Die erste ausgelöste Alarmierung eines Einsatzes ist der **Erstalarm**, alle weiteren sind
 **Nachalarmierungen**. Das wird über die Reihenfolge abgeleitet, nicht gespeichert.
