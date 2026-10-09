@@ -15,6 +15,7 @@ function baseMessage(overrides: Partial<PushMessage> = {}): PushMessage {
     platform: 'android',
     token: 'fcm-token-1',
     data: {
+      type: 'alarm.triggered',
       incident_id: 'incident-1',
       alarm_id: 'alarm-1',
       keyword: 'B2 – Wohnungsbrand',
@@ -160,6 +161,32 @@ describe('FcmPushSender', () => {
     });
   });
 
+  it('sends the Testalarm payload (ADR 0021): same channel/sound, tag test-alarm, no alarm_id', async () => {
+    const sender = makeSender();
+    await sender.send([baseMessage({ data: { type: 'test_alarm' } })]);
+
+    expect(fcmRequests).toHaveLength(1);
+    expect(fcmRequests[0]?.body).toEqual({
+      message: {
+        token: 'fcm-token-1',
+        android: {
+          priority: 'high',
+          ttl: '300s',
+          notification: {
+            channel_id: 'alarm',
+            sound: 'alarm',
+            tag: 'test-alarm',
+          },
+        },
+        notification: {
+          title: 'Testalarm',
+          body: 'Wenn du das hörst, funktioniert der Alarm.',
+        },
+        data: { type: 'test_alarm' },
+      },
+    });
+  });
+
   it('maps 404 UNREGISTERED to invalid_token', async () => {
     fcmResponse = {
       status: 404,
@@ -277,6 +304,25 @@ describe('ApnsPushSender', () => {
       },
       incident_id: 'incident-1',
       alarm_id: 'alarm-1',
+    });
+  });
+
+  it('sends the Testalarm payload (ADR 0021): thread-id test-alarm, top-level type test_alarm', async () => {
+    const sender = makeSender();
+    await sender.send([
+      baseMessage({ platform: 'ios', token: 'apns-token-1', data: { type: 'test_alarm' } }),
+    ]);
+    await sender.close();
+
+    expect(requests).toHaveLength(1);
+    expect(JSON.parse(requests[0]?.body ?? '{}')).toEqual({
+      aps: {
+        alert: { title: 'Testalarm', body: 'Wenn du das hörst, funktioniert der Alarm.' },
+        sound: 'alarm.wav',
+        'interruption-level': 'time-sensitive',
+        'thread-id': 'test-alarm',
+      },
+      type: 'test_alarm',
     });
   });
 

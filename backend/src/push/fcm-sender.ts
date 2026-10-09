@@ -58,29 +58,52 @@ export class FcmPushSender implements PushSender {
   }
 
   private async sendOne(message: PushMessage, accessToken: string): Promise<PushResult> {
-    const body = {
-      message: {
-        token: message.token,
-        android: {
-          priority: 'high',
-          ttl: '300s',
-          notification: {
-            channel_id: 'alarm',
-            sound: 'alarm',
-            tag: `incident-${message.data.incident_id}`,
-          },
-        },
-        notification: {
-          title: message.data.keyword,
-          body: message.data.address,
-        },
-        data: {
-          type: 'alarm.triggered',
-          incident_id: message.data.incident_id,
-          alarm_id: message.data.alarm_id,
-        },
-      },
-    };
+    const body =
+      message.data.type === 'test_alarm'
+        ? {
+            message: {
+              token: message.token,
+              android: {
+                priority: 'high',
+                ttl: '300s',
+                notification: {
+                  channel_id: 'alarm',
+                  sound: 'alarm',
+                  tag: 'test-alarm',
+                },
+              },
+              notification: {
+                title: 'Testalarm',
+                body: 'Wenn du das hörst, funktioniert der Alarm.',
+              },
+              data: {
+                type: 'test_alarm',
+              },
+            },
+          }
+        : {
+            message: {
+              token: message.token,
+              android: {
+                priority: 'high',
+                ttl: '300s',
+                notification: {
+                  channel_id: 'alarm',
+                  sound: 'alarm',
+                  tag: `incident-${message.data.incident_id}`,
+                },
+              },
+              notification: {
+                title: message.data.keyword,
+                body: message.data.address,
+              },
+              data: {
+                type: 'alarm.triggered',
+                incident_id: message.data.incident_id,
+                alarm_id: message.data.alarm_id,
+              },
+            },
+          };
 
     const url = `${this.endpoint}/v1/projects/${this.serviceAccount.project_id}/messages:send`;
 
