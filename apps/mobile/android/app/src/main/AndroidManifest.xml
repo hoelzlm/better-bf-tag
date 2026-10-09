@@ -4,6 +4,10 @@
     <!-- Runtime permission on Android 13+, requested via
          FirebaseMessaging.requestPermission() (ADR 0018). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Requested via the onboarding "Akku-Optimierung" step (ADR 0021):
+         play-store-restricted, justified here as the alarm app's
+         background-reliability exception. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <application
         android:label="bftag_mobile"
         android:name="${applicationName}"

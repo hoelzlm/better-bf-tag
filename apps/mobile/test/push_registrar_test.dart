@@ -45,6 +45,9 @@ class _FakePushService implements PushService {
   @override
   Stream<String> get onAlarmOpened => _alarmOpenedController.stream;
 
+  @override
+  Stream<void> get onTestAlarmReceived => const Stream<void>.empty();
+
   void emitTokenRefresh(String newToken) =>
       _tokenRefreshController.add(newToken);
 
