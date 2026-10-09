@@ -183,6 +183,26 @@ Map<String, dynamic> _alarmAcknowledgedEvent({
   };
 }
 
+Map<String, dynamic> _alarmPushReportedEvent({
+  required int seq,
+  required String alarmId,
+  required String incidentId,
+  required int pushDelivered,
+  required int pushRejected,
+}) {
+  return {
+    'seq': seq,
+    'type': 'alarm.push_reported',
+    'at': '2026-10-09T08:00:00Z',
+    'data': {
+      'alarm_id': alarmId,
+      'incident_id': incidentId,
+      'push_delivered': pushDelivered,
+      'push_rejected': pushRejected,
+    },
+  };
+}
+
 RealtimeClient _buildClient({
   required List<Completer<Snapshot>> snapshotCompleters,
   required _FakeConnector connector,
@@ -411,6 +431,91 @@ void main() {
         async.flushMicrotasks();
 
         expect(liveAlarms, isEmpty);
+
+        client.dispose();
+      });
+    });
+
+    test('alarm.push_reported updates the counters on the matching alarm',
+        () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+        final alarm = _alarm();
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [_incident(state: IncidentState.running)],
+            alarms: [alarm],
+          ),
+        );
+        async.flushMicrotasks();
+
+        connector.connections.single.emit(
+          _alarmPushReportedEvent(
+            seq: 11,
+            alarmId: alarm.id,
+            incidentId: alarm.incidentId,
+            pushDelivered: 3,
+            pushRejected: 1,
+          ),
+        );
+        async.flushMicrotasks();
+
+        final updated = states.last.alarms.single;
+        expect(updated.pushDelivered, 3);
+        expect(updated.pushRejected, 1);
+
+        client.dispose();
+      });
+    });
+
+    test('alarm.push_reported for an unknown alarm id is ignored', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client =
+            _buildClient(snapshotCompleters: completers, connector: connector);
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+        final alarm = _alarm();
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [_incident(state: IncidentState.running)],
+            alarms: [alarm],
+          ),
+        );
+        async.flushMicrotasks();
+
+        connector.connections.single.emit(
+          _alarmPushReportedEvent(
+            seq: 11,
+            alarmId: 'unknown-alarm',
+            incidentId: alarm.incidentId,
+            pushDelivered: 5,
+            pushRejected: 2,
+          ),
+        );
+        async.flushMicrotasks();
+
+        final unchanged = states.last.alarms.single;
+        expect(unchanged.pushDelivered, 0);
+        expect(unchanged.pushRejected, 0);
 
         client.dispose();
       });

@@ -32,6 +32,8 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
     triggeredAt: a.triggeredAt == null ? null : DateTime.parse(a.triggeredAt!),
     vehicleIds: a.vehicleIds.toList(),
     recipients: a.recipients.map(_recipientFromApi).toList(),
+    pushDelivered: a.pushDelivered,
+    pushRejected: a.pushRejected,
   );
 }
 
