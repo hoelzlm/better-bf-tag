@@ -88,6 +88,10 @@ List<Override> _overrides(
     // StartScreen watches this to kick off the realtime connection; these
     // tests only exercise pairing/navigation, so stub it out.
     pairedRealtimeClientProvider.overrideWith((ref) => null),
+    // MyVehicleScreen watches this; these tests don't exercise "Mein
+    // Fahrzeug" assignments, and overriding it avoids starting the real
+    // 30s tick timer (which would otherwise outlive the test).
+    myCrewAssignmentsProvider.overrideWithValue(const []),
   ];
 }
 
@@ -124,7 +128,7 @@ void main() {
       await tester.tap(find.byKey(const Key('pair-submit')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Hallo Max M.'), findsOneWidget);
+      expect(find.text('Mein Fahrzeug'), findsOneWidget);
     },
   );
 
@@ -163,7 +167,7 @@ void main() {
       scanner.onDetected!('ABCDEFGH');
       await tester.pumpAndSettle();
 
-      expect(find.text('Hallo Max M.'), findsOneWidget);
+      expect(find.text('Mein Fahrzeug'), findsOneWidget);
     },
   );
 
@@ -182,7 +186,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Hallo Max M.'), findsOneWidget);
+      expect(find.text('Mein Fahrzeug'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('settings')));
       await tester.pumpAndSettle();
@@ -217,7 +221,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Hallo Max M.'), findsOneWidget);
+      expect(find.text('Mein Fahrzeug'), findsOneWidget);
 
       await container
           .read(pairedSessionControllerProvider.notifier)

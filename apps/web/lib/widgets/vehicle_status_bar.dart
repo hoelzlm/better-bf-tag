@@ -102,7 +102,7 @@ class _VehicleTile extends ConsumerWidget {
       builder: (dialogContext) => SimpleDialog(
         title: Text('Status für ${vehicle.callSign}'),
         children: [
-          for (final status in FmsStatus.values)
+          for (final status in offeredStatuses(vehicle.type))
             SimpleDialogOption(
               key: Key('status-option-${status.code}'),
               onPressed: () => Navigator.of(dialogContext).pop(status),

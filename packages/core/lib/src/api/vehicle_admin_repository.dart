@@ -1,9 +1,34 @@
 import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/vehicle.dart';
 import 'dio_provider.dart';
+
+/// Maps a [VehicleAdminRepository.setStatus] failure to a German,
+/// user-safe message (ADR 0015): 403 means the Person is not Besatzung of
+/// the Fahrzeug (and has no `dispatch`/`admin` override); 409
+/// `status_not_allowed` means Status 7/8 was requested for a Fahrzeug that
+/// is not RTW/KTW. Anything else (network, 409 `vehicle_inactive`, ...)
+/// falls back to a generic message.
+String describeSetStatusError(Object error) {
+  if (error is DioException) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode == 403) {
+      return 'Du bist nicht in der Besatzung dieses Fahrzeugs.';
+    }
+    if (statusCode == 409) {
+      final data = error.response?.data;
+      final errorBody = data is Map ? data['error'] : null;
+      final code = errorBody is Map ? errorBody['code'] : null;
+      if (code == 'status_not_allowed') {
+        return 'Status nicht erlaubt für dieses Fahrzeug.';
+      }
+    }
+  }
+  return 'Status konnte nicht gesetzt werden.';
+}
 
 Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
   return Vehicle.fromJson({
