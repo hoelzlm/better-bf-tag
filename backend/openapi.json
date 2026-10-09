@@ -3622,6 +3622,16 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "relative_to_alarm_id": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "offset_minutes": {
+                            "nullable": true,
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -3633,7 +3643,9 @@
                           "vehicle_ids",
                           "recipients",
                           "push_delivered",
-                          "push_rejected"
+                          "push_rejected",
+                          "relative_to_alarm_id",
+                          "offset_minutes"
                         ],
                         "additionalProperties": false
                       }
@@ -3642,6 +3654,183 @@
                       "type": "array",
                       "items": {
                         "type": "string"
+                      }
+                    },
+                    "scheduled_alarms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "incident": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "bf_day_id": {
+                                "type": "string"
+                              },
+                              "number": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "keyword": {
+                                "type": "string"
+                              },
+                              "address": {
+                                "type": "string"
+                              },
+                              "report": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "draft",
+                                  "running",
+                                  "closed",
+                                  "discarded"
+                                ]
+                              },
+                              "created_at": {
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "type": "string"
+                              },
+                              "closed_at": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "script": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "bf_day_id",
+                              "number",
+                              "keyword",
+                              "address",
+                              "report",
+                              "state",
+                              "created_at",
+                              "updated_at",
+                              "closed_at"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "alarm": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "incident_id": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "planned",
+                                  "triggered",
+                                  "missed",
+                                  "discarded"
+                                ]
+                              },
+                              "scheduled_at": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "triggered_at": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "vehicle_ids": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "recipients": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "person_id": {
+                                      "type": "string"
+                                    },
+                                    "display_name": {
+                                      "type": "string"
+                                    },
+                                    "vehicle_id": {
+                                      "type": "string"
+                                    },
+                                    "function": {
+                                      "type": "string"
+                                    },
+                                    "has_device": {
+                                      "type": "boolean"
+                                    },
+                                    "acknowledged_at": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "person_id",
+                                    "display_name",
+                                    "vehicle_id",
+                                    "function",
+                                    "has_device",
+                                    "acknowledged_at"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "push_delivered": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "push_rejected": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "relative_to_alarm_id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "offset_minutes": {
+                                "nullable": true,
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "incident_id",
+                              "state",
+                              "scheduled_at",
+                              "triggered_at",
+                              "vehicle_ids",
+                              "recipients",
+                              "push_delivered",
+                              "push_rejected",
+                              "relative_to_alarm_id",
+                              "offset_minutes"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "incident",
+                          "alarm"
+                        ],
+                        "additionalProperties": false
                       }
                     }
                   },
@@ -3654,7 +3843,8 @@
                     "current_shift_id",
                     "incidents",
                     "alarms",
-                    "close_suggested_incident_ids"
+                    "close_suggested_incident_ids",
+                    "scheduled_alarms"
                   ],
                   "additionalProperties": false
                 }
@@ -7101,6 +7291,16 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "relative_to_alarm_id": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "offset_minutes": {
+                            "nullable": true,
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -7112,7 +7312,9 @@
                           "vehicle_ids",
                           "recipients",
                           "push_delivered",
-                          "push_rejected"
+                          "push_rejected",
+                          "relative_to_alarm_id",
+                          "offset_minutes"
                         ],
                         "additionalProperties": false
                       }
@@ -7740,7 +7942,7 @@
     },
     "/api/v1/incidents/{id}/alarms": {
       "post": {
-        "operationId": "triggerAlarm",
+        "operationId": "createAlarm",
         "tags": [
           "alarms"
         ],
@@ -7765,6 +7967,16 @@
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     }
+                  },
+                  "scheduled_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  "offset_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1440
                   }
                 },
                 "required": [
@@ -7872,6 +8084,16 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "relative_to_alarm_id": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "offset_minutes": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -7883,7 +8105,9 @@
                         "vehicle_ids",
                         "recipients",
                         "push_delivered",
-                        "push_rejected"
+                        "push_rejected",
+                        "relative_to_alarm_id",
+                        "offset_minutes"
                       ],
                       "additionalProperties": false
                     },
@@ -8007,6 +8231,16 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "relative_to_alarm_id": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "offset_minutes": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -8018,7 +8252,9 @@
                         "vehicle_ids",
                         "recipients",
                         "push_delivered",
-                        "push_rejected"
+                        "push_rejected",
+                        "relative_to_alarm_id",
+                        "offset_minutes"
                       ],
                       "additionalProperties": false
                     },
@@ -8084,6 +8320,483 @@
                   },
                   "required": [
                     "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/alarms/{id}": {
+      "patch": {
+        "operationId": "updateAlarm",
+        "tags": [
+          "alarms"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scheduled_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  "offset_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1440
+                  },
+                  "vehicle_ids": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alarm": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "incident_id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "planned",
+                            "triggered",
+                            "missed",
+                            "discarded"
+                          ]
+                        },
+                        "scheduled_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "triggered_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "vehicle_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "recipients": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "person_id": {
+                                "type": "string"
+                              },
+                              "display_name": {
+                                "type": "string"
+                              },
+                              "vehicle_id": {
+                                "type": "string"
+                              },
+                              "function": {
+                                "type": "string"
+                              },
+                              "has_device": {
+                                "type": "boolean"
+                              },
+                              "acknowledged_at": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "person_id",
+                              "display_name",
+                              "vehicle_id",
+                              "function",
+                              "has_device",
+                              "acknowledged_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "push_delivered": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "push_rejected": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "relative_to_alarm_id": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "offset_minutes": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "incident_id",
+                        "state",
+                        "scheduled_at",
+                        "triggered_at",
+                        "vehicle_ids",
+                        "recipients",
+                        "push_delivered",
+                        "push_rejected",
+                        "relative_to_alarm_id",
+                        "offset_minutes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "alarm"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/alarms/{id}/discard": {
+      "post": {
+        "operationId": "discardAlarm",
+        "tags": [
+          "alarms"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alarm": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "incident_id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "planned",
+                            "triggered",
+                            "missed",
+                            "discarded"
+                          ]
+                        },
+                        "scheduled_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "triggered_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "vehicle_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "recipients": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "person_id": {
+                                "type": "string"
+                              },
+                              "display_name": {
+                                "type": "string"
+                              },
+                              "vehicle_id": {
+                                "type": "string"
+                              },
+                              "function": {
+                                "type": "string"
+                              },
+                              "has_device": {
+                                "type": "boolean"
+                              },
+                              "acknowledged_at": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "person_id",
+                              "display_name",
+                              "vehicle_id",
+                              "function",
+                              "has_device",
+                              "acknowledged_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "push_delivered": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "push_rejected": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "relative_to_alarm_id": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "offset_minutes": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "incident_id",
+                        "state",
+                        "scheduled_at",
+                        "triggered_at",
+                        "vehicle_ids",
+                        "recipients",
+                        "push_delivered",
+                        "push_rejected",
+                        "relative_to_alarm_id",
+                        "offset_minutes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "alarm"
                   ],
                   "additionalProperties": false
                 }

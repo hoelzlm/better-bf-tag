@@ -192,8 +192,10 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | id | uuid PK | |
 | incident_id | uuid FK | cascade |
 | state | enum `alarm_state` (`planned`, `triggered`, `missed`, `discarded`) | geplant / ausgelöst / verpasst / verworfen |
-| scheduled_at | timestamptz null | null = sofort |
+| scheduled_at | timestamptz null | geplanter Auslösezeitpunkt (absolut oder aus `offset_minutes` berechnet); null = sofort ausgelöst |
 | triggered_at | timestamptz null | |
+| relative_to_alarm_id | uuid FK (self) null | [ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md): Basis-Alarmierung für relative Planung (`offset_minutes`); null = absolut oder sofort |
+| offset_minutes | int null | [ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md): Minuten relativ zu `relative_to_alarm_id`; null = absolut oder sofort |
 | created_at | timestamptz not null | |
 | push_delivered | int not null default 0 | zugestellte Pushes ([ADR 0018](adr/0018-push-alarm-zustellung.md)), gesetzt nach Abschluss des Versands |
 | push_rejected | int not null default 0 | abgelehnte/ungültige Pushes, gesetzt nach Abschluss des Versands |

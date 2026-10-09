@@ -589,7 +589,7 @@ describe('alarms', () => {
     expect(adminRes.status).toBe(201);
   });
 
-  it('scheduled_at present -> 400 validation_error', async () => {
+  it('scheduled_at in the past -> 409 scheduled_at_in_past (ADR 0022: scheduled_at is now accepted, no longer rejected as unknown)', async () => {
     const { incident, v1 } = await setupAlarmedIncident('ScheduledAt');
     const res = await app
       .client()
@@ -598,8 +598,8 @@ describe('alarms', () => {
         { vehicle_ids: [v1.id], scheduled_at: '2026-06-01T09:00:00Z' },
         { token: dispatchToken }
       );
-    expect(res.status).toBe(400);
-    expect((res.body as { error: { code: string } }).error.code).toBe('validation_error');
+    expect(res.status).toBe(409);
+    expect((res.body as { error: { code: string } }).error.code).toBe('scheduled_at_in_past');
   });
 
   it('inactive vehicle -> 409 vehicle_inactive', async () => {
