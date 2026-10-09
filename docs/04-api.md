@@ -96,23 +96,68 @@ Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
 
 | Methode | Pfad | Berechtigung | Beschreibung |
 |---------|------|--------------|--------------|
-| GET | `/bf-days/{day}/incidents?state=draft\|running\|closed\|discarded` | alle | Liste, sortiert nach `number` (Drehbuch je nach Berechtigung, Zustandsfilter nach Sichtbarkeit) |
-| GET | `/incidents/{id}` | alle | Einzelabruf; Mannschaft/Monitor 404 für `draft`/`discarded` (Alarmierungen folgen mit Ticket 08) |
+| GET | `/bf-days/{day}/incidents?state=draft\|running\|closed\|discarded` | alle | Liste, sortiert nach `number` (Drehbuch je nach Berechtigung, Zustandsfilter nach Sichtbarkeit); ohne `alarms` |
+| GET | `/incidents/{id}` | alle | Einzelabruf, inkl. `alarms: Alarm[]` (nach `triggered_at`, dann `created_at`); Mannschaft/Monitor 404 für `draft`/`discarded` |
 | POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung, Leitstelle, Admin | `{ keyword, address, report?, script? }` → 201 `draft`; 409 `bf_day_ended` |
 | PATCH | `/incidents/{id}` | Einsatzvorbereitung, Leitstelle, Admin | Meldebild/Drehbuch bearbeiten, nur `draft`/`running`; sonst 409 `incident_not_editable` |
 | POST | `/incidents/{id}/discard` | Einsatzvorbereitung, Leitstelle, Admin | nur `draft`, sonst 409 `invalid_state_transition` |
-| POST | `/incidents/{id}/close` | Leitstelle | verwirft geplante Alarmierungen |
-| POST | `/incidents/{id}/alarms` | Leitstelle | `{ vehicle_ids, scheduled_at? }`: ohne Zeit sofort, sonst geplant |
-| PATCH | `/alarms/{id}` | Leitstelle | geplante Zeit oder Fahrzeuge ändern |
-| POST | `/alarms/{id}/discard` | Leitstelle | geplante Alarmierung verwerfen |
-| POST | `/alarms/{id}/acknowledge` | Empfänger | Quittierung |
+| POST | `/incidents/{id}/close` | Leitstelle | verwirft geplante Alarmierungen (später) |
+| POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm (ADR 0017), siehe unten |
+| POST | `/alarms/{id}/acknowledge` | Empfänger | Quittierung (ADR 0017), siehe unten |
 | POST | `/incidents/{id}/copy` | Einsatzvorbereitung | in einen anderen BF-Tag kopieren (später) |
 | POST | `/incidents/{id}/ready` | Einsatzvorbereitung | Bereitmeldung (später) |
+
+#### Erstalarm: `POST /incidents/{id}/alarms` (ADR 0017)
+
+Body `{ id?: uuid, vehicle_ids: uuid[] }`. `scheduled_at` ist in diesem Ticket **nicht** erlaubt
+(400 `validation_error`; Planung kommt mit Ticket 11). `id` ist ein vom Client erzeugter
+Idempotenz-Schlüssel: existiert bereits eine Alarmierung mit dieser `id` für denselben Einsatz,
+antwortet der Server 200 mit genau dieser Alarmierung, ohne Event; für einen anderen Einsatz 409
+`conflict`.
+
+Zustandsprüfungen (in dieser Reihenfolge, alles in einer Transaktion):
+
+1. Einsatz unbekannt bzw. für den Aufrufer unsichtbar → 404.
+2. `vehicle_ids`: unbekannte ID → 400 `validation_error`; inaktives Fahrzeug → 409
+   `vehicle_inactive`.
+3. Der BF-Tag des Einsatzes muss `running` sein, sonst 409 `bf_day_not_running`.
+4. Der Einsatz muss `draft` sein (Übergang nach `running`), sonst 409
+   `invalid_state_transition` (verhindert auch einen zweiten Erstalarm durch Doppelklick).
+
+Empfänger werden zum Auslösezeitpunkt aus der aktuellen Schicht eingefroren (gefiltert auf die
+alarmierten Fahrzeuge, pro Person dedupliziert auf das erste Fahrzeug nach `sort_order`) und
+ändern sich danach nicht mehr, auch wenn die Besatzung später wechselt. `has_device` = Person
+hatte zum Auslösezeitpunkt mindestens ein nicht widerrufenes Gerät.
+
+Antwort 201 (200 bei Wiederholung über `id`):
+
+```json
+{ "alarm": { "id": "…", "incident_id": "…", "state": "triggered", "scheduled_at": null,
+             "triggered_at": "…", "vehicle_ids": ["…"],
+             "recipients": [{ "person_id": "…", "display_name": "…", "vehicle_id": "…",
+                              "function": "GF", "has_device": true, "acknowledged_at": null }] },
+  "double_crewed": [{ "person_id": "…", "display_name": "…", "vehicle_ids": ["…", "…"] }] }
+```
+
+`vehicle_ids` nach `sort_order`; `recipients` nach Fahrzeug-`sort_order`, Funktion
+(Standardreihenfolge wie `shift-json.ts`), `display_name`. `double_crewed` listet Personen, die
+auf mehr als einem der alarmierten Fahrzeuge sitzen (bei Wiederholung über `id` leer). Ein
+`Alarm` enthält nie das Drehbuch.
+
+#### Quittierung: `POST /alarms/{id}/acknowledge` (ADR 0017)
+
+Jede angemeldete Person (kein Monitor: 403 `forbidden`), kein Body. Alarmierung unbekannt → 404.
+Aufrufer nicht in den Empfängern → 403 `not_recipient`. Alarmierung nicht `triggered` oder
+zugehöriger Einsatz nicht `running` → 409 `alarm_not_active`. Wiederholung ist idempotent (200
+ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form wie in
+`recipients` oben).
 
 ### Später
 
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
+| PATCH | `/alarms/{id}` | geplante Zeit oder Fahrzeuge ändern (Ticket 11) |
+| POST | `/alarms/{id}/discard` | geplante Alarmierung verwerfen (Ticket 11) |
 | GET/PUT | `/incidents/{id}/reports/{vehicle_id}` | Einsatzbericht (GF der Besatzung) |
 | POST | `/incidents/{id}/reports/{vehicle_id}/approve` bzw. `/return` | Prüfung |
 | POST | `/vehicles/{id}/talk-request` | Sprechaufforderung |
@@ -125,7 +170,7 @@ Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
 |---------|------|--------------|
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren |
-| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
 ## WebSocket `/ws`
 
@@ -151,10 +196,9 @@ Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
 | Typ | Daten | Empfänger |
 |-----|-------|-----------|
 | `incident.created` / `incident.updated` | Einsatz, Drehbuch nur für Einsatzvorbereitung/Leitstelle/Admin | Einsatzvorbereitung, Leitstelle, Admin immer; zusätzlich alle, wenn `state ∈ {running, closed}` (ohne Drehbuch) |
-| `alarm.planned` / `alarm.discarded` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin |
-| `alarm.triggered` | Einsatz (Meldebild) + Alarmierung + Empfänger | alle |
-| `alarm.missed` | Alarmierung | Leitstelle, Admin |
-| `alarm.acknowledged` | `{ alarm_id, person_id, display_name }` | alle |
+| `alarm.triggered` (ADR 0017) | `{ incident, alarm }` – `incident` pro Verbindung projiziert (Drehbuch nur mit Berechtigung), `alarm` ein `Alarm` (nie mit Drehbuch) | alle; läuft im selben `Realtime.mutate` direkt nach `incident.updated` |
+| `alarm.acknowledged` (ADR 0017) | `{ alarm_id, incident_id, person_id, display_name, acknowledged_at }`, nur beim ersten Mal | alle |
+| `alarm.planned` / `alarm.discarded` / `alarm.missed` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin (später, Ticket 11) |
 | `incident.close_suggested` | `{ id }` | Leitstelle |
 | `incident.closed` | `{ id }` | alle |
 | `vehicle.status_changed` | `{ vehicle_id, status, at, source: 'app' \| 'dispatch' }` | alle |
@@ -172,6 +216,9 @@ Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
 ```
 
 400 Validierung, 401 nicht angemeldet, 403 Berechtigung fehlt, 404, 409 Zustandskonflikt.
+Zusätzliche Codes aus ADR 0017: 409 `vehicle_inactive`, 409 `bf_day_not_running`, 409
+`invalid_state_transition`, 409 `conflict` (Idempotenz-`id` für anderen Einsatz), 403
+`not_recipient`, 409 `alarm_not_active`.
 
 ## Client-Generierung
 

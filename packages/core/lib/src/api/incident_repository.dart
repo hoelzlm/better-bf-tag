@@ -25,6 +25,27 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
   });
 }
 
+// `GET /incidents/{id}` additionally carries `alarms` (T08-1 / ADR 0017),
+// which makes the generated response a distinct model from the shared
+// `GetSnapshot200ResponseIncidentsInner` used by the other Einsatz
+// endpoints. [Incident] (packages/core domain model) doesn't surface
+// alarms yet, so this just reuses the same field mapping as
+// [_incidentFromApi] without the `alarms` list.
+Incident _incidentFromGetIncidentApi(GetIncident200Response i) {
+  return Incident.fromJson({
+    'id': i.id,
+    'bf_day_id': i.bfDayId,
+    'number': i.number,
+    'keyword': i.keyword,
+    'address': i.address,
+    'report': i.report,
+    'state': i.state.name,
+    'created_at': i.createdAt,
+    'updated_at': i.updatedAt,
+    if (i.script != null) 'script': i.script,
+  });
+}
+
 String _wireState(IncidentState state) {
   switch (state) {
     case IncidentState.draft:
@@ -133,7 +154,7 @@ class ApiIncidentRepository implements IncidentRepository {
     if (data == null) {
       throw StateError('GET /incidents/{id} returned no body');
     }
-    return _incidentFromApi(data);
+    return _incidentFromGetIncidentApi(data);
   }
 
   @override
