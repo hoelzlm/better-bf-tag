@@ -1,3 +1,4 @@
+import '../domain/alarm.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
 import '../domain/shift.dart';
@@ -18,6 +19,8 @@ import '../domain/vehicle.dart';
 /// time the snapshot was taken, per `currentShift`. [incidents] (ADR 0016)
 /// holds the `running` Einsätze of the running BF-Tag, sorted by `number`,
 /// with Drehbuch only when the caller may see it; empty when no BF-Tag is
+/// running. [alarms] (ADR 0017) holds all `triggered` Alarmierungen of
+/// those Einsätze, sorted by `triggered_at`; empty when no BF-Tag is
 /// running.
 class Snapshot {
   const Snapshot({
@@ -28,6 +31,7 @@ class Snapshot {
     this.shifts = const [],
     this.currentShiftId,
     this.incidents = const <Incident>[],
+    this.alarms = const <Alarm>[],
   });
 
   final int seq;
@@ -37,4 +41,5 @@ class Snapshot {
   final List<Shift> shifts;
   final String? currentShiftId;
   final List<Incident> incidents;
+  final List<Alarm> alarms;
 }

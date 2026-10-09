@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/running_incidents_section.dart';
 import '../widgets/vehicle_status_bar.dart';
 
 /// Lage-Screen for `/admin`: Startseite der Leitstelle.
@@ -109,9 +110,7 @@ class LageScreen extends ConsumerWidget {
       body: const Column(
         children: [
           VehicleStatusBar(),
-          Expanded(
-            child: Center(child: Text('Keine laufenden Einsätze')),
-          ),
+          Expanded(child: RunningIncidentsSection()),
         ],
       ),
     );

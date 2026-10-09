@@ -4,6 +4,7 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../admin/api_errors.dart';
 import 'shifts_screen.dart' show pickDefaultBfDay;
 
 String _stateChipLabel(IncidentState state) => state.label;
@@ -145,6 +146,16 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     }
   }
 
+  Future<void> _openAlarmDialog(Incident incident) async {
+    final triggered = await showDialog<bool>(
+      context: context,
+      builder: (context) => _AlarmDialog(incident: incident),
+    );
+    if (triggered == true) {
+      await _reload();
+    }
+  }
+
   Future<void> _discard(Incident incident) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -179,6 +190,13 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(sessionControllerProvider);
+    final permission = switch (session) {
+      SessionSignedIn(person: final person) => person.permission,
+      _ => null,
+    };
+    final canAlarm =
+        permission == Permission.dispatch || permission == Permission.admin;
     final days = _days;
     final day = _selectedDay;
     final dayEnded = day?.state == BfDayState.ended;
@@ -271,6 +289,14 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
                                         key: Key('incident-state-${incident.id}'),
                                         label: Text(_stateChipLabel(incident.state)),
                                       ),
+                                      if (incident.state == IncidentState.draft &&
+                                          canAlarm)
+                                        IconButton(
+                                          key: Key('alarm-incident-${incident.id}'),
+                                          icon: const Icon(Icons.campaign),
+                                          tooltip: 'Alarmieren',
+                                          onPressed: () => _openAlarmDialog(incident),
+                                        ),
                                       if (incident.state == IncidentState.draft)
                                         IconButton(
                                           key: Key('discard-incident-${incident.id}'),
@@ -440,6 +466,169 @@ class _IncidentFormDialogState extends State<_IncidentFormDialog> {
             onPressed: _submit,
             child: const Text('Speichern'),
           ),
+      ],
+    );
+  }
+}
+
+/// Alarmieren-Dialog (ADR 0017): Fahrzeugauswahl aus den aktiven
+/// Fahrzeugen, Vorabwarnung bei Doppelbesetzung (berechnet aus der
+/// aktuellen Schicht, ohne Serverantwort), und `POST
+/// /incidents/{id}/alarms` mit einer beim Öffnen des Dialogs einmalig
+/// erzeugten Idempotenz-`id` -- ein erneuter Klick auf "Jetzt alarmieren"
+/// mit derselben Auswahl erzeugt keine zweite Alarmierung.
+class _AlarmDialog extends ConsumerStatefulWidget {
+  const _AlarmDialog({required this.incident});
+
+  final Incident incident;
+
+  @override
+  ConsumerState<_AlarmDialog> createState() => _AlarmDialogState();
+}
+
+class _AlarmDialogState extends ConsumerState<_AlarmDialog> {
+  late final String _idempotencyId;
+  final Set<String> _selected = <String>{};
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _idempotencyId = newIdempotencyId();
+  }
+
+  Future<void> _submit() async {
+    if (_selected.isEmpty || _submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final result = await ref.read(alarmRepositoryProvider).trigger(
+            widget.incident.id,
+            _selected.toList(),
+            id: _idempotencyId,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      final doubleCrewed = result.doubleCrewed;
+      if (doubleCrewed.isNotEmpty) {
+        for (final d in doubleCrewed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${d.displayName} sitzt auf mehreren ausgewählten '
+                'Fahrzeugen – wird nur einmal alarmiert.',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final message = describeAlarmTriggerError(error);
+      if (message == 'Einsatz wurde bereits alarmiert.') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        Navigator.of(context).pop(true);
+        return;
+      }
+      setState(() {
+        _submitting = false;
+        _error = message;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vehicles = ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
+    final shifts = ref.watch(shiftsProvider).valueOrNull ?? const <Shift>[];
+    final shift = currentShift(shifts, DateTime.now());
+    final doubleCrewed = doubleCrewedIn(shift, _selected);
+
+    return AlertDialog(
+      title: Text(
+        'Einsatz #${widget.incident.number} "${widget.incident.keyword}" alarmieren',
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Fahrzeuge auswählen'),
+            const SizedBox(height: 8),
+            for (final vehicle in vehicles)
+              CheckboxListTile(
+                key: Key('alarm-vehicle-${vehicle.id}'),
+                title: Text('${vehicle.shortName} (${vehicle.callSign})'),
+                value: _selected.contains(vehicle.id),
+                onChanged: _submitting
+                    ? null
+                    : (checked) {
+                        setState(() {
+                          if (checked == true) {
+                            _selected.add(vehicle.id);
+                          } else {
+                            _selected.remove(vehicle.id);
+                          }
+                        });
+                      },
+              ),
+            if (doubleCrewed.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                key: const Key('alarm-double-crewed-warning'),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.15),
+                  border: Border.all(color: Colors.orange.shade800),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber, color: Colors.orange.shade800),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Doppelbesetzung',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    for (final d in doubleCrewed)
+                      Text(
+                        key: Key('alarm-double-crewed-${d.personId}'),
+                        '${d.displayName} sitzt auf mehreren ausgewählten '
+                        'Fahrzeugen – wird nur einmal alarmiert.',
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(
+          key: const Key('alarm-dialog-submit'),
+          onPressed: (_selected.isEmpty || _submitting) ? null : _submit,
+          child: const Text('Jetzt alarmieren'),
+        ),
       ],
     );
   }

@@ -1,3 +1,4 @@
+import '../domain/alarm.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
@@ -97,6 +98,25 @@ sealed class RealtimeEvent {
           seq: seq,
           at: at,
           incident: Incident.fromJson(map),
+        );
+      case 'alarm.triggered':
+        final map = data as Map<String, dynamic>;
+        return AlarmTriggered(
+          seq: seq,
+          at: at,
+          incident: Incident.fromJson(map['incident'] as Map<String, dynamic>),
+          alarm: Alarm.fromJson(map['alarm'] as Map<String, dynamic>),
+        );
+      case 'alarm.acknowledged':
+        final map = data as Map<String, dynamic>;
+        return AlarmAcknowledged(
+          seq: seq,
+          at: at,
+          alarmId: map['alarm_id'] as String,
+          incidentId: map['incident_id'] as String,
+          personId: map['person_id'] as String,
+          displayName: map['display_name'] as String,
+          acknowledgedAt: DateTime.parse(map['acknowledged_at'] as String),
         );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
@@ -211,6 +231,43 @@ class IncidentUpdated extends RealtimeEvent {
   });
 
   final Incident incident;
+}
+
+/// `alarm.triggered` (ADR 0017): a new Alarmierung (Erstalarm, later also
+/// Nachalarmierung) was triggered. Carries both the Alarmierung and the
+/// Einsatz it belongs to (projected per connection, same rule as
+/// [IncidentUpdated]) -- the Einsatz may have just transitioned
+/// `draft` -> `running`.
+class AlarmTriggered extends RealtimeEvent {
+  const AlarmTriggered({
+    required super.seq,
+    required super.at,
+    required this.incident,
+    required this.alarm,
+  });
+
+  final Incident incident;
+  final Alarm alarm;
+}
+
+/// `alarm.acknowledged` (ADR 0017): a recipient quittierte ihre
+/// Alarmierung.
+class AlarmAcknowledged extends RealtimeEvent {
+  const AlarmAcknowledged({
+    required super.seq,
+    required super.at,
+    required this.alarmId,
+    required this.incidentId,
+    required this.personId,
+    required this.displayName,
+    required this.acknowledgedAt,
+  });
+
+  final String alarmId;
+  final String incidentId;
+  final String personId;
+  final String displayName;
+  final DateTime acknowledgedAt;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).
