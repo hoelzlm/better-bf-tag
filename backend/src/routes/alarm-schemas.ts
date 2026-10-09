@@ -106,6 +106,11 @@ export const updateAlarmResponseSchema = z.object({ alarm: alarmJsonSchema });
 
 export const discardAlarmResponseSchema = z.object({ alarm: alarmJsonSchema });
 
+export const triggerAlarmResponseSchema = z.object({
+  alarm: alarmJsonSchema,
+  double_crewed: z.array(doubleCrewedJsonSchema),
+});
+
 export const alarmIdParamsSchema = z.object({ id: z.string().uuid() });
 
 export type DoubleCrewedJson = z.infer<typeof doubleCrewedJsonSchema>;

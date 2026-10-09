@@ -68,6 +68,7 @@ Class | Method | HTTP request | Description
 [*AlarmsApi*](doc/AlarmsApi.md) | [**acknowledgeAlarm**](doc/AlarmsApi.md#acknowledgealarm) | **POST** /api/v1/alarms/{id}/acknowledge | 
 [*AlarmsApi*](doc/AlarmsApi.md) | [**createAlarm**](doc/AlarmsApi.md#createalarm) | **POST** /api/v1/incidents/{id}/alarms | 
 [*AlarmsApi*](doc/AlarmsApi.md) | [**discardAlarm**](doc/AlarmsApi.md#discardalarm) | **POST** /api/v1/alarms/{id}/discard | 
+[*AlarmsApi*](doc/AlarmsApi.md) | [**triggerAlarm**](doc/AlarmsApi.md#triggeralarm) | **POST** /api/v1/alarms/{id}/trigger | 
 [*AlarmsApi*](doc/AlarmsApi.md) | [**updateAlarm**](doc/AlarmsApi.md#updatealarm) | **PATCH** /api/v1/alarms/{id} | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceLogout**](doc/AuthApi.md#devicelogout) | **POST** /api/v1/auth/device/logout | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceRefresh**](doc/AuthApi.md#devicerefresh) | **POST** /api/v1/auth/device/refresh | 

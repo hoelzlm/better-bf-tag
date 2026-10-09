@@ -8870,6 +8870,239 @@
         }
       }
     },
+    "/api/v1/alarms/{id}/trigger": {
+      "post": {
+        "operationId": "triggerAlarm",
+        "tags": [
+          "alarms"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alarm": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "incident_id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "planned",
+                            "triggered",
+                            "missed",
+                            "discarded"
+                          ]
+                        },
+                        "scheduled_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "triggered_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "vehicle_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "recipients": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "person_id": {
+                                "type": "string"
+                              },
+                              "display_name": {
+                                "type": "string"
+                              },
+                              "vehicle_id": {
+                                "type": "string"
+                              },
+                              "function": {
+                                "type": "string"
+                              },
+                              "has_device": {
+                                "type": "boolean"
+                              },
+                              "acknowledged_at": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "person_id",
+                              "display_name",
+                              "vehicle_id",
+                              "function",
+                              "has_device",
+                              "acknowledged_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "push_delivered": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "push_rejected": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "relative_to_alarm_id": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "offset_minutes": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "incident_id",
+                        "state",
+                        "scheduled_at",
+                        "triggered_at",
+                        "vehicle_ids",
+                        "recipients",
+                        "push_delivered",
+                        "push_rejected",
+                        "relative_to_alarm_id",
+                        "offset_minutes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "double_crewed": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "person_id": {
+                            "type": "string"
+                          },
+                          "display_name": {
+                            "type": "string"
+                          },
+                          "vehicle_ids": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "person_id",
+                          "display_name",
+                          "vehicle_ids"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "alarm",
+                    "double_crewed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/alarms/{id}/acknowledge": {
       "post": {
         "operationId": "acknowledgeAlarm",

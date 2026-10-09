@@ -107,6 +107,7 @@ Liste, der Einzelabruf antwortet 404 `not_found`).
 | POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm, Nachalarmierung und Planung (ADR 0017, ADR 0019, [ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md)), siehe unten |
 | PATCH | `/alarms/{id}` | Leitstelle, Admin | geplante Alarmierung ändern (ADR 0022), siehe unten |
 | POST | `/alarms/{id}/discard` | Leitstelle, Admin | geplante/verpasste Alarmierung verwerfen (ADR 0022), siehe unten |
+| POST | `/alarms/{id}/trigger` | Leitstelle, Admin | geplante/verpasste Alarmierung manuell auslösen (ADR 0022), siehe unten |
 | POST | `/alarms/{id}/acknowledge` | Empfänger | Quittierung (ADR 0017), siehe unten |
 | POST | `/incidents/{id}/copy` | Einsatzvorbereitung | in einen anderen BF-Tag kopieren (später) |
 | POST | `/incidents/{id}/ready` | Einsatzvorbereitung | Bereitmeldung (später) |
@@ -202,6 +203,16 @@ derselben Transaktion neu berechnet und per `alarm.planned` gemeldet. Antwort 20
 Nur für `planned`/`missed`, sonst 409 `invalid_state_transition`. Setzt `state: "discarded"` und
 kaskadiert auf alle `planned` Alarmierungen, die sich relativ auf diese beziehen (werden ebenfalls
 `discarded`, je ein eigenes `alarm.discarded` Event). Antwort 200 `{ alarm }`.
+
+#### Geplante/verpasste Alarmierung manuell auslösen: `POST /alarms/{id}/trigger` ([ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md))
+
+Kein Body. Unbekannte Alarmierung → 404 `not_found`. Nur für `planned`/`missed`, sonst 409
+`invalid_state_transition`. Dieselben Zustandsprüfungen wie beim `AlarmScheduler` (gleicher
+Auslöse-Pfad): BF-Tag nicht `running` → 409 `bf_day_not_running`; Einsatz nicht `draft`/`running` →
+409 `incident_not_alarmable`; eines der Fahrzeuge bereits in einer `triggered` Alarmierung
+desselben Einsatzes → 409 `vehicle_already_alarmed`. Erfolgreich: derselbe Auslöse-Pfad wie beim
+Scheduler (Empfänger einfrieren, Push, `alarm.triggered`, ggf. `incident.updated` beim Erstalarm).
+Antwort 200 `{ alarm, double_crewed }` (gleiche Form wie `POST /incidents/{id}/alarms`).
 
 #### Quittierung: `POST /alarms/{id}/acknowledge` (ADR 0017)
 
