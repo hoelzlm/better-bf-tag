@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../widgets/fms_panel.dart';
+import '../widgets/main_nav_bar.dart';
 
 /// Screen "Mein Fahrzeug" for `/`: shows the Fahrzeug(e) the paired Person
 /// is currently Besatzung of (ADR 0015), with the FMS-Bedienteil to set
@@ -74,6 +75,7 @@ class _MyVehicleScreenState extends ConsumerState<MyVehicleScreen> {
                 ),
               ],
             ),
+      bottomNavigationBar: const MainNavBar(currentIndex: 0),
     );
   }
 }
