@@ -71,6 +71,13 @@
       "when": 1791536664665,
       "tag": "0009_low_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791570351934,
+      "tag": "0010_nappy_stingray",
+      "breakpoints": true
     }
   ]
 }

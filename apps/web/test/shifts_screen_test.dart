@@ -112,6 +112,13 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
   @override
   Future<void> setParticipants(String day, List<String> personIds) =>
       throw UnimplementedError();
+
+  @override
+  Future<AnonymizationSummary> anonymizationPreview(String bfDayId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> anonymize(String bfDayId) => throw UnimplementedError();
 }
 
 class _FakeShiftRepository implements ShiftRepository {

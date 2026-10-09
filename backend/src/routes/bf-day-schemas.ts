@@ -70,3 +70,35 @@ export function toParticipantJson(row: ParticipantRow): ParticipantJson {
     fire_department_id: row.fireDepartmentId,
   };
 }
+
+/** ADR 0020: the Anonymisierung preview/result shape, shared by both routes. */
+export const anonymizationSummaryJsonSchema = z.object({
+  participations: z.number().int().nonnegative(),
+  crew_assignments: z.number().int().nonnegative(),
+  alarm_recipients: z.number().int().nonnegative(),
+  status_events: z.number().int().nonnegative(),
+  persons_deleted: z.number().int().nonnegative(),
+});
+
+export type AnonymizationSummaryJson = z.infer<typeof anonymizationSummaryJsonSchema>;
+
+export const anonymizeBfDayResponseSchema = z.object({
+  bf_day: bfDayJsonSchema,
+  summary: anonymizationSummaryJsonSchema,
+});
+
+export function toAnonymizationSummaryJson(summary: {
+  participations: number;
+  crewAssignments: number;
+  alarmRecipients: number;
+  statusEvents: number;
+  personsDeleted: number;
+}): AnonymizationSummaryJson {
+  return {
+    participations: summary.participations,
+    crew_assignments: summary.crewAssignments,
+    alarm_recipients: summary.alarmRecipients,
+    status_events: summary.statusEvents,
+    persons_deleted: summary.personsDeleted,
+  };
+}

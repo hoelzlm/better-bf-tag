@@ -41,6 +41,7 @@ class BfDay {
     required this.startsAt,
     required this.endsAt,
     required this.state,
+    this.anonymizedAt,
   });
 
   final String id;
@@ -49,15 +50,25 @@ class BfDay {
   final DateTime endsAt;
   final BfDayState state;
 
+  /// Wann der BF-Tag anonymisiert wurde (ADR 0020), oder `null`, wenn noch
+  /// nicht anonymisiert.
+  final DateTime? anonymizedAt;
+
+  /// Ob der BF-Tag bereits anonymisiert wurde (ADR 0020).
+  bool get isAnonymized => anonymizedAt != null;
+
   /// Parses the wire representation used by the backend API (REST and
   /// WebSocket events), e.g. `{id,name,starts_at,ends_at,state,...}`.
   factory BfDay.fromJson(Map<String, dynamic> json) {
+    final anonymizedAtRaw = json['anonymized_at'] as String?;
     return BfDay(
       id: json['id'] as String,
       name: json['name'] as String,
       startsAt: DateTime.parse(json['starts_at'] as String),
       endsAt: DateTime.parse(json['ends_at'] as String),
       state: BfDayState.fromWire(json['state'] as String),
+      anonymizedAt:
+          anonymizedAtRaw == null ? null : DateTime.parse(anonymizedAtRaw),
     );
   }
 
@@ -68,10 +79,12 @@ class BfDay {
       other.name == name &&
       other.startsAt == startsAt &&
       other.endsAt == endsAt &&
-      other.state == state;
+      other.state == state &&
+      other.anonymizedAt == anonymizedAt;
 
   @override
-  int get hashCode => Object.hash(id, name, startsAt, endsAt, state);
+  int get hashCode =>
+      Object.hash(id, name, startsAt, endsAt, state, anonymizedAt);
 
   @override
   String toString() => 'BfDay($name, state: $state)';

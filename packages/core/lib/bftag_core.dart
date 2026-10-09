@@ -19,6 +19,7 @@ export 'src/auth/paired_session.dart';
 export 'src/auth/session.dart';
 export 'src/auth/token_store.dart';
 export 'src/domain/alarm.dart';
+export 'src/domain/anonymization_summary.dart';
 export 'src/domain/bf_day.dart';
 export 'src/domain/crew_function.dart';
 export 'src/domain/current_shift.dart';

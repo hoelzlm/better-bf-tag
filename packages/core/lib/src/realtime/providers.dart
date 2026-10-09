@@ -54,12 +54,15 @@ Slide _slideFromApi(GetSnapshot200ResponseSlidesInner s) {
 
 BfDay? _bfDayFromApi(GetSnapshot200ResponseBfDay? day) {
   if (day == null) return null;
+  final anonymizedAtRaw = day.anonymizedAt;
   return BfDay(
     id: day.id,
     name: day.name,
     startsAt: DateTime.parse(day.startsAt),
     endsAt: DateTime.parse(day.endsAt),
     state: BfDayState.fromWire(day.state.name),
+    anonymizedAt:
+        anonymizedAtRaw == null ? null : DateTime.parse(anonymizedAtRaw),
   );
 }
 

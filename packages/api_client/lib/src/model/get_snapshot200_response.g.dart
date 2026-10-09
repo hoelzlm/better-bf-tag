@@ -23,6 +23,8 @@ class _$GetSnapshot200Response extends GetSnapshot200Response {
   final BuiltList<GetSnapshot200ResponseIncidentsInner> incidents;
   @override
   final BuiltList<GetSnapshot200ResponseAlarmsInner> alarms;
+  @override
+  final BuiltList<String> closeSuggestedIncidentIds;
 
   factory _$GetSnapshot200Response([
     void Function(GetSnapshot200ResponseBuilder)? updates,
@@ -37,6 +39,7 @@ class _$GetSnapshot200Response extends GetSnapshot200Response {
     this.currentShiftId,
     required this.incidents,
     required this.alarms,
+    required this.closeSuggestedIncidentIds,
   }) : super._();
   @override
   GetSnapshot200Response rebuild(
@@ -58,7 +61,8 @@ class _$GetSnapshot200Response extends GetSnapshot200Response {
         shifts == other.shifts &&
         currentShiftId == other.currentShiftId &&
         incidents == other.incidents &&
-        alarms == other.alarms;
+        alarms == other.alarms &&
+        closeSuggestedIncidentIds == other.closeSuggestedIncidentIds;
   }
 
   @override
@@ -72,6 +76,7 @@ class _$GetSnapshot200Response extends GetSnapshot200Response {
     _$hash = $jc(_$hash, currentShiftId.hashCode);
     _$hash = $jc(_$hash, incidents.hashCode);
     _$hash = $jc(_$hash, alarms.hashCode);
+    _$hash = $jc(_$hash, closeSuggestedIncidentIds.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -86,7 +91,8 @@ class _$GetSnapshot200Response extends GetSnapshot200Response {
           ..add('shifts', shifts)
           ..add('currentShiftId', currentShiftId)
           ..add('incidents', incidents)
-          ..add('alarms', alarms))
+          ..add('alarms', alarms)
+          ..add('closeSuggestedIncidentIds', closeSuggestedIncidentIds))
         .toString();
   }
 }
@@ -139,6 +145,13 @@ class GetSnapshot200ResponseBuilder
   set alarms(ListBuilder<GetSnapshot200ResponseAlarmsInner>? alarms) =>
       _$this._alarms = alarms;
 
+  ListBuilder<String>? _closeSuggestedIncidentIds;
+  ListBuilder<String> get closeSuggestedIncidentIds =>
+      _$this._closeSuggestedIncidentIds ??= ListBuilder<String>();
+  set closeSuggestedIncidentIds(
+    ListBuilder<String>? closeSuggestedIncidentIds,
+  ) => _$this._closeSuggestedIncidentIds = closeSuggestedIncidentIds;
+
   GetSnapshot200ResponseBuilder() {
     GetSnapshot200Response._defaults(this);
   }
@@ -154,6 +167,7 @@ class GetSnapshot200ResponseBuilder
       _currentShiftId = $v.currentShiftId;
       _incidents = $v.incidents.toBuilder();
       _alarms = $v.alarms.toBuilder();
+      _closeSuggestedIncidentIds = $v.closeSuggestedIncidentIds.toBuilder();
       _$v = null;
     }
     return this;
@@ -190,6 +204,7 @@ class GetSnapshot200ResponseBuilder
             currentShiftId: currentShiftId,
             incidents: incidents.build(),
             alarms: alarms.build(),
+            closeSuggestedIncidentIds: closeSuggestedIncidentIds.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -207,6 +222,8 @@ class GetSnapshot200ResponseBuilder
         incidents.build();
         _$failedField = 'alarms';
         alarms.build();
+        _$failedField = 'closeSuggestedIncidentIds';
+        closeSuggestedIncidentIds.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
           r'GetSnapshot200Response',

@@ -2,18 +2,34 @@ import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/anonymization_summary.dart';
 import '../domain/bf_day.dart';
 import '../domain/participant.dart';
 import '../domain/permission.dart';
 import 'dio_provider.dart';
 
 BfDay _bfDayFromApi(ListBfDays200ResponseInner d) {
+  final anonymizedAtRaw = d.anonymizedAt;
   return BfDay(
     id: d.id,
     name: d.name,
     startsAt: DateTime.parse(d.startsAt),
     endsAt: DateTime.parse(d.endsAt),
     state: BfDayState.fromWire(d.state.name),
+    anonymizedAt:
+        anonymizedAtRaw == null ? null : DateTime.parse(anonymizedAtRaw),
+  );
+}
+
+AnonymizationSummary _anonymizationSummaryFromApi(
+  GetBfDayAnonymizationPreview200Response s,
+) {
+  return AnonymizationSummary(
+    participations: s.participations,
+    crewAssignments: s.crewAssignments,
+    alarmRecipients: s.alarmRecipients,
+    statusEvents: s.statusEvents,
+    personsDeleted: s.personsDeleted,
   );
 }
 
@@ -79,6 +95,14 @@ abstract class BfDayAdminRepository {
   /// `PUT /bf-days/{day}/participants`: full replacement of the
   /// participant list by person id.
   Future<void> setParticipants(String day, List<String> personIds);
+
+  /// `GET /bf-days/{id}/anonymization-preview` (ADR 0020): the numbers an
+  /// [anonymize] call on this BF-Tag would produce, without writing.
+  Future<AnonymizationSummary> anonymizationPreview(String bfDayId);
+
+  /// `POST /bf-days/{id}/anonymize` (ADR 0020): removes all Personenbezüge
+  /// from this beendeten, nicht anonymisierten BF-Tag.
+  Future<BfDay> anonymize(String bfDayId);
 }
 
 /// [BfDayAdminRepository] backed by the generated [BfDaysApi].
@@ -174,6 +198,28 @@ class ApiBfDayAdminRepository implements BfDayAdminRepository {
         (b) => b..personIds.addAll(personIds),
       ),
     );
+  }
+
+  @override
+  Future<AnonymizationSummary> anonymizationPreview(String bfDayId) async {
+    final response = await _api.getBfDayAnonymizationPreview(id: bfDayId);
+    final data = response.data;
+    if (data == null) {
+      throw StateError(
+        'GET /bf-days/{id}/anonymization-preview returned no body',
+      );
+    }
+    return _anonymizationSummaryFromApi(data);
+  }
+
+  @override
+  Future<BfDay> anonymize(String bfDayId) async {
+    final response = await _api.anonymizeBfDay(id: bfDayId);
+    final data = response.data;
+    if (data == null) {
+      throw StateError('POST /bf-days/{id}/anonymize returned no body');
+    }
+    return _bfDayFromApi(data.bfDay);
   }
 }
 
