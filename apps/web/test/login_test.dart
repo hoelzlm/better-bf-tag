@@ -47,6 +47,8 @@ Future<void> _pumpApp(WidgetTester tester) async {
         realtimeConnectionProvider.overrideWith(
           (ref) => Stream.value(ConnectionStatus.live),
         ),
+        incidentsProvider.overrideWith((ref) => Stream.value(const [])),
+        alarmsProvider.overrideWith((ref) => Stream.value(const [])),
       ],
       child: const BftagWebApp(),
     ),

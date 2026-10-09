@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import '../domain/alarm.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
 import '../domain/shift.dart';
@@ -20,7 +21,9 @@ enum ConnectionStatus { connecting, live, reconnecting, revoked }
 /// A snapshot of realtime state: the current `seq`, the active vehicles
 /// (sorted by `sort_order`), the active Folien (ADR 0014, in `sort_order`),
 /// the running BF-Tag and its shifts (ADR 0013), the running Einsätze of
-/// that BF-Tag (ADR 0016, sorted by `number`), and the connection status.
+/// that BF-Tag (ADR 0016, sorted by `number`), the `triggered` Alarmierungen
+/// of those Einsätze (ADR 0017, sorted by `triggered_at`), and the
+/// connection status.
 class RealtimeState {
   const RealtimeState({
     required this.seq,
@@ -30,6 +33,7 @@ class RealtimeState {
     this.bfDay,
     this.shifts = const [],
     this.incidents = const <Incident>[],
+    this.alarms = const <Alarm>[],
   });
 
   final int seq;
@@ -39,6 +43,7 @@ class RealtimeState {
   final BfDay? bfDay;
   final List<Shift> shifts;
   final List<Incident> incidents;
+  final List<Alarm> alarms;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -102,12 +107,22 @@ class RealtimeClient {
   /// connection status changes.
   Stream<RealtimeState> get states => _controller.stream;
 
+  final StreamController<Alarm> _liveAlarmTriggeredController =
+      StreamController<Alarm>.broadcast();
+
+  /// Emits an [Alarm] only for `alarm.triggered` events received live over
+  /// the WebSocket -- never for Alarmierungen loaded via the (initial or
+  /// a gap/resync-triggered) snapshot. Drives Ton/Gong (ADR 0017): a
+  /// reload must never re-trigger it.
+  Stream<Alarm> get liveAlarmTriggered => _liveAlarmTriggeredController.stream;
+
   int _lastSeq = 0;
   final Map<String, Vehicle> _vehiclesById = <String, Vehicle>{};
   List<Slide> _slides = <Slide>[];
   BfDay? _bfDay;
   final Map<String, Shift> _shiftsById = <String, Shift>{};
   final Map<String, Incident> _incidentsById = <String, Incident>{};
+  final Map<String, Alarm> _alarmsById = <String, Alarm>{};
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -151,6 +166,7 @@ class RealtimeClient {
       // Ignore: we're tearing down anyway.
     }
     await _controller.close();
+    await _liveAlarmTriggeredController.close();
   }
 
   Future<void> _connect() async {
@@ -200,6 +216,9 @@ class RealtimeClient {
       _incidentsById
         ..clear()
         ..addEntries(snapshot.incidents.map((i) => MapEntry(i.id, i)));
+      _alarmsById
+        ..clear()
+        ..addEntries(snapshot.alarms.map((a) => MapEntry(a.id, a)));
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -301,6 +320,12 @@ class RealtimeClient {
         _applyIncident(incident);
       case IncidentUpdated(:final incident):
         _applyIncident(incident);
+      case AlarmTriggered(:final incident, :final alarm):
+        _applyIncident(incident);
+        _alarmsById[alarm.id] = alarm;
+        _liveAlarmTriggeredController.add(alarm);
+      case AlarmAcknowledged(:final alarmId, :final personId, :final acknowledgedAt):
+        _applyAlarmAcknowledged(alarmId, personId, acknowledgedAt);
       case BfDayUpdated():
         // The current BF-Tag/shifts changed in a way too varied to patch
         // incrementally (new BF-Tag started, time range changed, ...);
@@ -323,7 +348,27 @@ class RealtimeClient {
       _incidentsById[incident.id] = incident;
     } else {
       _incidentsById.remove(incident.id);
+      _alarmsById.removeWhere((_, alarm) => alarm.incidentId == incident.id);
     }
+  }
+
+  /// Sets `acknowledgedAt` on the matching recipient of [alarmId], if both
+  /// the Alarmierung and the recipient are known (ADR 0017).
+  void _applyAlarmAcknowledged(
+    String alarmId,
+    String personId,
+    DateTime acknowledgedAt,
+  ) {
+    final alarm = _alarmsById[alarmId];
+    if (alarm == null) return;
+    final recipients = [
+      for (final recipient in alarm.recipients)
+        if (recipient.personId == personId)
+          recipient.copyWith(acknowledgedAt: acknowledgedAt)
+        else
+          recipient,
+    ];
+    _alarmsById[alarmId] = alarm.copyWith(recipients: recipients);
   }
 
   /// A gap was detected (gaps include: gaps in event seq, hello/heartbeat
@@ -383,6 +428,19 @@ class RealtimeClient {
     return incidents;
   }
 
+  List<Alarm> get _sortedAlarms {
+    final alarms = _alarmsById.values.toList()
+      ..sort((a, b) {
+        final at = a.triggeredAt;
+        final bt = b.triggeredAt;
+        if (at == null && bt == null) return 0;
+        if (at == null) return -1;
+        if (bt == null) return 1;
+        return at.compareTo(bt);
+      });
+    return alarms;
+  }
+
   void _emit() {
     if (_disposed) return;
     _controller.add(
@@ -394,6 +452,7 @@ class RealtimeClient {
         bfDay: _bfDay,
         shifts: _sortedShifts,
         incidents: _sortedIncidents,
+        alarms: _sortedAlarms,
       ),
     );
   }
