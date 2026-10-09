@@ -47,12 +47,14 @@ Please follow the [installation procedure](#installation--usage) and then run th
 import 'package:bftag_api_client/bftag_api_client.dart';
 
 
-final api = BftagApiClient().getAuthApi();
+final api = BftagApiClient().getAlarmsApi();
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | 
 
 try {
-    api.deviceLogout();
+    final response = await api.acknowledgeAlarm(id);
+    print(response);
 } catch on DioException (e) {
-    print("Exception when calling AuthApi->deviceLogout: $e\n");
+    print("Exception when calling AlarmsApi->acknowledgeAlarm: $e\n");
 }
 
 ```
@@ -63,6 +65,8 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*AlarmsApi*](doc/AlarmsApi.md) | [**acknowledgeAlarm**](doc/AlarmsApi.md#acknowledgealarm) | **POST** /api/v1/alarms/{id}/acknowledge | 
+[*AlarmsApi*](doc/AlarmsApi.md) | [**triggerAlarm**](doc/AlarmsApi.md#triggeralarm) | **POST** /api/v1/incidents/{id}/alarms | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceLogout**](doc/AuthApi.md#devicelogout) | **POST** /api/v1/auth/device/logout | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceRefresh**](doc/AuthApi.md#devicerefresh) | **POST** /api/v1/auth/device/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /api/v1/me | 
@@ -126,6 +130,7 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AcknowledgeAlarm200Response](doc/AcknowledgeAlarm200Response.md)
  - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateIncidentRequest](doc/CreateIncidentRequest.md)
  - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)
@@ -139,9 +144,12 @@ Class | Method | HTTP request | Description
  - [DeviceRefreshRequest](doc/DeviceRefreshRequest.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)
+ - [GetIncident200Response](doc/GetIncident200Response.md)
  - [GetMe200Response](doc/GetMe200Response.md)
  - [GetMe200ResponseCrewAssignmentsInner](doc/GetMe200ResponseCrewAssignmentsInner.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
+ - [GetSnapshot200ResponseAlarmsInner](doc/GetSnapshot200ResponseAlarmsInner.md)
+ - [GetSnapshot200ResponseAlarmsInnerRecipientsInner](doc/GetSnapshot200ResponseAlarmsInnerRecipientsInner.md)
  - [GetSnapshot200ResponseBfDay](doc/GetSnapshot200ResponseBfDay.md)
  - [GetSnapshot200ResponseIncidentsInner](doc/GetSnapshot200ResponseIncidentsInner.md)
  - [GetSnapshot200ResponseShiftsInner](doc/GetSnapshot200ResponseShiftsInner.md)
@@ -172,6 +180,9 @@ Class | Method | HTTP request | Description
  - [SetShiftCrewRequestAssignmentsInner](doc/SetShiftCrewRequestAssignmentsInner.md)
  - [SetVehicleStatusRequest](doc/SetVehicleStatusRequest.md)
  - [SetWebAccessRequest](doc/SetWebAccessRequest.md)
+ - [TriggerAlarm200Response](doc/TriggerAlarm200Response.md)
+ - [TriggerAlarm200ResponseDoubleCrewedInner](doc/TriggerAlarm200ResponseDoubleCrewedInner.md)
+ - [TriggerAlarmRequest](doc/TriggerAlarmRequest.md)
  - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
  - [UpdateIncidentRequest](doc/UpdateIncidentRequest.md)
  - [UpdatePersonRequest](doc/UpdatePersonRequest.md)

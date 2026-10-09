@@ -4,16 +4,16 @@
 
 **Blocked by:** 03, 06, 07
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Alarmierung sofort auslösen: Einsatz Entwurf → laufend beim Erstalarm; bedingte Zustandsübergänge, Doppelklick löst nichts doppelt aus
-- [ ] Empfänger = Besatzung der alarmierten Fahrzeuge in der zum Auslösezeitpunkt aktiven Schicht, eingefroren; `has_device` je Empfänger
-- [ ] Warnung an die Leitstelle, wenn eine Person auf mehreren gleichzeitig alarmierten Fahrzeugen sitzt; sie ist nur einmal Empfänger
-- [ ] Quittierung durch Empfänger; Event `alarm.acknowledged`
-- [ ] Event `alarm.triggered` mit Meldebild (ohne Drehbuch für Mannschaft/Monitor), Alarmierung und Empfängern
-- [ ] Monitor: Einsatzansicht (Nummer, Stichwort, Adresse, Meldebild, Laufzeit, Fahrzeuge mit Status, Quittierungen), Gong
-- [ ] App im Vordergrund: Alarm-Vollbild mit Ton und großem Quittieren-Button
-- [ ] Lage: laufende Einsätze, Quittierungs-Zustände je Empfänger; „kein Gerät“ zählt nicht als ausstehend
-- [ ] Tests: Empfänger eingefroren (späterer Schichtwechsel ändert nichts), Doppelbesetzung, Idempotenz, Quittierung nur durch Empfänger, Drehbuch nicht im Event für Mannschaft/Monitor, nur Leitstelle/Admin darf alarmieren
+- [x] Alarmierung sofort auslösen: Einsatz Entwurf → laufend beim Erstalarm; bedingte Zustandsübergänge, Doppelklick löst nichts doppelt aus
+- [x] Empfänger = Besatzung der alarmierten Fahrzeuge in der zum Auslösezeitpunkt aktiven Schicht, eingefroren; `has_device` je Empfänger
+- [x] Warnung an die Leitstelle, wenn eine Person auf mehreren gleichzeitig alarmierten Fahrzeugen sitzt; sie ist nur einmal Empfänger
+- [x] Quittierung durch Empfänger; Event `alarm.acknowledged`
+- [x] Event `alarm.triggered` mit Meldebild (ohne Drehbuch für Mannschaft/Monitor), Alarmierung und Empfängern
+- [x] Monitor: Einsatzansicht (Nummer, Stichwort, Adresse, Meldebild, Laufzeit, Fahrzeuge mit Status, Quittierungen), Gong
+- [x] App im Vordergrund: Alarm-Vollbild mit Ton und großem Quittieren-Button
+- [x] Lage: laufende Einsätze, Quittierungs-Zustände je Empfänger; „kein Gerät“ zählt nicht als ausstehend
+- [x] Tests: Empfänger eingefroren (späterer Schichtwechsel ändert nichts), Doppelbesetzung, Idempotenz, Quittierung nur durch Empfänger, Drehbuch nicht im Event für Mannschaft/Monitor, nur Leitstelle/Admin darf alarmieren
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`

@@ -8,6 +8,7 @@ part of 'serializers.dart';
 
 Serializers _$serializers =
     (Serializers().toBuilder()
+          ..add(AcknowledgeAlarm200Response.serializer)
           ..add(CreateBfDayRequest.serializer)
           ..add(CreateIncidentRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
@@ -27,9 +28,14 @@ Serializers _$serializers =
           ..add(GetHealth503Response.serializer)
           ..add(GetHealth503ResponseDatabaseEnum.serializer)
           ..add(GetHealth503ResponseStatusEnum.serializer)
+          ..add(GetIncident200Response.serializer)
+          ..add(GetIncident200ResponseStateEnum.serializer)
           ..add(GetMe200Response.serializer)
           ..add(GetMe200ResponseCrewAssignmentsInner.serializer)
           ..add(GetSnapshot200Response.serializer)
+          ..add(GetSnapshot200ResponseAlarmsInner.serializer)
+          ..add(GetSnapshot200ResponseAlarmsInnerRecipientsInner.serializer)
+          ..add(GetSnapshot200ResponseAlarmsInnerStateEnum.serializer)
           ..add(GetSnapshot200ResponseBfDay.serializer)
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
           ..add(GetSnapshot200ResponseIncidentsInner.serializer)
@@ -72,6 +78,9 @@ Serializers _$serializers =
           ..add(SetShiftCrewRequestAssignmentsInner.serializer)
           ..add(SetVehicleStatusRequest.serializer)
           ..add(SetWebAccessRequest.serializer)
+          ..add(TriggerAlarm200Response.serializer)
+          ..add(TriggerAlarm200ResponseDoubleCrewedInner.serializer)
+          ..add(TriggerAlarmRequest.serializer)
           ..add(UpdateBfDayRequest.serializer)
           ..add(UpdateIncidentRequest.serializer)
           ..add(UpdatePersonRequest.serializer)
@@ -90,6 +99,12 @@ Serializers _$serializers =
               const FullType(GetMe200ResponseCrewAssignmentsInner),
             ]),
             () => ListBuilder<GetMe200ResponseCrewAssignmentsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseAlarmsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseAlarmsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [
@@ -123,6 +138,12 @@ Serializers _$serializers =
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseAlarmsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseAlarmsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
               const FullType(SetShiftCrewRequestAssignmentsInner),
             ]),
             () => ListBuilder<SetShiftCrewRequestAssignmentsInner>(),
@@ -142,6 +163,31 @@ Serializers _$serializers =
           ..addBuilderFactory(
             const FullType(BuiltList, const [const FullType(String)]),
             () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseAlarmsInnerRecipientsInner),
+            ]),
+            () =>
+                ListBuilder<GetSnapshot200ResponseAlarmsInnerRecipientsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(TriggerAlarm200ResponseDoubleCrewedInner),
+            ]),
+            () => ListBuilder<TriggerAlarm200ResponseDoubleCrewedInner>(),
           ))
         .build();
 

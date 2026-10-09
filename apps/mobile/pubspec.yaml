@@ -17,6 +17,7 @@ dependencies:
   mobile_scanner: ^6.0.2
   flutter_secure_storage: ^9.2.2
   package_info_plus: ^8.1.2
+  audioplayers: ^6.1.0
   bftag_core:
     path: ../../packages/core
   bftag_api_client:
@@ -29,3 +30,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sounds/alarm.wav

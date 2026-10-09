@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner.dart';
 import 'package:bftag_api_client/src/model/list_vehicles200_response_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
@@ -24,6 +25,7 @@ part 'get_snapshot200_response.g.dart';
 /// * [shifts] 
 /// * [currentShiftId] 
 /// * [incidents] 
+/// * [alarms] 
 @BuiltValue()
 abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, GetSnapshot200ResponseBuilder> {
   @BuiltValueField(wireName: r'seq')
@@ -46,6 +48,9 @@ abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, G
 
   @BuiltValueField(wireName: r'incidents')
   BuiltList<GetSnapshot200ResponseIncidentsInner> get incidents;
+
+  @BuiltValueField(wireName: r'alarms')
+  BuiltList<GetSnapshot200ResponseAlarmsInner> get alarms;
 
   GetSnapshot200Response._();
 
@@ -104,6 +109,11 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
     yield serializers.serialize(
       object.incidents,
       specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseIncidentsInner)]),
+    );
+    yield r'alarms';
+    yield serializers.serialize(
+      object.alarms,
+      specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAlarmsInner)]),
     );
   }
 
@@ -178,6 +188,13 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
             specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseIncidentsInner)]),
           ) as BuiltList<GetSnapshot200ResponseIncidentsInner>;
           result.incidents.replace(valueDes);
+          break;
+        case r'alarms':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAlarmsInner)]),
+          ) as BuiltList<GetSnapshot200ResponseAlarmsInner>;
+          result.alarms.replace(valueDes);
           break;
         default:
           unhandled.add(key);

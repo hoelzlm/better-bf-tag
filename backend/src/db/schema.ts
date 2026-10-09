@@ -43,6 +43,12 @@ export const incidentStateEnum = pgEnum('incident_state', [
   'closed',
   'discarded',
 ]);
+export const alarmStateEnum = pgEnum('alarm_state', [
+  'planned',
+  'triggered',
+  'missed',
+  'discarded',
+]);
 
 export const fireDepartment = pgTable(
   'fire_department',
@@ -273,6 +279,57 @@ export const incident = pgTable(
     uniqueIndex('incident_bf_day_number_unique').on(table.bfDayId, table.number),
     index('incident_bf_day_state_idx').on(table.bfDayId, table.state),
   ]
+);
+
+export const alarm = pgTable(
+  'alarm',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    incidentId: uuid('incident_id')
+      .notNull()
+      .references(() => incident.id, { onDelete: 'cascade' }),
+    state: alarmStateEnum('state').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    triggeredAt: timestamp('triggered_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  table => [index('alarm_incident_idx').on(table.incidentId)]
+);
+
+export const alarmVehicle = pgTable(
+  'alarm_vehicle',
+  {
+    alarmId: uuid('alarm_id')
+      .notNull()
+      .references(() => alarm.id, { onDelete: 'cascade' }),
+    vehicleId: uuid('vehicle_id')
+      .notNull()
+      .references(() => vehicle.id),
+  },
+  table => [primaryKey({ columns: [table.alarmId, table.vehicleId] })]
+);
+
+export const alarmRecipient = pgTable(
+  'alarm_recipient',
+  {
+    alarmId: uuid('alarm_id')
+      .notNull()
+      .references(() => alarm.id, { onDelete: 'cascade' }),
+    personId: uuid('person_id')
+      .notNull()
+      .references(() => person.id),
+    vehicleId: uuid('vehicle_id')
+      .notNull()
+      .references(() => vehicle.id),
+    function: text('function').notNull(),
+    hasDevice: boolean('has_device').notNull(),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  // ADR 0017: PK (alarm_id, person_id) — a person is a recipient of a
+  // given alarm exactly once, even when sitting on several alarmed
+  // vehicles (deduplicated to the first vehicle by sort_order).
+  table => [primaryKey({ columns: [table.alarmId, table.personId] })]
 );
 
 export const slideImage = pgTable('slide_image', {

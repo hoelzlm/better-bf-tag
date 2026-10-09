@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 
 import 'package:bftag_api_client/src/api_util.dart';
 import 'package:bftag_api_client/src/model/create_incident_request.dart';
+import 'package:bftag_api_client/src/model/get_incident200_response.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
 import 'package:bftag_api_client/src/model/login401_response.dart';
 import 'package:bftag_api_client/src/model/update_incident_request.dart';
@@ -207,9 +208,9 @@ class IncidentsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [GetSnapshot200ResponseIncidentsInner] as data
+  /// Returns a [Future] containing a [Response] with a [GetIncident200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<GetSnapshot200ResponseIncidentsInner>> getIncident({ 
+  Future<Response<GetIncident200Response>> getIncident({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -239,14 +240,14 @@ class IncidentsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    GetSnapshot200ResponseIncidentsInner? _responseData;
+    GetIncident200Response? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(GetSnapshot200ResponseIncidentsInner),
-      ) as GetSnapshot200ResponseIncidentsInner;
+        specifiedType: const FullType(GetIncident200Response),
+      ) as GetIncident200Response;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -258,7 +259,7 @@ class IncidentsApi {
       );
     }
 
-    return Response<GetSnapshot200ResponseIncidentsInner>(
+    return Response<GetIncident200Response>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

@@ -7,6 +7,7 @@ import '../api/api_config.dart';
 import '../api/dio_provider.dart';
 import '../auth/paired_session.dart';
 import '../auth/session.dart';
+import '../domain/alarm.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
@@ -97,6 +98,32 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
   });
 }
 
+AlarmRecipient _alarmRecipientFromApi(
+  GetSnapshot200ResponseAlarmsInnerRecipientsInner r,
+) {
+  return AlarmRecipient(
+    personId: r.personId,
+    displayName: r.displayName,
+    vehicleId: r.vehicleId,
+    function: r.function_,
+    hasDevice: r.hasDevice,
+    acknowledgedAt:
+        r.acknowledgedAt == null ? null : DateTime.parse(r.acknowledgedAt!),
+  );
+}
+
+Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
+  return Alarm(
+    id: a.id,
+    incidentId: a.incidentId,
+    state: AlarmState.fromWire(a.state.name),
+    scheduledAt: a.scheduledAt == null ? null : DateTime.parse(a.scheduledAt!),
+    triggeredAt: a.triggeredAt == null ? null : DateTime.parse(a.triggeredAt!),
+    vehicleIds: a.vehicleIds.toList(),
+    recipients: a.recipients.map(_alarmRecipientFromApi).toList(),
+  );
+}
+
 Snapshot _snapshotFromApi(GetSnapshot200Response data) {
   return Snapshot(
     seq: data.seq,
@@ -106,6 +133,7 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     shifts: data.shifts.map(_shiftFromApi).toList(),
     currentShiftId: data.currentShiftId,
     incidents: data.incidents.map(_incidentFromApi).toList(),
+    alarms: data.alarms.map(_alarmFromApi).toList(),
   );
 }
 
@@ -218,6 +246,28 @@ final incidentsProvider = StreamProvider<List<Incident>>((ref) {
     return Stream.value(const <Incident>[]);
   }
   return client.states.map((state) => state.incidents);
+});
+
+/// The `triggered` Alarmierungen of the currently running BF-Tag's
+/// Einsätze (ADR 0017), sorted by `triggered_at` -- empty while signed
+/// out, before the first snapshot has loaded, or when there are none.
+final alarmsProvider = StreamProvider<List<Alarm>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Alarm>[]);
+  }
+  return client.states.map((state) => state.alarms);
+});
+
+/// Emits an [Alarm] only for `alarm.triggered` events received live over
+/// the WebSocket (ADR 0017) -- never for Alarmierungen loaded via the
+/// snapshot. Drives Ton/Gong.
+final liveAlarmTriggeredProvider = StreamProvider<Alarm>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return const Stream<Alarm>.empty();
+  }
+  return client.liveAlarmTriggered;
 });
 
 /// The [RealtimeClient] for the current paired device session (mobile app,

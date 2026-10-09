@@ -44,3 +44,15 @@ String describeSlideImageError(Object error) {
   }
   return describeApiError(error, 'Bild konnte nicht hochgeladen werden.');
 }
+
+/// German message for `POST /incidents/{id}/alarms` (ADR 0017): a 409
+/// `invalid_state_transition` means a Erstalarm was already triggered for
+/// this Einsatz (e.g. a stale dialog, or another dispatcher got there
+/// first) -- phrased as a plain notice, not as an error. Falls back to
+/// [describeApiError] for anything else.
+String describeAlarmTriggerError(Object error) {
+  if (_apiErrorCode(error) == 'invalid_state_transition') {
+    return 'Einsatz wurde bereits alarmiert.';
+  }
+  return describeApiError(error, 'Alarmierung konnte nicht ausgelöst werden.');
+}
