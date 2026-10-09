@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'screens/my_vehicle_screen.dart';
 import 'screens/pairing_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/start_screen.dart';
 
 /// Bridges [PairedSessionController] changes into a [Listenable] that
 /// go_router's `refreshListenable` can subscribe to, so route redirects
@@ -66,7 +66,8 @@ final mobileGoRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const _SessionGate(child: StartScreen()),
+        builder: (context, state) =>
+            const _SessionGate(child: MyVehicleScreen()),
       ),
       GoRoute(
         path: '/pair',

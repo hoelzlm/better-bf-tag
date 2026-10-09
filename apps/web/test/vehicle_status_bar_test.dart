@@ -206,6 +206,56 @@ void main() {
     expect(find.byKey(const Key('status-option-5')), findsOneWidget);
   });
 
+  testWidgets(
+    'the status picker hides 7/8 for a non-RTW/KTW vehicle',
+    (tester) async {
+      final repository = _FakeVehicleAdminRepository();
+      await _pump(
+        tester,
+        vehicles: Stream.value([_vehicle(id: 'v1', status: 2)]),
+        permission: Permission.dispatch,
+        repository: repository,
+      );
+
+      await tester.tap(find.byKey(const Key('vehicle-tile-v1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('status-option-6')), findsOneWidget);
+      expect(find.byKey(const Key('status-option-7')), findsNothing);
+      expect(find.byKey(const Key('status-option-8')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'the status picker offers 7/8 for a RTW vehicle',
+    (tester) async {
+      final repository = _FakeVehicleAdminRepository();
+      await _pump(
+        tester,
+        vehicles: Stream.value([
+          Vehicle(
+            id: 'v1',
+            callSign: 'Rettung 1',
+            shortName: 'RTW 1',
+            type: 'RTW',
+            status: FmsStatus.fromCode(2),
+            statusChangedAt: null,
+            sortOrder: 1,
+            active: true,
+          ),
+        ]),
+        permission: Permission.dispatch,
+        repository: repository,
+      );
+
+      await tester.tap(find.byKey(const Key('vehicle-tile-v1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('status-option-7')), findsOneWidget);
+      expect(find.byKey(const Key('status-option-8')), findsOneWidget);
+    },
+  );
+
   testWidgets('crew cannot open the status picker', (tester) async {
     final repository = _FakeVehicleAdminRepository();
     await _pump(

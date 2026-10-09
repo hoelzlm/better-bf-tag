@@ -9,6 +9,7 @@ import '../auth/paired_session.dart';
 import '../auth/session.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
+import '../domain/my_crew.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -243,4 +244,71 @@ final pairedRealtimeConnectionProvider = StreamProvider<ConnectionStatus>((
     return Stream.value(ConnectionStatus.connecting);
   }
   return client.states.map((state) => state.status);
+});
+
+/// The live, sorted, active vehicles from [pairedRealtimeClientProvider]
+/// -- empty while unpaired or before the first snapshot has loaded.
+/// Mirrors [vehiclesProvider].
+final pairedVehiclesProvider = StreamProvider<List<Vehicle>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Vehicle>[]);
+  }
+  return client.states.map((state) => state.vehicles);
+});
+
+/// The Schichten of the currently running BF-Tag from
+/// [pairedRealtimeClientProvider], with crew -- empty while unpaired,
+/// before the first snapshot has loaded, or when no BF-Tag is running.
+/// Mirrors [shiftsProvider].
+final pairedShiftsProvider = StreamProvider<List<Shift>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Shift>[]);
+  }
+  return client.states.map((state) => state.shifts);
+});
+
+/// How often [myCrewTickProvider] ticks, so [myCrewAssignmentsProvider]
+/// re-evaluates even without a realtime event (e.g. right at a Schicht
+/// boundary). Tests can override this with a short duration, or override
+/// [myCrewTickProvider]/[nowProvider] directly to avoid real timers.
+final myCrewTickIntervalProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 30),
+);
+
+/// Ticks on [myCrewTickIntervalProvider], used only to make
+/// [nowProvider] re-evaluate periodically.
+final myCrewTickProvider = StreamProvider<void>((ref) {
+  final interval = ref.watch(myCrewTickIntervalProvider);
+  return Stream.periodic(interval, (_) {});
+});
+
+/// The current wall-clock time, re-read whenever [myCrewTickProvider]
+/// ticks. Tests override this provider directly with a fixed [DateTime]
+/// to make [myCrewAssignmentsProvider] deterministic.
+final nowProvider = Provider<DateTime>((ref) {
+  ref.watch(myCrewTickProvider);
+  return DateTime.now();
+});
+
+/// The Fahrzeuge the paired Person is currently Besatzung of (ADR 0015),
+/// computed purely from [pairedVehiclesProvider] / [pairedShiftsProvider]
+/// (not `/me`) so the app needs no extra request. Empty while unpaired.
+final myCrewAssignmentsProvider = Provider<List<MyCrewAssignment>>((ref) {
+  final session = ref.watch(pairedSessionControllerProvider);
+  if (session is! Paired) {
+    return const [];
+  }
+  final vehicles =
+      ref.watch(pairedVehiclesProvider).valueOrNull ?? const <Vehicle>[];
+  final shifts =
+      ref.watch(pairedShiftsProvider).valueOrNull ?? const <Shift>[];
+  final now = ref.watch(nowProvider);
+  return myCrewAssignments(
+    shifts: shifts,
+    vehicles: vehicles,
+    personId: session.person.id,
+    now: now,
+  );
 });
