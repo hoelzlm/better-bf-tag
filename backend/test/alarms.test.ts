@@ -379,7 +379,7 @@ describe('alarms', () => {
     }
   });
 
-  it('idempotency: same id twice -> 201 then 200, exactly one alarm.triggered; without id on an already-running incident -> 409', async () => {
+  it('idempotency: same id twice -> 201 then 200, exactly one alarm.triggered; re-alarming the same vehicle without id -> 409 vehicle_already_alarmed', async () => {
     const { incident, v1 } = await setupAlarmedIncident('Idem');
     const ws = await connectWs(app.baseUrl, dispatchToken);
     await ws.next(m => m.type === 'hello');
@@ -399,10 +399,14 @@ describe('alarms', () => {
       // the idempotent repeat, which emits nothing.
       await expect(ws.next(m => m.type === 'alarm.triggered', 300)).rejects.toThrow();
 
+      // The incident is now `running`; retriggering the same vehicle
+      // without an idempotency `id` is a Nachalarmierung attempt that
+      // re-alarms an already-triggered vehicle (ADR 0019), not a state
+      // conflict.
       const third = await triggerAlarm(incident.id, [v1.id]);
       expect(third.status).toBe(409);
       expect((third.body as { error: { code: string } }).error.code).toBe(
-        'invalid_state_transition'
+        'vehicle_already_alarmed'
       );
 
       const detail = await app
@@ -412,6 +416,106 @@ describe('alarms', () => {
     } finally {
       ws.close();
     }
+  });
+
+  describe('Nachalarmierung (ADR 0019)', () => {
+    it('on a running incident -> 201, incident stays running, only alarm.triggered is emitted', async () => {
+      const { incident, v1, v2 } = await setupAlarmedIncident('NachalarmRunning');
+      const ws = await connectWs(app.baseUrl, dispatchToken);
+      await ws.next(m => m.type === 'hello');
+      try {
+        const first = await triggerAlarm(incident.id, [v1.id]);
+        expect(first.status).toBe(201);
+        await ws.next(m => m.type === 'incident.updated');
+        await ws.next(m => m.type === 'alarm.triggered');
+
+        const second = await triggerAlarm(incident.id, [v2.id]);
+        expect(second.status).toBe(201);
+        const secondBody = second.body as TriggerAlarmResponse;
+
+        const event = await ws.next();
+        expect(event.type).toBe('alarm.triggered');
+        expect((event.data as { alarm: AlarmJson }).alarm.id).toBe(secondBody.alarm.id);
+
+        await expect(ws.next(m => m.type === 'incident.updated', 300)).rejects.toThrow();
+
+        const detail = await app
+          .client()
+          .get(`/api/v1/incidents/${incident.id}`, { token: dispatchToken });
+        const detailBody = detail.body as IncidentJson & { alarms: AlarmJson[] };
+        expect(detailBody.state).toBe('running');
+        expect(detailBody.alarms).toHaveLength(2);
+      } finally {
+        ws.close();
+      }
+    });
+
+    it('recipients already frozen by an earlier triggered alarm are not recipients again; a new person is', async () => {
+      const day = await createBfDay('NachalarmFreeze');
+      const shift = await getDefaultShift(day.id);
+      const v1 = await createVehicle('NachalarmFreeze-V1');
+      const v2 = await createVehicle('NachalarmFreeze-V2');
+
+      const p1 = await createParticipant('NachalarmFreeze-p1'); // Erstalarm + Nachalarmierung
+      const p2 = await createParticipant('NachalarmFreeze-p2'); // only Nachalarmierung
+      await setParticipants(day.id, [p1, p2]);
+
+      await setCrew(shift.id, [
+        { vehicle_id: v1.id, person_id: p1, function: 'GF' },
+        { vehicle_id: v2.id, person_id: p1, function: 'MA' },
+        { vehicle_id: v2.id, person_id: p2, function: 'GF' },
+      ]);
+
+      await startBfDay(day.id);
+      const incident = await createIncident(day.id);
+
+      const first = await triggerAlarm(incident.id, [v1.id]);
+      expect(first.status).toBe(201);
+      expect((first.body as TriggerAlarmResponse).alarm.recipients.map(r => r.person_id)).toEqual([
+        p1,
+      ]);
+
+      const second = await triggerAlarm(incident.id, [v2.id]);
+      expect(second.status).toBe(201);
+      const recipientIds = (second.body as TriggerAlarmResponse).alarm.recipients.map(
+        r => r.person_id
+      );
+      expect(recipientIds).toContain(p2);
+      expect(recipientIds).not.toContain(p1);
+    });
+
+    it('re-alarming an already-triggered vehicle -> 409 vehicle_already_alarmed', async () => {
+      const { incident, v1 } = await setupAlarmedIncident('ReAlarm');
+      const first = await triggerAlarm(incident.id, [v1.id]);
+      expect(first.status).toBe(201);
+
+      const second = await triggerAlarm(incident.id, [v1.id]);
+      expect(second.status).toBe(409);
+      expect((second.body as { error: { code: string } }).error.code).toBe(
+        'vehicle_already_alarmed'
+      );
+    });
+
+    it('alarming a closed or discarded incident -> 409 incident_not_alarmable', async () => {
+      const { incident: closedIncident, v1: v1Closed } = await setupAlarmedIncident('ClosedAlarm');
+      await pool.query(`update incident set state = 'closed' where id = $1`, [closedIncident.id]);
+      const closedRes = await triggerAlarm(closedIncident.id, [v1Closed.id]);
+      expect(closedRes.status).toBe(409);
+      expect((closedRes.body as { error: { code: string } }).error.code).toBe(
+        'incident_not_alarmable'
+      );
+
+      const { incident: discardedIncident, v1: v1Discarded } =
+        await setupAlarmedIncident('DiscardedAlarm');
+      await pool.query(`update incident set state = 'discarded' where id = $1`, [
+        discardedIncident.id,
+      ]);
+      const discardedRes = await triggerAlarm(discardedIncident.id, [v1Discarded.id]);
+      expect(discardedRes.status).toBe(409);
+      expect((discardedRes.body as { error: { code: string } }).error.code).toBe(
+        'incident_not_alarmable'
+      );
+    });
   });
 
   it('idempotency: same id for a different incident -> 409 conflict', async () => {
@@ -608,6 +712,23 @@ describe('alarms', () => {
         .post(`/api/v1/alarms/${alarm.id}/acknowledge`, {}, { token: p1Token });
       expect(inactiveRes.status).toBe(409);
       expect((inactiveRes.body as { error: { code: string } }).error.code).toBe('alarm_not_active');
+    });
+
+    it('on a closed incident -> 409 alarm_not_active even though the alarm itself stays triggered (ADR 0019)', async () => {
+      const { incident, v1, p1 } = await setupAlarmedIncident('AckAfterClose');
+      const triggered = await triggerAlarm(incident.id, [v1.id]);
+      const alarm = (triggered.body as TriggerAlarmResponse).alarm;
+      const p1Token = await signTestAccessToken(app, p1, 'crew');
+
+      await app
+        .client()
+        .post(`/api/v1/incidents/${incident.id}/close`, {}, { token: dispatchToken });
+
+      const ackRes = await app
+        .client()
+        .post(`/api/v1/alarms/${alarm.id}/acknowledge`, {}, { token: p1Token });
+      expect(ackRes.status).toBe(409);
+      expect((ackRes.body as { error: { code: string } }).error.code).toBe('alarm_not_active');
     });
   });
 

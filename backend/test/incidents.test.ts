@@ -19,6 +19,7 @@ interface IncidentJson {
   state: 'draft' | 'running' | 'closed' | 'discarded';
   created_at: string;
   updated_at: string;
+  closed_at: string | null;
   script?: string;
 }
 
@@ -404,6 +405,131 @@ describe('incidents', () => {
         monitorWs.close();
         prepWs.close();
       }
+    });
+  });
+
+  describe('close (ADR 0019)', () => {
+    async function createRunningIncident(dayId: string): Promise<IncidentJson> {
+      const created = await createIncident(dayId);
+      await setState(created.body.id, 'running');
+      return created.body;
+    }
+
+    it('dispatch and admin can close a running incident -> 200, closed_at set, events incident.updated then incident.closed', async () => {
+      for (const token of [dispatchToken, adminToken]) {
+        const day = await createBfDay(`Close-${token === dispatchToken ? 'dispatch' : 'admin'}`);
+        const running = await createRunningIncident(day.id);
+
+        const ws = await connectWs(app.baseUrl, dispatchToken);
+        await ws.next(m => m.type === 'hello');
+        try {
+          const res = await app
+            .client()
+            .post(`/api/v1/incidents/${running.id}/close`, {}, { token });
+          expect(res.status).toBe(200);
+          const body = res.body as { incident: IncidentJson; discarded_alarm_ids: string[] };
+          expect(body.incident.state).toBe('closed');
+          expect(body.incident.closed_at).not.toBeNull();
+          expect(body.discarded_alarm_ids).toEqual([]);
+
+          const updated = await ws.next(m => m.type === 'incident.updated');
+          expect((updated.data as IncidentJson).state).toBe('closed');
+
+          const closed = await ws.next(m => m.type === 'incident.closed');
+          expect((closed.data as { id: string }).id).toBe(running.id);
+        } finally {
+          ws.close();
+        }
+      }
+    });
+
+    it('preparation and crew -> 403 forbidden', async () => {
+      const day = await createBfDay('ClosePerm');
+      const running = await createRunningIncident(day.id);
+
+      for (const token of [preparationToken, crewToken]) {
+        const res = await app.client().post(`/api/v1/incidents/${running.id}/close`, {}, { token });
+        expect(res.status).toBe(403);
+        expect(res.body).toMatchObject({ error: { code: 'forbidden' } });
+      }
+    });
+
+    it('unknown incident -> 404 not_found', async () => {
+      const res = await app
+        .client()
+        .post(
+          '/api/v1/incidents/00000000-0000-4000-8000-000000000099/close',
+          {},
+          { token: dispatchToken }
+        );
+      expect(res.status).toBe(404);
+    });
+
+    it('draft incident -> 409 invalid_state_transition', async () => {
+      const day = await createBfDay('CloseDraft');
+      const draft = await createIncident(day.id);
+
+      const res = await app
+        .client()
+        .post(`/api/v1/incidents/${draft.body.id}/close`, {}, { token: dispatchToken });
+      expect(res.status).toBe(409);
+      expect(res.body).toMatchObject({ error: { code: 'invalid_state_transition' } });
+    });
+
+    it('closing twice -> second time 409 invalid_state_transition', async () => {
+      const day = await createBfDay('CloseTwice');
+      const running = await createRunningIncident(day.id);
+
+      const first = await app
+        .client()
+        .post(`/api/v1/incidents/${running.id}/close`, {}, { token: dispatchToken });
+      expect(first.status).toBe(200);
+
+      const second = await app
+        .client()
+        .post(`/api/v1/incidents/${running.id}/close`, {}, { token: dispatchToken });
+      expect(second.status).toBe(409);
+      expect(second.body).toMatchObject({ error: { code: 'invalid_state_transition' } });
+    });
+
+    it('discards planned alarms and lists them in discarded_alarm_ids', async () => {
+      const day = await createBfDay('ClosePlanned');
+      const running = await createRunningIncident(day.id);
+
+      const plannedRes = await pool.query<{ id: string }>(
+        `insert into alarm (incident_id, state, created_at) values ($1, 'planned', now()) returning id`,
+        [running.id]
+      );
+      const plannedAlarmId = plannedRes.rows[0]?.id;
+      expect(plannedAlarmId).toBeTruthy();
+
+      const res = await app
+        .client()
+        .post(`/api/v1/incidents/${running.id}/close`, {}, { token: dispatchToken });
+      expect(res.status).toBe(200);
+      const body = res.body as { discarded_alarm_ids: string[] };
+      expect(body.discarded_alarm_ids).toEqual([plannedAlarmId]);
+
+      const alarmState = await pool.query<{ state: string }>(
+        `select state from alarm where id = $1`,
+        [plannedAlarmId]
+      );
+      expect(alarmState.rows[0]?.state).toBe('discarded');
+    });
+
+    it('crew sees the closed incident without the script key', async () => {
+      const day = await createBfDay('CloseScript');
+      const running = await createRunningIncident(day.id);
+      await app
+        .client()
+        .post(`/api/v1/incidents/${running.id}/close`, {}, { token: dispatchToken });
+
+      const crewDetail = await app
+        .client()
+        .get(`/api/v1/incidents/${running.id}`, { token: crewToken });
+      expect(crewDetail.status).toBe(200);
+      assertNoScript(JSON.stringify(crewDetail.body));
+      expect((crewDetail.body as IncidentJson).state).toBe('closed');
     });
   });
 

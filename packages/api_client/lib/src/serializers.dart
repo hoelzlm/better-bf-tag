@@ -15,6 +15,7 @@ import 'package:bftag_api_client/src/date_serializer.dart';
 import 'package:bftag_api_client/src/model/date.dart';
 
 import 'package:bftag_api_client/src/model/acknowledge_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/close_incident200_response.dart';
 import 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/create_incident_request.dart';
 import 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
@@ -78,6 +79,7 @@ part 'serializers.g.dart';
 
 @SerializersFor([
   AcknowledgeAlarm200Response,
+  CloseIncident200Response,
   CreateBfDayRequest,
   CreateIncidentRequest,
   CreateMonitorPairingCode201Response,

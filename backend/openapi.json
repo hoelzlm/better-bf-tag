@@ -3446,6 +3446,10 @@
                           "updated_at": {
                             "type": "string"
                           },
+                          "closed_at": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "script": {
                             "type": "string"
                           }
@@ -3459,7 +3463,8 @@
                           "report",
                           "state",
                           "created_at",
-                          "updated_at"
+                          "updated_at",
+                          "closed_at"
                         ],
                         "additionalProperties": false
                       }
@@ -6278,6 +6283,10 @@
                       "updated_at": {
                         "type": "string"
                       },
+                      "closed_at": {
+                        "nullable": true,
+                        "type": "string"
+                      },
                       "script": {
                         "type": "string"
                       }
@@ -6291,7 +6300,8 @@
                       "report",
                       "state",
                       "created_at",
-                      "updated_at"
+                      "updated_at",
+                      "closed_at"
                     ],
                     "additionalProperties": false
                   }
@@ -6425,6 +6435,10 @@
                     "updated_at": {
                       "type": "string"
                     },
+                    "closed_at": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "script": {
                       "type": "string"
                     }
@@ -6438,7 +6452,8 @@
                     "report",
                     "state",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "closed_at"
                   ],
                   "additionalProperties": false
                 }
@@ -6605,6 +6620,10 @@
                     "updated_at": {
                       "type": "string"
                     },
+                    "closed_at": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "script": {
                       "type": "string"
                     },
@@ -6714,6 +6733,7 @@
                     "state",
                     "created_at",
                     "updated_at",
+                    "closed_at",
                     "alarms"
                   ],
                   "additionalProperties": false
@@ -6845,6 +6865,10 @@
                     "updated_at": {
                       "type": "string"
                     },
+                    "closed_at": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "script": {
                       "type": "string"
                     }
@@ -6858,7 +6882,8 @@
                     "report",
                     "state",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "closed_at"
                   ],
                   "additionalProperties": false
                 }
@@ -7025,6 +7050,10 @@
                     "updated_at": {
                       "type": "string"
                     },
+                    "closed_at": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "script": {
                       "type": "string"
                     }
@@ -7038,7 +7067,209 @@
                     "report",
                     "state",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "closed_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents/{id}/close": {
+      "post": {
+        "operationId": "closeIncident",
+        "tags": [
+          "incidents"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "incident": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "bf_day_id": {
+                          "type": "string"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "keyword": {
+                          "type": "string"
+                        },
+                        "address": {
+                          "type": "string"
+                        },
+                        "report": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "running",
+                            "closed",
+                            "discarded"
+                          ]
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "closed_at": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "script": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "bf_day_id",
+                        "number",
+                        "keyword",
+                        "address",
+                        "report",
+                        "state",
+                        "created_at",
+                        "updated_at",
+                        "closed_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "discarded_alarm_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "incident",
+                    "discarded_alarm_ids"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
                   ],
                   "additionalProperties": false
                 }
