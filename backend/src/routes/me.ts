@@ -5,9 +5,17 @@ import { person } from '../db/schema.js';
 import { requireAuth } from '../access/authenticate.js';
 import { personSummarySchema } from '../access/schemas.js';
 import { ApiError } from '../errors.js';
+import { loadCurrentCrewAssignments } from '../shifts/current-crew.js';
+
+const crewAssignmentSummarySchema = z.object({
+  shift_id: z.string(),
+  vehicle_id: z.string(),
+  function: z.string(),
+});
 
 const meResponseSchema = z.object({
   person: personSummarySchema,
+  crew_assignments: z.array(crewAssignmentSummarySchema),
 });
 
 export const meRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -39,6 +47,12 @@ export const meRoutes: FastifyPluginAsyncZod = async fastify => {
         throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
       }
 
+      const crewAssignments = await loadCurrentCrewAssignments(
+        fastify.db,
+        fastify.clock.now(),
+        auth.personId
+      );
+
       return {
         person: {
           id: found.id,
@@ -46,6 +60,11 @@ export const meRoutes: FastifyPluginAsyncZod = async fastify => {
           person_type: found.personType,
           permission: found.permission,
         },
+        crew_assignments: crewAssignments.map(assignment => ({
+          shift_id: assignment.shiftId,
+          vehicle_id: assignment.vehicleId,
+          function: assignment.function,
+        })),
       };
     }
   );

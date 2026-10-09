@@ -918,10 +918,34 @@
                         "permission"
                       ],
                       "additionalProperties": false
+                    },
+                    "crew_assignments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "shift_id": {
+                            "type": "string"
+                          },
+                          "vehicle_id": {
+                            "type": "string"
+                          },
+                          "function": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "shift_id",
+                          "vehicle_id",
+                          "function"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
-                    "person"
+                    "person",
+                    "crew_assignments"
                   ],
                   "additionalProperties": false
                 }
@@ -1423,6 +1447,38 @@
                     "status_changed_at",
                     "sort_order",
                     "active"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
                   ],
                   "additionalProperties": false
                 }

@@ -83,7 +83,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 | Methode | Pfad | Berechtigung |
 |---------|------|--------------|
-| PUT | `/vehicles/{id}/status` | Besatzung der aktuellen Schicht oder Leitstelle |
+| PUT | `/vehicles/{id}/status` | Besatzung der aktuellen Schicht (`source: 'app'`) oder Leitstelle/Admin (`source: 'dispatch'`); sonst 403 `forbidden`. Status 7/8 nur für RTW/KTW, sonst 409 `status_not_allowed` (gilt für alle, auch Leitstelle) |
 
 ### Einsätze und Alarmierungen
 
@@ -116,7 +116,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
-| GET | `/me` | Person, aktuelle Besatzungen |
+| GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren |
 | GET | `/snapshot` | laufender BF-Tag, aktive Einsätze, Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
@@ -150,7 +150,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | `alarm.acknowledged` | `{ alarm_id, person_id, display_name }` | alle |
 | `incident.close_suggested` | `{ id }` | Leitstelle |
 | `incident.closed` | `{ id }` | alle |
-| `vehicle.status_changed` | `{ vehicle_id, status, at }` | alle |
+| `vehicle.status_changed` | `{ vehicle_id, status, at, source: 'app' \| 'dispatch' }` | alle |
 | `bf_day.updated` | BF-Tag | alle |
 | `shift.crew_changed` | Schicht + Besatzungen (auch bei Anlegen/Bearbeiten einer Schicht) | alle |
 | `shift.deleted` | `{ id, bf_day_id }` | alle |
