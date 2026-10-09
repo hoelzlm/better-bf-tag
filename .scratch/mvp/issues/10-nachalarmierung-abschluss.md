@@ -4,13 +4,13 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Nachalarmierung für laufende Einsätze; Personen, die schon Empfänger einer früheren Alarmierung desselben Einsatzes sind, bekommen keinen erneuten Alarm/Push
-- [ ] Erstalarm/Nachalarmierung werden aus der Reihenfolge abgeleitet und so angezeigt
-- [ ] Abschlussvorschlag (`incident.close_suggested`), sobald alle Fahrzeuge aller ausgelösten Alarmierungen Status 1/2 haben und keine Alarmierung mehr geplant ist
-- [ ] Einsatz schließen (`incident.closed`); Monitor kehrt in den Standby zurück, wenn kein Einsatz mehr läuft
-- [ ] Monitor rotiert bei mehreren laufenden Einsätzen
-- [ ] Tests: kein doppelter Alarm bei Nachalarmierung, Abschlussvorschlag erscheint/erscheint nicht, Schließen nur durch Leitstelle/Admin, geschlossene Einsätze nicht mehr alarmierbar
+- [x] Nachalarmierung für laufende Einsätze; Personen, die schon Empfänger einer früheren Alarmierung desselben Einsatzes sind, bekommen keinen erneuten Alarm/Push
+- [x] Erstalarm/Nachalarmierung werden aus der Reihenfolge abgeleitet und so angezeigt
+- [x] Abschlussvorschlag (`incident.close_suggested`), sobald alle Fahrzeuge aller ausgelösten Alarmierungen Status 1/2 haben und keine Alarmierung mehr geplant ist
+- [x] Einsatz schließen (`incident.closed`); Monitor kehrt in den Standby zurück, wenn kein Einsatz mehr läuft
+- [x] Monitor rotiert bei mehreren laufenden Einsätzen
+- [x] Tests: kein doppelter Alarm bei Nachalarmierung, Abschlussvorschlag erscheint/erscheint nicht, Schließen nur durch Leitstelle/Admin, geschlossene Einsätze nicht mehr alarmierbar
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`
