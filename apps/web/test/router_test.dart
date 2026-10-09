@@ -123,6 +123,8 @@ Future<void> _pumpAppAt(
         realtimeConnectionProvider.overrideWith(
           (ref) => Stream.value(ConnectionStatus.live),
         ),
+        shiftsProvider.overrideWith((ref) => Stream.value(const [])),
+        bfDayProvider.overrideWith((ref) => Stream.value(null)),
         vehicleAdminRepositoryProvider.overrideWithValue(
           _FakeVehicleAdminRepository(),
         ),
@@ -330,6 +332,77 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('BF-Tage'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'crew permission navigating to /admin/schichten is redirected to /admin',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.crew,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-schichten')), findsNothing);
+
+      final context = tester.element(find.text('Keine laufenden Einsätze'));
+      context.go('/admin/schichten');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'dispatch permission can navigate to /admin/schichten via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-schichten')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-schichten')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Schichten'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'admin can navigate to /admin/schichten via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.admin,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-schichten')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-schichten')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Schichten'), findsOneWidget);
     },
   );
 }
