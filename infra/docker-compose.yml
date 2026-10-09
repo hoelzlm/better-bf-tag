@@ -43,6 +43,13 @@ services:
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       OWN_FIRE_DEPARTMENT_NAME: ${OWN_FIRE_DEPARTMENT_NAME:-Eigene Feuerwehr}
+      # Push (ADR 0018), alle optional (siehe infra/.env.example):
+      # FCM_SERVICE_ACCOUNT_FILE: /secrets/fcm-service-account.json
+      # APNS_KEY_FILE: /secrets/apns-key.p8
+      # APNS_KEY_ID: ${APNS_KEY_ID:-}
+      # APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      # APNS_BUNDLE_ID: ${APNS_BUNDLE_ID:-}
+      # APNS_PRODUCTION: ${APNS_PRODUCTION:-false}
 
   db:
     image: postgres:17
