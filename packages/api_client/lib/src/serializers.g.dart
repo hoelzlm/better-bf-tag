@@ -9,6 +9,7 @@ part of 'serializers.dart';
 Serializers _$serializers =
     (Serializers().toBuilder()
           ..add(AcknowledgeAlarm200Response.serializer)
+          ..add(AnonymizeBfDay200Response.serializer)
           ..add(CloseIncident200Response.serializer)
           ..add(CreateBfDayRequest.serializer)
           ..add(CreateIncidentRequest.serializer)
@@ -23,6 +24,7 @@ Serializers _$serializers =
           ..add(CreateSlideRequest.serializer)
           ..add(CreateVehicleRequest.serializer)
           ..add(DeviceRefreshRequest.serializer)
+          ..add(GetBfDayAnonymizationPreview200Response.serializer)
           ..add(GetHealth200Response.serializer)
           ..add(GetHealth200ResponseDatabaseEnum.serializer)
           ..add(GetHealth200ResponseStatusEnum.serializer)

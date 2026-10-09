@@ -78,9 +78,11 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**updatePushToken**](doc/AuthApi.md#updatepushtoken) | **PUT** /api/v1/me/device/push-token | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**anonymizeBfDay**](doc/BfDaysApi.md#anonymizebfday) | **POST** /api/v1/bf-days/{id}/anonymize | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**createBfDay**](doc/BfDaysApi.md#createbfday) | **POST** /api/v1/bf-days | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**endBfDay**](doc/BfDaysApi.md#endbfday) | **POST** /api/v1/bf-days/{id}/end | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**getBfDay**](doc/BfDaysApi.md#getbfday) | **GET** /api/v1/bf-days/{day} | 
+[*BfDaysApi*](doc/BfDaysApi.md) | [**getBfDayAnonymizationPreview**](doc/BfDaysApi.md#getbfdayanonymizationpreview) | **GET** /api/v1/bf-days/{id}/anonymization-preview | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**listBfDays**](doc/BfDaysApi.md#listbfdays) | **GET** /api/v1/bf-days | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**listParticipants**](doc/BfDaysApi.md#listparticipants) | **GET** /api/v1/bf-days/{day}/participants | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**setParticipants**](doc/BfDaysApi.md#setparticipants) | **PUT** /api/v1/bf-days/{day}/participants | 
@@ -133,6 +135,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [AcknowledgeAlarm200Response](doc/AcknowledgeAlarm200Response.md)
+ - [AnonymizeBfDay200Response](doc/AnonymizeBfDay200Response.md)
  - [CloseIncident200Response](doc/CloseIncident200Response.md)
  - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateIncidentRequest](doc/CreateIncidentRequest.md)
@@ -145,6 +148,7 @@ Class | Method | HTTP request | Description
  - [CreateSlideRequest](doc/CreateSlideRequest.md)
  - [CreateVehicleRequest](doc/CreateVehicleRequest.md)
  - [DeviceRefreshRequest](doc/DeviceRefreshRequest.md)
+ - [GetBfDayAnonymizationPreview200Response](doc/GetBfDayAnonymizationPreview200Response.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)
  - [GetIncident200Response](doc/GetIncident200Response.md)

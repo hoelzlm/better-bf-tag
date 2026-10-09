@@ -165,6 +165,7 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | status | smallint null | |
 | source | enum `app`, `dispatch`, `system` | |
 | person_id | uuid null | wird bei der Anonymisierung entfernt |
+| bf_day_id | uuid null FK | der zum Zeitpunkt laufende BF-Tag, oder null; Index für die Anonymisierung (ADR 0020) |
 | created_at | timestamptz | |
 
 ### `incident` – Einsatz
