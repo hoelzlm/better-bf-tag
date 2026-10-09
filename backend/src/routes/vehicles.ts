@@ -7,6 +7,8 @@ import { errorResponseSchema } from '../access/schemas.js';
 import { vehicleSchema, toVehicleJson, type VehicleRow } from './vehicle-schemas.js';
 import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
+import { allowsPatientStatus, isPatientStatus } from '../vehicles/fms-rules.js';
+import { loadCurrentCrewAssignments } from '../shifts/current-crew.js';
 
 const createVehicleBodySchema = z.object({
   call_sign: z.string().trim().min(1),
@@ -229,7 +231,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.put(
     '/vehicles/:id/status',
     {
-      preHandler: [requireAuth(), requirePermission('dispatch')],
+      preHandler: [requireAuth()],
       schema: {
         operationId: 'setVehicleStatus',
         tags: ['vehicles'],
@@ -237,6 +239,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
         body: setStatusBodySchema,
         response: {
           200: vehicleSchema,
+          403: errorResponseSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
         },
@@ -256,8 +259,27 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
         if (!existing.active) {
           throw new ApiError(409, 'vehicle_inactive', 'Fahrzeug ist deaktiviert.');
         }
+        if (isPatientStatus(request.body.status) && !allowsPatientStatus(existing.type)) {
+          throw new ApiError(
+            409,
+            'status_not_allowed',
+            'Status nicht erlaubt für dieses Fahrzeug.'
+          );
+        }
 
         const now = fastify.clock.now();
+
+        const crew = await loadCurrentCrewAssignments(tx, now, auth.personId);
+        const isCrew = crew.some(assignment => assignment.vehicleId === existing.id);
+
+        let source: 'app' | 'dispatch';
+        if (isCrew) {
+          source = 'app';
+        } else if (auth.permission === 'dispatch' || auth.permission === 'admin') {
+          source = 'dispatch';
+        } else {
+          throw new ApiError(403, 'forbidden', 'Keine Berechtigung.');
+        }
 
         const [row] = await tx
           .update(vehicle)
@@ -272,7 +294,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
           vehicleId: row.id,
           kind: 'status',
           status: request.body.status,
-          source: 'dispatch',
+          source,
           personId: auth.personId,
           createdAt: now,
         });
@@ -282,7 +304,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
           vehicle_id: row.id,
           status: row.status,
           at: now.toISOString(),
-          source: 'dispatch',
+          source,
         });
         return json;
       });

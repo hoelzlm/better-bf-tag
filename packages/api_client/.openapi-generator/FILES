@@ -33,6 +33,7 @@ lib/src/model/device_refresh_request.dart
 lib/src/model/get_health200_response.dart
 lib/src/model/get_health503_response.dart
 lib/src/model/get_me200_response.dart
+lib/src/model/get_me200_response_crew_assignments_inner.dart
 lib/src/model/get_snapshot200_response.dart
 lib/src/model/get_snapshot200_response_bf_day.dart
 lib/src/model/get_snapshot200_response_shifts_inner.dart

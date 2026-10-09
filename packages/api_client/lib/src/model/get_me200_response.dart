@@ -3,7 +3,9 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:bftag_api_client/src/model/login200_response_person.dart';
+import 'package:bftag_api_client/src/model/get_me200_response_crew_assignments_inner.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -13,10 +15,14 @@ part 'get_me200_response.g.dart';
 ///
 /// Properties:
 /// * [person] 
+/// * [crewAssignments] 
 @BuiltValue()
 abstract class GetMe200Response implements Built<GetMe200Response, GetMe200ResponseBuilder> {
   @BuiltValueField(wireName: r'person')
   Login200ResponsePerson get person;
+
+  @BuiltValueField(wireName: r'crew_assignments')
+  BuiltList<GetMe200ResponseCrewAssignmentsInner> get crewAssignments;
 
   GetMe200Response._();
 
@@ -45,6 +51,11 @@ class _$GetMe200ResponseSerializer implements PrimitiveSerializer<GetMe200Respon
     yield serializers.serialize(
       object.person,
       specifiedType: const FullType(Login200ResponsePerson),
+    );
+    yield r'crew_assignments';
+    yield serializers.serialize(
+      object.crewAssignments,
+      specifiedType: const FullType(BuiltList, [FullType(GetMe200ResponseCrewAssignmentsInner)]),
     );
   }
 
@@ -75,6 +86,13 @@ class _$GetMe200ResponseSerializer implements PrimitiveSerializer<GetMe200Respon
             specifiedType: const FullType(Login200ResponsePerson),
           ) as Login200ResponsePerson;
           result.person.replace(valueDes);
+          break;
+        case r'crew_assignments':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(GetMe200ResponseCrewAssignmentsInner)]),
+          ) as BuiltList<GetMe200ResponseCrewAssignmentsInner>;
+          result.crewAssignments.replace(valueDes);
           break;
         default:
           unhandled.add(key);

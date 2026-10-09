@@ -256,6 +256,8 @@ describe('realtime websocket /ws', () => {
       const vehicle = await createVehicle(app, adminToken, {
         call_sign: 'Concurrent',
         short_name: 'Concurrent',
+        // Status 7/8 are used below; only RTW/KTW allow them (ADR 0015).
+        type: 'RTW',
       });
 
       const adminWs = await connectWs(app.baseUrl, adminToken);

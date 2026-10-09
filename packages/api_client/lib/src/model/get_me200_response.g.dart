@@ -9,12 +9,15 @@ part of 'get_me200_response.dart';
 class _$GetMe200Response extends GetMe200Response {
   @override
   final Login200ResponsePerson person;
+  @override
+  final BuiltList<GetMe200ResponseCrewAssignmentsInner> crewAssignments;
 
   factory _$GetMe200Response([
     void Function(GetMe200ResponseBuilder)? updates,
   ]) => (GetMe200ResponseBuilder()..update(updates))._build();
 
-  _$GetMe200Response._({required this.person}) : super._();
+  _$GetMe200Response._({required this.person, required this.crewAssignments})
+    : super._();
   @override
   GetMe200Response rebuild(void Function(GetMe200ResponseBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -26,22 +29,26 @@ class _$GetMe200Response extends GetMe200Response {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is GetMe200Response && person == other.person;
+    return other is GetMe200Response &&
+        person == other.person &&
+        crewAssignments == other.crewAssignments;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, person.hashCode);
+    _$hash = $jc(_$hash, crewAssignments.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(
-      r'GetMe200Response',
-    )..add('person', person)).toString();
+    return (newBuiltValueToStringHelper(r'GetMe200Response')
+          ..add('person', person)
+          ..add('crewAssignments', crewAssignments))
+        .toString();
   }
 }
 
@@ -54,6 +61,14 @@ class GetMe200ResponseBuilder
       _$this._person ??= Login200ResponsePersonBuilder();
   set person(Login200ResponsePersonBuilder? person) => _$this._person = person;
 
+  ListBuilder<GetMe200ResponseCrewAssignmentsInner>? _crewAssignments;
+  ListBuilder<GetMe200ResponseCrewAssignmentsInner> get crewAssignments =>
+      _$this._crewAssignments ??=
+          ListBuilder<GetMe200ResponseCrewAssignmentsInner>();
+  set crewAssignments(
+    ListBuilder<GetMe200ResponseCrewAssignmentsInner>? crewAssignments,
+  ) => _$this._crewAssignments = crewAssignments;
+
   GetMe200ResponseBuilder() {
     GetMe200Response._defaults(this);
   }
@@ -62,6 +77,7 @@ class GetMe200ResponseBuilder
     final $v = _$v;
     if ($v != null) {
       _person = $v.person.toBuilder();
+      _crewAssignments = $v.crewAssignments.toBuilder();
       _$v = null;
     }
     return this;
@@ -83,12 +99,19 @@ class GetMe200ResponseBuilder
   _$GetMe200Response _build() {
     _$GetMe200Response _$result;
     try {
-      _$result = _$v ?? _$GetMe200Response._(person: person.build());
+      _$result =
+          _$v ??
+          _$GetMe200Response._(
+            person: person.build(),
+            crewAssignments: crewAssignments.build(),
+          );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'person';
         person.build();
+        _$failedField = 'crewAssignments';
+        crewAssignments.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
           r'GetMe200Response',
