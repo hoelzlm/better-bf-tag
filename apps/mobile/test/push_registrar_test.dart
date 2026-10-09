@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_mobile/alarm/pending_alarm.dart';
 import 'package:bftag_mobile/main.dart';
+import 'package:bftag_mobile/onboarding/onboarding_store.dart';
 import 'package:bftag_mobile/push/push_service.dart';
 import 'package:bftag_mobile/screens/alarm_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,6 +105,11 @@ Future<ProviderContainer> _pumpApp(
       myCrewAssignmentsProvider.overrideWithValue(const []),
       pushServiceProvider.overrideWithValue(pushService),
       pushTokenRepositoryProvider.overrideWithValue(repository),
+      // Not under test here; keep a freshly-Paired session off the
+      // Onboarding (ADR 0021) redirect.
+      onboardingStoreProvider.overrideWithValue(
+        InMemoryOnboardingStore(completed: true),
+      ),
     ],
   );
   addTearDown(container.dispose);

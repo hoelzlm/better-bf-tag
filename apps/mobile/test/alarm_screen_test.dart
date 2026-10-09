@@ -4,6 +4,7 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_mobile/alarm/alarm_sound.dart';
 import 'package:bftag_mobile/alarm/pending_alarm.dart';
 import 'package:bftag_mobile/main.dart';
+import 'package:bftag_mobile/onboarding/onboarding_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -201,6 +202,11 @@ Future<void> _pumpApp(
           () => _FakePairedSessionController(
             const Paired(_me, 'fake-access-token', 'dev1'),
           ),
+        ),
+        // Not under test here; keep a freshly-Paired session off the
+        // Onboarding (ADR 0021) redirect.
+        onboardingStoreProvider.overrideWithValue(
+          InMemoryOnboardingStore(completed: true),
         ),
         pairedRealtimeClientProvider.overrideWith((ref) => null),
         pairedAlarmsProvider.overrideWith((ref) => Stream.value(alarms)),
