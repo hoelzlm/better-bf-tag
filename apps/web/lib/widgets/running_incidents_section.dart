@@ -154,6 +154,7 @@ class _AlarmSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = alarm.summary;
+    final errorColor = Theme.of(context).colorScheme.error;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -163,6 +164,13 @@ class _AlarmSection extends StatelessWidget {
             key: Key('alarm-summary-${alarm.id}'),
             '${summary.acknowledged} quittiert · ${summary.pending} ausstehend · '
             '${summary.noDevice} kein Gerät',
+          ),
+          Text(
+            key: Key('alarm-push-summary-${alarm.id}'),
+            'Push: ${alarm.pushDelivered} zugestellt · ${alarm.pushRejected} abgelehnt',
+            style: alarm.pushRejected > 0
+                ? TextStyle(color: errorColor)
+                : null,
           ),
           const SizedBox(height: 4),
           for (final recipient in alarm.recipients)

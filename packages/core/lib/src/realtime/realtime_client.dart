@@ -326,6 +326,8 @@ class RealtimeClient {
         _liveAlarmTriggeredController.add(alarm);
       case AlarmAcknowledged(:final alarmId, :final personId, :final acknowledgedAt):
         _applyAlarmAcknowledged(alarmId, personId, acknowledgedAt);
+      case AlarmPushReported(:final alarmId, :final pushDelivered, :final pushRejected):
+        _applyAlarmPushReported(alarmId, pushDelivered, pushRejected);
       case BfDayUpdated():
         // The current BF-Tag/shifts changed in a way too varied to patch
         // incrementally (new BF-Tag started, time range changed, ...);
@@ -369,6 +371,21 @@ class RealtimeClient {
           recipient,
     ];
     _alarmsById[alarmId] = alarm.copyWith(recipients: recipients);
+  }
+
+  /// Updates the push counters on the matching Alarmierung (ADR 0018),
+  /// ignoring the event if the Alarmierung is unknown.
+  void _applyAlarmPushReported(
+    String alarmId,
+    int pushDelivered,
+    int pushRejected,
+  ) {
+    final alarm = _alarmsById[alarmId];
+    if (alarm == null) return;
+    _alarmsById[alarmId] = alarm.copyWith(
+      pushDelivered: pushDelivered,
+      pushRejected: pushRejected,
+    );
   }
 
   /// A gap was detected (gaps include: gaps in event seq, hello/heartbeat
