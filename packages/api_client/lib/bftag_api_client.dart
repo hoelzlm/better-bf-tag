@@ -34,6 +34,7 @@ export 'package:bftag_api_client/src/model/device_refresh_request.dart';
 export 'package:bftag_api_client/src/model/get_health200_response.dart';
 export 'package:bftag_api_client/src/model/get_health503_response.dart';
 export 'package:bftag_api_client/src/model/get_me200_response.dart';
+export 'package:bftag_api_client/src/model/get_me200_response_crew_assignments_inner.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner.dart';

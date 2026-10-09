@@ -27,6 +27,7 @@ import 'package:bftag_api_client/src/model/device_refresh_request.dart';
 import 'package:bftag_api_client/src/model/get_health200_response.dart';
 import 'package:bftag_api_client/src/model/get_health503_response.dart';
 import 'package:bftag_api_client/src/model/get_me200_response.dart';
+import 'package:bftag_api_client/src/model/get_me200_response_crew_assignments_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner.dart';
@@ -78,6 +79,7 @@ part 'serializers.g.dart';
   GetHealth200Response,
   GetHealth503Response,
   GetMe200Response,
+  GetMe200ResponseCrewAssignmentsInner,
   GetSnapshot200Response,
   GetSnapshot200ResponseBfDay,
   GetSnapshot200ResponseShiftsInner,

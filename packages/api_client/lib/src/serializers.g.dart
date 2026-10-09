@@ -27,6 +27,7 @@ Serializers _$serializers =
           ..add(GetHealth503ResponseDatabaseEnum.serializer)
           ..add(GetHealth503ResponseStatusEnum.serializer)
           ..add(GetMe200Response.serializer)
+          ..add(GetMe200ResponseCrewAssignmentsInner.serializer)
           ..add(GetSnapshot200Response.serializer)
           ..add(GetSnapshot200ResponseBfDay.serializer)
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
@@ -79,6 +80,12 @@ Serializers _$serializers =
               const FullType(CreatePairingCode201Response),
             ]),
             () => ListBuilder<CreatePairingCode201Response>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetMe200ResponseCrewAssignmentsInner),
+            ]),
+            () => ListBuilder<GetMe200ResponseCrewAssignmentsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

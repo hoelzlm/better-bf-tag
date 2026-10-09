@@ -134,6 +134,7 @@ Class | Method | HTTP request | Description
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)
  - [GetMe200Response](doc/GetMe200Response.md)
+ - [GetMe200ResponseCrewAssignmentsInner](doc/GetMe200ResponseCrewAssignmentsInner.md)
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
  - [GetSnapshot200ResponseBfDay](doc/GetSnapshot200ResponseBfDay.md)
  - [GetSnapshot200ResponseShiftsInner](doc/GetSnapshot200ResponseShiftsInner.md)
