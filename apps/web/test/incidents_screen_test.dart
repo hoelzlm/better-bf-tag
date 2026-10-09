@@ -103,6 +103,7 @@ class _FakeIncidentRepository implements IncidentRepository {
         String? script,
       })> createCalls = [];
   final List<String> discardCalls = [];
+  final List<String> closeCalls = [];
   Object? createError;
 
   @override
@@ -191,6 +192,22 @@ class _FakeIncidentRepository implements IncidentRepository {
           for (final i in entry.value) if (i.id == id) updated else i,
         ];
         return updated;
+      }
+    }
+    throw StateError('incident not found: $id');
+  }
+
+  @override
+  Future<CloseIncidentResult> close(String id) async {
+    closeCalls.add(id);
+    for (final entry in incidentsByDay.entries) {
+      final idx = entry.value.indexWhere((i) => i.id == id);
+      if (idx != -1) {
+        final updated = entry.value[idx].copyWith(state: IncidentState.closed);
+        incidentsByDay[entry.key] = [
+          for (final i in entry.value) if (i.id == id) updated else i,
+        ];
+        return CloseIncidentResult(incident: updated, discardedAlarmIds: const []);
       }
     }
     throw StateError('incident not found: $id');

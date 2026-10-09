@@ -134,9 +134,14 @@ class _AlarmContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final incidents = ref.watch(pairedIncidentsProvider).valueOrNull ?? const [];
+    final incidents =
+        ref.watch(pairedIncidentsProvider).valueOrNull ?? const [];
+    final allAlarms = ref.watch(pairedAlarmsProvider).valueOrNull ?? const [];
     final vehicles = ref.watch(pairedVehiclesProvider).valueOrNull ?? const [];
     final incident = _findIncident(incidents, alarm.incidentId);
+    final incidentAlarms =
+        allAlarms.where((a) => a.incidentId == alarm.incidentId).toList();
+    final alarmLabel = alarmSequenceLabel(alarm, incidentAlarms);
 
     AlarmRecipient? myRecipient;
     for (final recipient in alarm.recipients) {
@@ -166,6 +171,17 @@ class _AlarmContent extends ConsumerWidget {
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    alarmLabel.toUpperCase(),
+                    key: const Key('alarm-sequence-label'),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
                     ),
                   ),
                   const SizedBox(height: 16),

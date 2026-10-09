@@ -34,6 +34,7 @@ class RealtimeState {
     this.shifts = const [],
     this.incidents = const <Incident>[],
     this.alarms = const <Alarm>[],
+    this.closeSuggestedIncidentIds = const <String>{},
   });
 
   final int seq;
@@ -44,6 +45,10 @@ class RealtimeState {
   final List<Shift> shifts;
   final List<Incident> incidents;
   final List<Alarm> alarms;
+
+  /// Ids of `running` Einsätze that are abschlussreif (ADR 0019), computed
+  /// for `dispatch`/`admin` only -- always empty for other Berechtigungen.
+  final Set<String> closeSuggestedIncidentIds;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -123,6 +128,7 @@ class RealtimeClient {
   final Map<String, Shift> _shiftsById = <String, Shift>{};
   final Map<String, Incident> _incidentsById = <String, Incident>{};
   final Map<String, Alarm> _alarmsById = <String, Alarm>{};
+  final Set<String> _closeSuggestedIncidentIds = <String>{};
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -219,6 +225,9 @@ class RealtimeClient {
       _alarmsById
         ..clear()
         ..addEntries(snapshot.alarms.map((a) => MapEntry(a.id, a)));
+      _closeSuggestedIncidentIds
+        ..clear()
+        ..addAll(snapshot.closeSuggestedIncidentIds);
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -333,6 +342,17 @@ class RealtimeClient {
         // incrementally (new BF-Tag started, time range changed, ...);
         // reload the whole snapshot (ADR 0013), same mechanism as a gap.
         _handleGap();
+      case IncidentClosed(:final id):
+        // The Einsatz/its Alarmierungen were already removed by the
+        // preceding `incident.updated` (ADR 0019); also drop any leftover
+        // Abschlussvorschlag so both orders are idempotent.
+        _closeSuggestedIncidentIds.remove(id);
+      case IncidentCloseSuggested(:final id, :final suggested):
+        if (suggested) {
+          _closeSuggestedIncidentIds.add(id);
+        } else {
+          _closeSuggestedIncidentIds.remove(id);
+        }
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
         break;
@@ -351,6 +371,7 @@ class RealtimeClient {
     } else {
       _incidentsById.remove(incident.id);
       _alarmsById.removeWhere((_, alarm) => alarm.incidentId == incident.id);
+      _closeSuggestedIncidentIds.remove(incident.id);
     }
   }
 
@@ -470,6 +491,7 @@ class RealtimeClient {
         shifts: _sortedShifts,
         incidents: _sortedIncidents,
         alarms: _sortedAlarms,
+        closeSuggestedIncidentIds: Set.of(_closeSuggestedIncidentIds),
       ),
     );
   }

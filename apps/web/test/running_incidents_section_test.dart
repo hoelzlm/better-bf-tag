@@ -6,11 +6,80 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _dispatchPerson = Person(
+  id: 'p-dispatch',
+  displayName: 'Leitstelle',
+  personType: PersonType.supervisor,
+  permission: Permission.dispatch,
+);
+
+const _crewPerson = Person(
+  id: 'p-crew',
+  displayName: 'Mannschaft',
+  personType: PersonType.youth,
+  permission: Permission.crew,
+);
+
+class _FakeSessionController extends SessionController {
+  _FakeSessionController(this._state);
+
+  final SessionState _state;
+
+  @override
+  SessionState build() => _state;
+}
+
+class _FakeIncidentRepository implements IncidentRepository {
+  final List<String> closeCalls = [];
+  Object? closeError;
+
+  @override
+  Future<CloseIncidentResult> close(String id) async {
+    closeCalls.add(id);
+    if (closeError != null) throw closeError!;
+    return CloseIncidentResult(
+      incident: _incident(id: id, state: IncidentState.closed),
+      discardedAlarmIds: const [],
+    );
+  }
+
+  @override
+  Future<Incident> create(
+    String day, {
+    required String keyword,
+    required String address,
+    String? report,
+    String? script,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Incident> discard(String id) => throw UnimplementedError();
+
+  @override
+  Future<Incident> get(String id) => throw UnimplementedError();
+
+  @override
+  Future<List<Incident>> list(String day, {IncidentState? state}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Incident> update(
+    String id, {
+    String? keyword,
+    String? address,
+    String? report,
+    String? script,
+  }) =>
+      throw UnimplementedError();
+}
+
 Incident _incident({
   String id = 'i1',
   int number = 1,
   String keyword = 'Verkehrsunfall',
   String address = 'Hauptstraße 1',
+  IncidentState state = IncidentState.running,
 }) {
   return Incident(
     id: id,
@@ -20,7 +89,7 @@ Incident _incident({
     address: address,
     report: 'PKW gegen Baum',
     script: null,
-    state: IncidentState.running,
+    state: state,
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
@@ -62,6 +131,9 @@ Future<void> _pump(
   required List<Incident> incidents,
   required List<Alarm> alarms,
   List<Vehicle> vehicles = const [],
+  Set<String> closeSuggestedIncidentIds = const {},
+  SessionState session = const SessionUnknown(),
+  IncidentRepository? incidentRepository,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -69,6 +141,14 @@ Future<void> _pump(
         incidentsProvider.overrideWith((ref) => Stream.value(incidents)),
         alarmsProvider.overrideWith((ref) => Stream.value(alarms)),
         vehiclesProvider.overrideWith((ref) => Stream.value(vehicles)),
+        closeSuggestedIncidentIdsProvider.overrideWith(
+          (ref) => Stream.value(closeSuggestedIncidentIds),
+        ),
+        sessionControllerProvider.overrideWith(
+          () => _FakeSessionController(session),
+        ),
+        if (incidentRepository != null)
+          incidentRepositoryProvider.overrideWithValue(incidentRepository),
       ],
       child: const MaterialApp(
         home: Scaffold(body: RunningIncidentsSection()),
@@ -193,6 +273,9 @@ void main() {
               .overrideWith((ref) => Stream.value([_incident(id: 'i1')])),
           alarmsProvider.overrideWith((ref) => alarmsController.stream),
           vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+          closeSuggestedIncidentIdsProvider.overrideWith(
+            (ref) => Stream.value(const <String>{}),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(body: RunningIncidentsSection()),
@@ -219,5 +302,125 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Push: 5 zugestellt · 2 abgelehnt'), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows "Erstalarm" and "1. Nachalarmierung" titles for two alarms',
+      (tester) async {
+    final erst = Alarm(
+      id: 'a1',
+      incidentId: 'i1',
+      state: AlarmState.triggered,
+      triggeredAt: DateTime.now().subtract(const Duration(minutes: 10)),
+      vehicleIds: const ['v1'],
+      recipients: const [],
+    );
+    final nach = Alarm(
+      id: 'a2',
+      incidentId: 'i1',
+      state: AlarmState.triggered,
+      triggeredAt: DateTime.now().subtract(const Duration(minutes: 3)),
+      vehicleIds: const ['v2'],
+      recipients: const [],
+    );
+
+    await _pump(
+      tester,
+      incidents: [_incident(id: 'i1')],
+      alarms: [erst, nach],
+    );
+
+    expect(find.text('Erstalarm'), findsOneWidget);
+    expect(find.text('1. Nachalarmierung'), findsOneWidget);
+  });
+
+  testWidgets(
+      '"Abschluss vorgeschlagen" banner appears and disappears with the '
+      'close_suggested_incident_ids set', (tester) async {
+    final closeSuggestedController = StreamController<Set<String>>();
+    addTearDown(closeSuggestedController.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          incidentsProvider
+              .overrideWith((ref) => Stream.value([_incident(id: 'i1')])),
+          alarmsProvider.overrideWith((ref) => Stream.value(const [])),
+          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+          closeSuggestedIncidentIdsProvider
+              .overrideWith((ref) => closeSuggestedController.stream),
+          sessionControllerProvider.overrideWith(
+            () => _FakeSessionController(
+              const SessionSignedIn(_dispatchPerson, 'token'),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: RunningIncidentsSection()),
+        ),
+      ),
+    );
+    closeSuggestedController.add(const <String>{});
+    await tester.pumpAndSettle();
+    expect(find.text('Abschluss vorgeschlagen'), findsNothing);
+
+    closeSuggestedController.add(const {'i1'});
+    await tester.pumpAndSettle();
+    expect(find.text('Abschluss vorgeschlagen'), findsOneWidget);
+
+    closeSuggestedController.add(const <String>{});
+    await tester.pumpAndSettle();
+    expect(find.text('Abschluss vorgeschlagen'), findsNothing);
+  });
+
+  testWidgets('"Einsatz schließen" calls the repository after confirming',
+      (tester) async {
+    final repository = _FakeIncidentRepository();
+
+    await _pump(
+      tester,
+      incidents: [_incident(id: 'i1')],
+      alarms: const [],
+      session: const SessionSignedIn(_dispatchPerson, 'token'),
+      incidentRepository: repository,
+    );
+
+    await tester.tap(find.byKey(const Key('close-incident-i1')));
+    await tester.pumpAndSettle();
+    expect(repository.closeCalls, isEmpty, reason: 'needs confirmation');
+
+    await tester.tap(find.byKey(const Key('close-incident-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(repository.closeCalls, ['i1']);
+  });
+
+  testWidgets(
+      'dispatch sees Nachalarmieren and Einsatz schließen buttons',
+      (tester) async {
+    await _pump(
+      tester,
+      incidents: [_incident(id: 'i1')],
+      alarms: const [],
+      session: const SessionSignedIn(_dispatchPerson, 'token'),
+    );
+    expect(
+      find.byKey(const Key('nachalarmieren-incident-i1')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('close-incident-i1')), findsOneWidget);
+  });
+
+  testWidgets(
+      'crew permission does not see Nachalarmieren/Einsatz schließen buttons',
+      (tester) async {
+    await _pump(
+      tester,
+      incidents: [_incident(id: 'i1')],
+      alarms: const [],
+      session: const SessionSignedIn(_crewPerson, 'token'),
+    );
+    expect(find.byKey(const Key('nachalarmieren-incident-i1')), findsNothing);
+    expect(find.byKey(const Key('close-incident-i1')), findsNothing);
   });
 }

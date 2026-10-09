@@ -97,6 +97,7 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'state': i.state.name,
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
+    if (i.closedAt != null) 'closed_at': i.closedAt,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -137,6 +138,7 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     currentShiftId: data.currentShiftId,
     incidents: data.incidents.map(_incidentFromApi).toList(),
     alarms: data.alarms.map(_alarmFromApi).toList(),
+    closeSuggestedIncidentIds: data.closeSuggestedIncidentIds.toSet(),
   );
 }
 
@@ -271,6 +273,17 @@ final liveAlarmTriggeredProvider = StreamProvider<Alarm>((ref) {
     return const Stream<Alarm>.empty();
   }
   return client.liveAlarmTriggered;
+});
+
+/// Ids of `running` Einsätze that are abschlussreif (ADR 0019) -- empty
+/// while signed out, before the first snapshot has loaded, or for
+/// Berechtigungen other than Leitstelle/Administrator.
+final closeSuggestedIncidentIdsProvider = StreamProvider<Set<String>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <String>{});
+  }
+  return client.states.map((state) => state.closeSuggestedIncidentIds);
 });
 
 /// The [RealtimeClient] for the current paired device session (mobile app,

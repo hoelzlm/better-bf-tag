@@ -131,8 +131,7 @@ class _FakeAlarmRepository implements AlarmRepository {
     String incidentId,
     List<String> vehicleIds, {
     required String id,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 }
 
 class _FakePairedSessionController extends PairedSessionController {
@@ -224,29 +223,28 @@ void main() {
     },
   );
 
-  testWidgets(
-    'an alarm where I am not a recipient shows nothing',
-    (tester) async {
-      final alarm = _alarm(
-        recipients: [_recipient(personId: 'p2', displayName: 'Erika M.')],
-      );
-      final sound = _FakeAlarmSound();
-      final repository = _FakeAlarmRepository();
+  testWidgets('an alarm where I am not a recipient shows nothing', (
+    tester,
+  ) async {
+    final alarm = _alarm(
+      recipients: [_recipient(personId: 'p2', displayName: 'Erika M.')],
+    );
+    final sound = _FakeAlarmSound();
+    final repository = _FakeAlarmRepository();
 
-      await _pumpApp(
-        tester,
-        alarms: [alarm],
-        liveAlarmTriggered: Stream.value(alarm),
-        incidents: [_incident()],
-        vehicles: [_vehicle()],
-        sound: sound,
-        repository: repository,
-      );
+    await _pumpApp(
+      tester,
+      alarms: [alarm],
+      liveAlarmTriggered: Stream.value(alarm),
+      incidents: [_incident()],
+      vehicles: [_vehicle()],
+      sound: sound,
+      repository: repository,
+    );
 
-      expect(find.text('ALARM'), findsNothing);
-      expect(sound.playCalls, 0);
-    },
-  );
+    expect(find.text('ALARM'), findsNothing);
+    expect(sound.playCalls, 0);
+  });
 
   testWidgets(
     'tapping Quittieren acknowledges exactly once, stops the sound and '
@@ -312,33 +310,54 @@ void main() {
     },
   );
 
+  testWidgets('no Drehbuch text is visible even if the incident has a script', (
+    tester,
+  ) async {
+    final alarm = _alarm(
+      recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+    );
+    final sound = _FakeAlarmSound();
+    final repository = _FakeAlarmRepository();
+
+    await _pumpApp(
+      tester,
+      alarms: [alarm],
+      liveAlarmTriggered: Stream.value(alarm),
+      incidents: [_incident(script: 'Übung: Simulierter Dachstuhlbrand.')],
+      vehicles: [_vehicle()],
+      sound: sound,
+      repository: repository,
+    );
+
+    expect(find.text('ALARM'), findsOneWidget);
+    expect(find.text('Übung: Simulierter Dachstuhlbrand.'), findsNothing);
+    expect(find.textContaining('Drehbuch'), findsNothing);
+  });
+
   testWidgets(
-    'no Drehbuch text is visible even if the incident has a script',
+    'a live alarm.triggered Nachalarmierung without me as recipient keeps '
+    'the app on the Einsätze screen (no alarm screen, no sound)',
     (tester) async {
-      final alarm = _alarm(
-        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      final nachalarmierung = _alarm(
+        id: 'a2',
+        vehicleIds: ['v2'],
+        recipients: [_recipient(personId: 'p2', displayName: 'Erika M.')],
       );
       final sound = _FakeAlarmSound();
       final repository = _FakeAlarmRepository();
 
       await _pumpApp(
         tester,
-        alarms: [alarm],
-        liveAlarmTriggered: Stream.value(alarm),
-        incidents: [
-          _incident(script: 'Übung: Simulierter Dachstuhlbrand.'),
-        ],
+        alarms: [nachalarmierung],
+        liveAlarmTriggered: Stream.value(nachalarmierung),
+        incidents: [_incident()],
         vehicles: [_vehicle()],
         sound: sound,
         repository: repository,
       );
 
-      expect(find.text('ALARM'), findsOneWidget);
-      expect(
-        find.text('Übung: Simulierter Dachstuhlbrand.'),
-        findsNothing,
-      );
-      expect(find.textContaining('Drehbuch'), findsNothing);
+      expect(find.text('ALARM'), findsNothing);
+      expect(sound.playCalls, 0);
     },
   );
 }

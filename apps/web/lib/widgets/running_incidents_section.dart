@@ -2,6 +2,9 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../admin/api_errors.dart';
+import 'alarm_dialog.dart';
+
 /// Formats the elapsed time since [since] as `"X min"` (< 60 min) or
 /// `"Hh MMmin"` (ADR 0017, Lage-Anzeige "seit Erstalarm").
 String formatElapsedSince(DateTime since, DateTime now) {
@@ -49,10 +52,13 @@ String _ackLabel(AckState state) {
   }
 }
 
-/// "Laufende Einsätze" (ADR 0017, Abschnitt "Anzeige"): one card per
+/// "Laufende Einsätze" (ADR 0017/0019, Abschnitt "Anzeige"): one card per
 /// running Einsatz from [incidentsProvider], each with its Alarmierungen
-/// from [alarmsProvider] -- counts and a per-recipient Quittierungsstatus.
-/// Empty state "Keine laufenden Einsätze".
+/// from [alarmsProvider] -- titled with [alarmSequenceLabel], counts and a
+/// per-recipient Quittierungsstatus. For `dispatch`/`admin`: a
+/// "Nachalarmieren" button, an "Abschluss vorgeschlagen" highlight when the
+/// Einsatz is in [closeSuggestedIncidentIdsProvider], and an
+/// "Einsatz schließen" button. Empty state "Keine laufenden Einsätze".
 class RunningIncidentsSection extends ConsumerWidget {
   const RunningIncidentsSection({super.key});
 
@@ -64,6 +70,16 @@ class RunningIncidentsSection extends ConsumerWidget {
     final vehicles =
         ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
     final vehiclesById = {for (final v in vehicles) v.id: v};
+    final closeSuggestedIds =
+        ref.watch(closeSuggestedIncidentIdsProvider).valueOrNull ??
+            const <String>{};
+    final session = ref.watch(sessionControllerProvider);
+    final permission = switch (session) {
+      SessionSignedIn(person: final person) => person.permission,
+      _ => null,
+    };
+    final canDispatch =
+        permission == Permission.dispatch || permission == Permission.admin;
 
     if (incidents.isEmpty) {
       return const Center(child: Text('Keine laufenden Einsätze'));
@@ -82,28 +98,92 @@ class RunningIncidentsSection extends ConsumerWidget {
             alarms: alarms.where((a) => a.incidentId == incident.id).toList(),
             vehiclesById: vehiclesById,
             now: now,
+            canDispatch: canDispatch,
+            closeSuggested: closeSuggestedIds.contains(incident.id),
           ),
       ],
     );
   }
 }
 
-class _IncidentCard extends StatelessWidget {
+class _IncidentCard extends ConsumerWidget {
   const _IncidentCard({
     super.key,
     required this.incident,
     required this.alarms,
     required this.vehiclesById,
     required this.now,
+    required this.canDispatch,
+    required this.closeSuggested,
   });
 
   final Incident incident;
   final List<Alarm> alarms;
   final Map<String, Vehicle> vehiclesById;
   final DateTime now;
+  final bool canDispatch;
+  final bool closeSuggested;
+
+  Future<void> _openNachalarmierenDialog(BuildContext context) async {
+    final alreadyAlarmed = {
+      for (final alarm in alarms)
+        if (alarm.state == AlarmState.triggered) ...alarm.vehicleIds,
+    };
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => AlarmDialog(
+        incidentId: incident.id,
+        title: 'Nachalarmierung für Einsatz #${incident.number}',
+        alreadyAlarmedVehicleIds: alreadyAlarmed,
+      ),
+    );
+  }
+
+  Future<void> _closeIncident(BuildContext context, WidgetRef ref) async {
+    final plannedCount =
+        alarms.where((a) => a.state == AlarmState.planned).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Einsatz schließen?'),
+        content: Text(
+          plannedCount > 0
+              ? 'Einsatz #${incident.number} "${incident.keyword}" wird '
+                  'abgeschlossen. $plannedCount geplante Alarmierung'
+                  '${plannedCount == 1 ? '' : 'en'} werden verworfen.'
+              : 'Einsatz #${incident.number} "${incident.keyword}" wird '
+                  'abgeschlossen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            key: const Key('close-incident-confirm'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Einsatz schließen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(incidentRepositoryProvider).close(incident.id);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            describeApiError(error, 'Einsatz konnte nicht geschlossen werden.'),
+          ),
+        ),
+      );
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final triggerTimes = [
       for (final alarm in alarms)
         if (alarm.triggeredAt != null) alarm.triggeredAt!,
@@ -137,7 +217,43 @@ class _IncidentCard extends StatelessWidget {
                   ),
               ],
             ),
-            for (final alarm in alarms) _AlarmSection(alarm: alarm, vehiclesById: vehiclesById),
+            if (closeSuggested)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Chip(
+                  key: Key('close-suggested-${incident.id}'),
+                  avatar: const Icon(Icons.task_alt, size: 18),
+                  label: const Text('Abschluss vorgeschlagen'),
+                  backgroundColor: Colors.green.withValues(alpha: 0.15),
+                ),
+              ),
+            if (canDispatch)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      key: Key('nachalarmieren-incident-${incident.id}'),
+                      icon: const Icon(Icons.campaign),
+                      label: const Text('Nachalarmieren'),
+                      onPressed: () => _openNachalarmierenDialog(context),
+                    ),
+                    OutlinedButton.icon(
+                      key: Key('close-incident-${incident.id}'),
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Einsatz schließen'),
+                      onPressed: () => _closeIncident(context, ref),
+                    ),
+                  ],
+                ),
+              ),
+            for (final alarm in alarms)
+              _AlarmSection(
+                alarm: alarm,
+                vehiclesById: vehiclesById,
+                label: alarmSequenceLabel(alarm, alarms),
+              ),
           ],
         ),
       ),
@@ -146,10 +262,15 @@ class _IncidentCard extends StatelessWidget {
 }
 
 class _AlarmSection extends StatelessWidget {
-  const _AlarmSection({required this.alarm, required this.vehiclesById});
+  const _AlarmSection({
+    required this.alarm,
+    required this.vehiclesById,
+    required this.label,
+  });
 
   final Alarm alarm;
   final Map<String, Vehicle> vehiclesById;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +281,11 @@ class _AlarmSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            key: Key('alarm-label-${alarm.id}'),
+            label,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           Text(
             key: Key('alarm-summary-${alarm.id}'),
             '${summary.acknowledged} quittiert · ${summary.pending} ausstehend · '
