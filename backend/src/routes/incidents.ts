@@ -10,6 +10,10 @@ import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
 import { canSeeIncident, canSeeScript, scriptAudience } from '../incidents/visibility.js';
 import { incidentUpdatedEventOpts } from '../incidents/incident-events.js';
+import {
+  computeCloseSuggested,
+  emitCloseSuggestionChanges,
+} from '../incidents/close-suggestion.js';
 import type { IncidentRow } from '../incidents/incident-json.js';
 import { alarmJsonSchema, loadAlarms } from './alarm-schemas.js';
 import {
@@ -303,6 +307,11 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
           throw incidentNotFound();
         }
 
+        // Abschlussvorschlag (ADR 0019): `before` wird vor dem Schließen
+        // berechnet, damit wir nach dem Schließen wissen, ob ein
+        // zurücknehmendes `incident.close_suggested` nötig ist.
+        const closeSuggestedBefore = await computeCloseSuggested(tx, [existing.id]);
+
         const now = fastify.clock.now();
         const [row] = await tx
           .update(incident)
@@ -330,10 +339,7 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
         await emit('incident.closed', { id: incidentRow.id });
 
-        // TODO(T10-2, ADR 0019 "Abschlussvorschlag"): if the incident was
-        // close-suggested before this close, emit
-        // `incident.close_suggested { id, suggested: false }` here, after
-        // `incident.closed`. `computeCloseSuggested` doesn't exist yet.
+        await emitCloseSuggestionChanges(tx, emit, [incidentRow.id], closeSuggestedBefore);
 
         return {
           incident: toIncidentJson(incidentRow, { includeScript: true }),

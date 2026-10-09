@@ -1,7 +1,14 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import { vehicle, vehicleStatusEvent, fireDepartment } from '../db/schema.js';
+import {
+  vehicle,
+  vehicleStatusEvent,
+  fireDepartment,
+  incident,
+  alarm,
+  alarmVehicle,
+} from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import { errorResponseSchema } from '../access/schemas.js';
 import { vehicleSchema, toVehicleJson, type VehicleRow } from './vehicle-schemas.js';
@@ -9,6 +16,32 @@ import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
 import { allowsPatientStatus, isPatientStatus } from '../vehicles/fms-rules.js';
 import { loadCurrentCrewAssignments } from '../shifts/current-crew.js';
+import {
+  computeCloseSuggested,
+  emitCloseSuggestionChanges,
+} from '../incidents/close-suggestion.js';
+
+/**
+ * Abschlussvorschlag (ADR 0019): `running` Einsätze, in deren `triggered`
+ * Alarmierungen das Fahrzeug steht — die einzigen Einsätze, deren
+ * Abschlussvorschlag sich durch einen Statuswechsel dieses Fahrzeugs
+ * ändern kann.
+ */
+async function loadAffectedIncidentIds(tx: Tx, vehicleId: string): Promise<string[]> {
+  const rows = await tx
+    .select({ incidentId: alarm.incidentId })
+    .from(alarmVehicle)
+    .innerJoin(alarm, eq(alarmVehicle.alarmId, alarm.id))
+    .innerJoin(incident, eq(alarm.incidentId, incident.id))
+    .where(
+      and(
+        eq(alarmVehicle.vehicleId, vehicleId),
+        eq(alarm.state, 'triggered'),
+        eq(incident.state, 'running')
+      )
+    );
+  return [...new Set(rows.map(row => row.incidentId))];
+}
 
 const createVehicleBodySchema = z.object({
   call_sign: z.string().trim().min(1),
@@ -281,6 +314,12 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
           throw new ApiError(403, 'forbidden', 'Keine Berechtigung.');
         }
 
+        // Abschlussvorschlag (ADR 0019): `before` muss vor dem Schreiben
+        // berechnet werden, damit der Vergleich nach dem Statuswechsel den
+        // tatsächlichen Wechsel erkennt.
+        const affectedIncidentIds = await loadAffectedIncidentIds(tx, existing.id);
+        const closeSuggestedBefore = await computeCloseSuggested(tx, affectedIncidentIds);
+
         const [row] = await tx
           .update(vehicle)
           .set({ status: request.body.status, statusChangedAt: now })
@@ -306,6 +345,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
           at: now.toISOString(),
           source,
         });
+        await emitCloseSuggestionChanges(tx, emit, affectedIncidentIds, closeSuggestedBefore);
         return json;
       });
     }

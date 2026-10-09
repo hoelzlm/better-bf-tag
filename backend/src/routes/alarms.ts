@@ -19,6 +19,10 @@ import { toIncidentJson, type IncidentRow } from '../incidents/incident-json.js'
 import { scriptAudience } from '../incidents/visibility.js';
 import { incidentUpdatedEventOpts } from '../incidents/incident-events.js';
 import { loadCurrentCrewAssignments } from '../shifts/current-crew.js';
+import {
+  computeCloseSuggested,
+  emitCloseSuggestionChanges,
+} from '../incidents/close-suggestion.js';
 import { incidentIdParamsSchema } from './incident-schemas.js';
 import { dispatchAlarmPushes } from '../push/alarm-push.js';
 import {
@@ -111,6 +115,10 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
             return { status: 200 as const, body: { alarm: alarmJson, double_crewed: [] } };
           }
         }
+
+        // Abschlussvorschlag (ADR 0019): `before` wird vor jeder Änderung
+        // berechnet (für `draft` ohnehin immer leer, da nicht `running`).
+        const closeSuggestedBefore = await computeCloseSuggested(tx, [incidentRow.id]);
 
         const [bfDayRow] = await tx
           .select({ state: bfDay.state })
@@ -292,6 +300,8 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
             alarm: alarmJson,
           }),
         });
+
+        await emitCloseSuggestionChanges(tx, emit, [runningIncident.id], closeSuggestedBefore);
 
         return { status: 201 as const, body: { alarm: alarmJson, double_crewed: doubleCrewed } };
       });

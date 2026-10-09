@@ -185,9 +185,8 @@ Einsatzes werden `discarded` (Löschen zugehöriger Jobs kommt mit Ticket 11). A
 `incident` wie bei `GET /incidents/{id}` (inkl. Drehbuch für den Aufrufer). Events in dieser
 Reihenfolge: `incident.updated` (Zustand `closed`, projiziert wie gewohnt — Mannschaft/Monitor
 ohne Drehbuch), dann `incident.closed`. War der Einsatz zuvor abschlussreif
-([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“, Ticket T10-2), folgt ein
-drittes Event `incident.close_suggested { id, suggested: false }` — **noch nicht implementiert**
-(`computeCloseSuggested` existiert erst mit T10-2).
+([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“), folgt ein drittes Event
+`incident.close_suggested { id, suggested: false }`.
 
 Folgen: Der Einsatz verlässt `running` ⇒ Monitor/App entfernen ihn und seine Alarmierungen aus der
 aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `alarm_not_active`.
@@ -210,7 +209,7 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 |---------|------|--------------|
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren ([ADR 0018](adr/0018-push-alarm-zustellung.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ token: string (1–4096) }` → 204. Setzt `device.push_token` des eigenen Geräts; trägt ein anderes Gerät dasselbe Token, wird es dort auf `null` gesetzt |
-| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
 ## WebSocket `/ws`
 
@@ -240,7 +239,7 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | `alarm.acknowledged` (ADR 0017) | `{ alarm_id, incident_id, person_id, display_name, acknowledged_at }`, nur beim ersten Mal | alle |
 | `alarm.push_reported` (ADR 0018) | `{ alarm_id, incident_id, push_delivered, push_rejected }`, nach Abschluss des Push-Versands (keine Personendaten); bei null Zielgeräten wird kein Event ausgelöst | alle |
 | `alarm.planned` / `alarm.discarded` / `alarm.missed` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin (später, Ticket 11) |
-| `incident.close_suggested` | `{ id }` | Leitstelle |
+| `incident.close_suggested` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md)) | `{ id, suggested: boolean }`, bei jedem Wechsel | Leitstelle, Admin |
 | `incident.closed` | `{ id }` | alle |
 | `vehicle.status_changed` | `{ vehicle_id, status, at, source: 'app' \| 'dispatch' }` | alle |
 | `bf_day.updated` | BF-Tag | alle |

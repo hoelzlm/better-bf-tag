@@ -3563,6 +3563,12 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "close_suggested_incident_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [
@@ -3573,7 +3579,8 @@
                     "shifts",
                     "current_shift_id",
                     "incidents",
-                    "alarms"
+                    "alarms",
+                    "close_suggested_incident_ids"
                   ],
                   "additionalProperties": false
                 }
