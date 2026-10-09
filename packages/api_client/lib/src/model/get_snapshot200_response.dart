@@ -26,6 +26,7 @@ part 'get_snapshot200_response.g.dart';
 /// * [currentShiftId] 
 /// * [incidents] 
 /// * [alarms] 
+/// * [closeSuggestedIncidentIds] 
 @BuiltValue()
 abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, GetSnapshot200ResponseBuilder> {
   @BuiltValueField(wireName: r'seq')
@@ -51,6 +52,9 @@ abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, G
 
   @BuiltValueField(wireName: r'alarms')
   BuiltList<GetSnapshot200ResponseAlarmsInner> get alarms;
+
+  @BuiltValueField(wireName: r'close_suggested_incident_ids')
+  BuiltList<String> get closeSuggestedIncidentIds;
 
   GetSnapshot200Response._();
 
@@ -114,6 +118,11 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
     yield serializers.serialize(
       object.alarms,
       specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAlarmsInner)]),
+    );
+    yield r'close_suggested_incident_ids';
+    yield serializers.serialize(
+      object.closeSuggestedIncidentIds,
+      specifiedType: const FullType(BuiltList, [FullType(String)]),
     );
   }
 
@@ -195,6 +204,13 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
             specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAlarmsInner)]),
           ) as BuiltList<GetSnapshot200ResponseAlarmsInner>;
           result.alarms.replace(valueDes);
+          break;
+        case r'close_suggested_incident_ids':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>;
+          result.closeSuggestedIncidentIds.replace(valueDes);
           break;
         default:
           unhandled.add(key);

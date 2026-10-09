@@ -11,6 +11,8 @@ import { incidentJsonSchema, toIncidentJson, type IncidentRow } from './incident
 import { alarmJsonSchema, loadAlarms } from './alarm-schemas.js';
 import { canSeeScript } from '../incidents/visibility.js';
 import { currentShift } from '../shifts/current-shift.js';
+import { computeCloseSuggested } from '../incidents/close-suggestion.js';
+import { closeSuggestedAudience } from '../incidents/visibility.js';
 
 const snapshotResponseSchema = z.object({
   seq: z.number().int(),
@@ -21,6 +23,7 @@ const snapshotResponseSchema = z.object({
   current_shift_id: z.string().nullable(),
   incidents: z.array(incidentJsonSchema),
   alarms: z.array(alarmJsonSchema),
+  close_suggested_incident_ids: z.array(z.string()),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -78,6 +81,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
           let currentShiftId: string | null = null;
           let incidentsJson: ReturnType<typeof toIncidentJson>[] = [];
           let alarmsJson: Awaited<ReturnType<typeof loadAlarms>> = [];
+          let closeSuggestedIncidentIds: string[] = [];
 
           if (runningBfDay) {
             const shiftRows = await tx
@@ -122,6 +126,17 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
                   return at.localeCompare(bt);
                 });
             }
+
+            const canSeeCloseSuggested = request.auth
+              ? request.auth.kind === 'person' && closeSuggestedAudience(request.auth.permission)
+              : false;
+            if (canSeeCloseSuggested && incidentRows.length > 0) {
+              const suggested = await computeCloseSuggested(
+                tx,
+                incidentRows.map(row => row.id)
+              );
+              closeSuggestedIncidentIds = [...suggested];
+            }
           }
 
           return {
@@ -133,6 +148,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             current_shift_id: currentShiftId,
             incidents: incidentsJson,
             alarms: alarmsJson,
+            close_suggested_incident_ids: closeSuggestedIncidentIds,
           };
         },
         { isolationLevel: 'repeatable read' }

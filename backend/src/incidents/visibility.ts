@@ -11,6 +11,13 @@ export const scriptAudience = (p: Permission): boolean =>
   p === 'preparation' || p === 'dispatch' || p === 'admin';
 
 /**
+ * Audience for the Abschlussvorschlag (ADR 0019 "Abschlussvorschlag"):
+ * `dispatch`, `admin` only — Einsatzvorbereitung and Mannschaft never see
+ * it, Monitore never either (they have no `permission`).
+ */
+export const closeSuggestedAudience = (p: Permission): boolean => p === 'dispatch' || p === 'admin';
+
+/**
  * Whether the given Principal may see an Einsatz's Drehbuch (ADR 0016).
  * Monitors count as Mannschaft and never see it.
  */
