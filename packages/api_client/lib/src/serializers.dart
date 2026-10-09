@@ -70,6 +70,7 @@ import 'package:bftag_api_client/src/model/trigger_alarm_request.dart';
 import 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/update_incident_request.dart';
 import 'package:bftag_api_client/src/model/update_person_request.dart';
+import 'package:bftag_api_client/src/model/update_push_token_request.dart';
 import 'package:bftag_api_client/src/model/update_slide_request.dart';
 import 'package:bftag_api_client/src/model/update_vehicle_request.dart';
 
@@ -132,6 +133,7 @@ part 'serializers.g.dart';
   UpdateBfDayRequest,
   UpdateIncidentRequest,
   UpdatePersonRequest,
+  UpdatePushTokenRequest,
   UpdateSlideRequest,
   UpdateVehicleRequest,
 ])

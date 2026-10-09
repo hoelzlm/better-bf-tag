@@ -78,6 +78,7 @@ lib/src/model/trigger_alarm_request.dart
 lib/src/model/update_bf_day_request.dart
 lib/src/model/update_incident_request.dart
 lib/src/model/update_person_request.dart
+lib/src/model/update_push_token_request.dart
 lib/src/model/update_slide_request.dart
 lib/src/model/update_vehicle_request.dart
 lib/src/serializers.dart

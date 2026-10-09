@@ -57,6 +57,13 @@
       "when": 1791520236786,
       "tag": "0007_late_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791534983308,
+      "tag": "0008_ancient_dazzler",
+      "breakpoints": true
     }
   ]
 }

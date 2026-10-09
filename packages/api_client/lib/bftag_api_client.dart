@@ -79,6 +79,7 @@ export 'package:bftag_api_client/src/model/trigger_alarm_request.dart';
 export 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 export 'package:bftag_api_client/src/model/update_incident_request.dart';
 export 'package:bftag_api_client/src/model/update_person_request.dart';
+export 'package:bftag_api_client/src/model/update_push_token_request.dart';
 export 'package:bftag_api_client/src/model/update_slide_request.dart';
 export 'package:bftag_api_client/src/model/update_vehicle_request.dart';
 

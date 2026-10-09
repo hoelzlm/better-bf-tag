@@ -20,6 +20,7 @@ import { scriptAudience } from '../incidents/visibility.js';
 import { incidentUpdatedEventOpts } from '../incidents/incident-events.js';
 import { loadCurrentCrewAssignments } from '../shifts/current-crew.js';
 import { incidentIdParamsSchema } from './incident-schemas.js';
+import { dispatchAlarmPushes } from '../push/alarm-push.js';
 import {
   alarmRecipientJsonSchema,
   alarmIdParamsSchema,
@@ -238,6 +239,24 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
 
         return { status: 201 as const, body: { alarm: alarmJson, double_crewed: doubleCrewed } };
       });
+
+      if (result.status === 201) {
+        await dispatchAlarmPushes(
+          {
+            db: fastify.db,
+            pushSender: fastify.pushSender,
+            realtime: fastify.realtime,
+            log: fastify.log,
+          },
+          result.body.alarm.id
+        );
+        const [reloaded] = await fastify.db.transaction(tx =>
+          loadAlarms(tx, { alarmIds: [result.body.alarm.id] })
+        );
+        if (reloaded) {
+          result.body.alarm = reloaded;
+        }
+      }
 
       return reply.status(result.status).send(result.body);
     }

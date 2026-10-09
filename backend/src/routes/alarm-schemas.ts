@@ -33,6 +33,8 @@ export const alarmJsonSchema: z.ZodType<AlarmJson> = z.object({
   triggered_at: z.string().nullable(),
   vehicle_ids: z.array(z.string()),
   recipients: z.array(alarmRecipientJsonSchema),
+  push_delivered: z.number().int(),
+  push_rejected: z.number().int(),
 });
 
 export const doubleCrewedJsonSchema = z.object({

@@ -955,6 +955,39 @@
         }
       }
     },
+    "/api/v1/me/device/push-token": {
+      "put": {
+        "operationId": "updatePushToken",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/vehicles": {
       "get": {
         "operationId": "listVehicles",
@@ -3500,6 +3533,16 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "push_delivered": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "push_rejected": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -3509,7 +3552,9 @@
                           "scheduled_at",
                           "triggered_at",
                           "vehicle_ids",
-                          "recipients"
+                          "recipients",
+                          "push_delivered",
+                          "push_rejected"
                         ],
                         "additionalProperties": false
                       }
@@ -6632,6 +6677,16 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "push_delivered": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "push_rejected": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -6641,7 +6696,9 @@
                           "scheduled_at",
                           "triggered_at",
                           "vehicle_ids",
-                          "recipients"
+                          "recipients",
+                          "push_delivered",
+                          "push_rejected"
                         ],
                         "additionalProperties": false
                       }
@@ -7179,6 +7236,16 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "push_delivered": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "push_rejected": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -7188,7 +7255,9 @@
                         "scheduled_at",
                         "triggered_at",
                         "vehicle_ids",
-                        "recipients"
+                        "recipients",
+                        "push_delivered",
+                        "push_rejected"
                       ],
                       "additionalProperties": false
                     },
@@ -7302,6 +7371,16 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "push_delivered": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "push_rejected": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -7311,7 +7390,9 @@
                         "scheduled_at",
                         "triggered_at",
                         "vehicle_ids",
-                        "recipients"
+                        "recipients",
+                        "push_delivered",
+                        "push_rejected"
                       ],
                       "additionalProperties": false
                     },

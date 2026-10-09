@@ -292,6 +292,8 @@ export const alarm = pgTable(
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     triggeredAt: timestamp('triggered_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    pushDelivered: integer('push_delivered').notNull().default(0),
+    pushRejected: integer('push_rejected').notNull().default(0),
   },
   table => [index('alarm_incident_idx').on(table.incidentId)]
 );
