@@ -66,9 +66,12 @@ Future<DateTime?> _pickDateTime(
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }
 
-/// BF-Tage admin screen (`/admin/bf-tage`, Berechtigung Administrator):
-/// BF-Tage anlegen/bearbeiten, starten/beenden, Teilnahmen verwalten (ADR
-/// 0013).
+/// BF-Tage admin screen (`/admin/bf-tage`, Berechtigung Leitstelle oder
+/// Administrator, ADR 0013/0020): BF-Tage anlegen/bearbeiten,
+/// starten/beenden, Teilnahmen verwalten und anonymisieren. Anlegen,
+/// Bearbeiten, Starten/Beenden und Teilnahmen bleiben nur für
+/// Administratoren sichtbar; Anonymisieren ist auch für die Leitstelle
+/// verfügbar.
 ///
 /// Loads `GET /bf-days` once on entry and after every mutation -- there is
 /// no realtime subscription here (same pattern as VehiclesScreen).
@@ -205,17 +208,42 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
     );
   }
 
+  Future<void> _openAnonymizeDialog(BfDay day) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => _AnonymizeDialog(day: day),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(bfDayAdminRepositoryProvider).anonymize(day.id);
+      await _reload();
+      _showError('BF-Tag anonymisiert.');
+    } catch (error) {
+      _showError(describeAnonymizationError(error));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(sessionControllerProvider);
+    final permission = switch (session) {
+      SessionSignedIn(person: final person) => person.permission,
+      _ => null,
+    };
+    final isAdmin = permission == Permission.admin;
+    final isDispatchOrAdmin =
+        isAdmin || permission == Permission.dispatch;
     final days = _days;
     return Scaffold(
       appBar: AppBar(title: const Text('BF-Tage')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('create-bf-day'),
-        onPressed: _openCreateDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('BF-Tag anlegen'),
-      ),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton.extended(
+              key: const Key('create-bf-day'),
+              onPressed: _openCreateDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('BF-Tag anlegen'),
+            )
+          : null,
       body: days == null
           ? Center(
               child: _loadError != null
@@ -230,6 +258,7 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
                 final day = days[index];
                 final isPlanning = day.state == BfDayState.planning;
                 final isRunning = day.state == BfDayState.running;
+                final isEnded = day.state == BfDayState.ended;
                 return ListTile(
                   key: Key('bf-day-${day.id}'),
                   title: Text(day.name),
@@ -237,7 +266,9 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
                     '${_formatDateTime(day.startsAt)} – '
                     '${_formatDateTime(day.endsAt)}',
                   ),
-                  onTap: isPlanning ? () => _openEditDialog(day) : null,
+                  onTap: isPlanning && isAdmin
+                      ? () => _openEditDialog(day)
+                      : null,
                   trailing: Wrap(
                     spacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -246,23 +277,36 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
                         key: Key('bf-day-state-${day.id}'),
                         label: Text(day.state.label),
                       ),
-                      IconButton(
-                        key: Key('bf-day-participants-${day.id}'),
-                        icon: const Icon(Icons.groups),
-                        tooltip: 'Teilnahmen',
-                        onPressed: () => _openParticipantsDialog(day),
-                      ),
-                      if (isPlanning)
+                      if (isAdmin)
+                        IconButton(
+                          key: Key('bf-day-participants-${day.id}'),
+                          icon: const Icon(Icons.groups),
+                          tooltip: 'Teilnahmen',
+                          onPressed: () => _openParticipantsDialog(day),
+                        ),
+                      if (isPlanning && isAdmin)
                         TextButton(
                           key: Key('bf-day-start-${day.id}'),
                           onPressed: () => _start(day),
                           child: const Text('Starten'),
                         ),
-                      if (isRunning)
+                      if (isRunning && isAdmin)
                         TextButton(
                           key: Key('bf-day-end-${day.id}'),
                           onPressed: () => _end(day),
                           child: const Text('Beenden'),
+                        ),
+                      if (isEnded && day.isAnonymized)
+                        Text(
+                          key: Key('bf-day-anonymized-${day.id}'),
+                          'Anonymisiert am '
+                          '${_formatDateTime(day.anonymizedAt!)}',
+                        ),
+                      if (isEnded && !day.isAnonymized && isDispatchOrAdmin)
+                        TextButton(
+                          key: Key('bf-day-anonymize-${day.id}'),
+                          onPressed: () => _openAnonymizeDialog(day),
+                          child: const Text('Anonymisieren'),
                         ),
                     ],
                   ),
@@ -530,6 +574,118 @@ class _ParticipantsDialogState extends ConsumerState<_ParticipantsDialog> {
           key: const Key('participants-submit'),
           onPressed: _saving || selected == null ? null : _save,
           child: const Text('Speichern'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bestätigungsdialog für die Anonymisierung eines beendeten BF-Tags (ADR
+/// 0020): lädt `GET /bf-days/{id}/anonymization-preview` und zeigt, was
+/// gelöscht wird und was erhalten bleibt. Gibt bei Bestätigung `true`
+/// zurück (der Aufruf von `anonymize` passiert im Aufrufer), bei
+/// Abbrechen `false`/`null`.
+class _AnonymizeDialog extends ConsumerStatefulWidget {
+  const _AnonymizeDialog({required this.day});
+
+  final BfDay day;
+
+  @override
+  ConsumerState<_AnonymizeDialog> createState() => _AnonymizeDialogState();
+}
+
+class _AnonymizeDialogState extends ConsumerState<_AnonymizeDialog> {
+  AnonymizationSummary? _summary;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    try {
+      final summary = await ref
+          .read(bfDayAdminRepositoryProvider)
+          .anonymizationPreview(widget.day.id);
+      if (!mounted) return;
+      setState(() {
+        _summary = summary;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = describeAnonymizationError(error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = _summary;
+    return AlertDialog(
+      title: Text('BF-Tag anonymisieren · ${widget.day.name}'),
+      content: SizedBox(
+        width: 420,
+        child: summary == null
+            ? SizedBox(
+                height: 80,
+                child: Center(
+                  child: _error != null
+                      ? Text(_error!)
+                      : const CircularProgressIndicator(),
+                ),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Folgendes wird endgültig gelöscht:'),
+                  const SizedBox(height: 8),
+                  Text('${summary.participations} Teilnahmen'),
+                  Text('${summary.crewAssignments} Besatzungseinträge'),
+                  Text(
+                    '${summary.alarmRecipients} Empfänger und '
+                    'Quittierungen',
+                  ),
+                  Text(
+                    '${summary.personsDeleted} Personen anderer '
+                    'Feuerwehren',
+                  ),
+                  Text(
+                    'Personenbezug in ${summary.statusEvents} '
+                    'Statusmeldungen wird entfernt',
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Erhalten bleiben: Einsätze mit Meldebild und '
+                    'Drehbuch, Alarmierungen, Fahrzeuge, Schichten.',
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Die Anonymisierung kann nicht rückgängig gemacht '
+                    'werden.',
+                  ),
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(
+          key: const Key('anonymize-dialog-confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
+          onPressed: summary == null
+              ? null
+              : () => Navigator.of(context).pop(true),
+          child: const Text('Anonymisieren'),
         ),
       ],
     );

@@ -52,6 +52,14 @@ class LageScreen extends ConsumerWidget {
               tooltip: 'Schichten',
               onPressed: () => context.go('/admin/schichten'),
             ),
+          if (permission == Permission.dispatch || permission == Permission.admin)
+            IconButton(
+              key: const Key('nav-bf-tage'),
+              style: navButtonStyle,
+              icon: const Icon(Icons.event),
+              tooltip: 'BF-Tage',
+              onPressed: () => context.go('/admin/bf-tage'),
+            ),
           if (permission == Permission.admin) ...[
             IconButton(
               key: const Key('nav-fahrzeuge'),
@@ -73,13 +81,6 @@ class LageScreen extends ConsumerWidget {
               icon: const Icon(Icons.tv),
               tooltip: 'Monitore',
               onPressed: () => context.go('/admin/monitors'),
-            ),
-            IconButton(
-              key: const Key('nav-bf-tage'),
-              style: navButtonStyle,
-              icon: const Icon(Icons.event),
-              tooltip: 'BF-Tage',
-              onPressed: () => context.go('/admin/bf-tage'),
             ),
             IconButton(
               key: const Key('nav-slides'),

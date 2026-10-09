@@ -56,3 +56,19 @@ String describeAlarmTriggerError(Object error) {
   }
   return describeApiError(error, 'Alarmierung konnte nicht ausgelöst werden.');
 }
+
+/// German message for `POST /bf-days/{id}/anonymize` and `GET
+/// /bf-days/{id}/anonymization-preview` (ADR 0020): a 409
+/// `bf_day_not_ended` means the BF-Tag hasn't ended yet, a 409
+/// `bf_day_already_anonymized` means it was already anonymized (e.g. a
+/// stale dialog, or a double click). Falls back to [describeApiError] for
+/// anything else.
+String describeAnonymizationError(Object error) {
+  switch (_apiErrorCode(error)) {
+    case 'bf_day_not_ended':
+      return 'BF-Tag ist noch nicht beendet.';
+    case 'bf_day_already_anonymized':
+      return 'BF-Tag wurde bereits anonymisiert.';
+  }
+  return describeApiError(error, 'BF-Tag konnte nicht anonymisiert werden.');
+}

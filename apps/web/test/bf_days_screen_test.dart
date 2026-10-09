@@ -11,6 +11,7 @@ BfDay _bfDay({
   BfDayState state = BfDayState.planning,
   DateTime? startsAt,
   DateTime? endsAt,
+  DateTime? anonymizedAt,
 }) {
   return BfDay(
     id: id,
@@ -18,6 +19,7 @@ BfDay _bfDay({
     startsAt: startsAt ?? DateTime.utc(2026, 6, 1, 8, 0),
     endsAt: endsAt ?? DateTime.utc(2026, 6, 2, 8, 0),
     state: state,
+    anonymizedAt: anonymizedAt,
   );
 }
 
@@ -47,6 +49,11 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
   final List<String> endCalls = [];
   final List<(String, List<String>)> setParticipantsCalls = [];
   Object? startError;
+  AnonymizationSummary? anonymizationPreviewResult;
+  Object? anonymizationPreviewError;
+  final List<String> anonymizationPreviewCalls = [];
+  final List<String> anonymizeCalls = [];
+  Object? anonymizeError;
 
   @override
   Future<List<BfDay>> list() async => List.of(days);
@@ -143,6 +150,50 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     setParticipantsCalls.add((day, personIds));
     participants[day] = personIds;
   }
+
+  @override
+  Future<AnonymizationSummary> anonymizationPreview(String bfDayId) async {
+    anonymizationPreviewCalls.add(bfDayId);
+    final error = anonymizationPreviewError;
+    if (error != null) {
+      throw error;
+    }
+    return anonymizationPreviewResult ??
+        const AnonymizationSummary(
+          participations: 0,
+          crewAssignments: 0,
+          alarmRecipients: 0,
+          statusEvents: 0,
+          personsDeleted: 0,
+        );
+  }
+
+  @override
+  Future<BfDay> anonymize(String bfDayId) async {
+    anonymizeCalls.add(bfDayId);
+    final error = anonymizeError;
+    if (error != null) {
+      throw error;
+    }
+    final index = days.indexWhere((d) => d.id == bfDayId);
+    final updated = _bfDay(
+      id: days[index].id,
+      name: days[index].name,
+      state: days[index].state,
+      startsAt: days[index].startsAt,
+      endsAt: days[index].endsAt,
+    );
+    final anonymized = BfDay(
+      id: updated.id,
+      name: updated.name,
+      startsAt: updated.startsAt,
+      endsAt: updated.endsAt,
+      state: updated.state,
+      anonymizedAt: DateTime.utc(2026, 6, 3, 10, 0),
+    );
+    days = List.of(days)..[index] = anonymized;
+    return anonymized;
+  }
 }
 
 class _FakePersonAdminRepository implements PersonAdminRepository {
@@ -200,10 +251,20 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
   Future<void> revokeDevice(String id) => throw UnimplementedError();
 }
 
+class _FakeSessionController extends SessionController {
+  _FakeSessionController(this._initial);
+
+  final SessionState _initial;
+
+  @override
+  SessionState build() => _initial;
+}
+
 Future<_FakeBfDayAdminRepository> _pump(
   WidgetTester tester, {
   required List<BfDay> days,
   List<Person>? persons,
+  Permission permission = Permission.admin,
 }) async {
   final repository = _FakeBfDayAdminRepository(days: days);
   await tester.pumpWidget(
@@ -212,6 +273,11 @@ Future<_FakeBfDayAdminRepository> _pump(
         bfDayAdminRepositoryProvider.overrideWithValue(repository),
         personAdminRepositoryProvider.overrideWithValue(
           _FakePersonAdminRepository(persons ?? []),
+        ),
+        sessionControllerProvider.overrideWith(
+          () => _FakeSessionController(
+            SessionSignedIn(_person(permission: permission), 'access-token'),
+          ),
         ),
       ],
       child: const MaterialApp(home: BfDaysScreen()),
@@ -309,6 +375,14 @@ void main() {
           personAdminRepositoryProvider.overrideWithValue(
             _FakePersonAdminRepository([]),
           ),
+          sessionControllerProvider.overrideWith(
+            () => _FakeSessionController(
+              SessionSignedIn(
+                _person(permission: Permission.admin),
+                'access-token',
+              ),
+            ),
+          ),
         ],
         child: const MaterialApp(home: BfDaysScreen()),
       ),
@@ -370,5 +444,118 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.setParticipantsCalls.single.$2, unorderedEquals(['p1', 'p2']));
+  });
+
+  group('Anonymisierung (ADR 0020)', () {
+    testWidgets(
+      'ended non-anonymized day shows Anonymisieren, running/planning do not',
+      (tester) async {
+        await _pump(
+          tester,
+          days: [
+            _bfDay(id: 'd1', state: BfDayState.planning),
+            _bfDay(id: 'd2', state: BfDayState.running),
+            _bfDay(id: 'd3', state: BfDayState.ended),
+          ],
+        );
+
+        expect(find.byKey(const Key('bf-day-anonymize-d1')), findsNothing);
+        expect(find.byKey(const Key('bf-day-anonymize-d2')), findsNothing);
+        expect(find.byKey(const Key('bf-day-anonymize-d3')), findsOneWidget);
+      },
+    );
+
+    testWidgets('anonymized day shows "Anonymisiert am" instead of the button',
+        (tester) async {
+      await _pump(
+        tester,
+        days: [
+          _bfDay(
+            id: 'd1',
+            state: BfDayState.ended,
+            anonymizedAt: DateTime.utc(2026, 6, 3, 10, 30),
+          ),
+        ],
+      );
+
+      expect(find.byKey(const Key('bf-day-anonymize-d1')), findsNothing);
+      expect(
+        find.byKey(const Key('bf-day-anonymized-d1')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Anonymisiert am 03.06.2026'), findsOneWidget);
+    });
+
+    testWidgets('dialog shows preview numbers; confirm calls anonymize and reloads',
+        (tester) async {
+      final repository = await _pump(
+        tester,
+        days: [_bfDay(id: 'd1', state: BfDayState.ended)],
+      );
+      repository.anonymizationPreviewResult = const AnonymizationSummary(
+        participations: 3,
+        crewAssignments: 2,
+        alarmRecipients: 5,
+        statusEvents: 7,
+        personsDeleted: 1,
+      );
+
+      await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 Teilnahmen'), findsOneWidget);
+      expect(find.text('2 Besatzungseinträge'), findsOneWidget);
+      expect(find.textContaining('5 Empfänger und'), findsOneWidget);
+      expect(find.textContaining('1 Personen anderer'), findsOneWidget);
+      expect(find.textContaining('7'), findsWidgets);
+      expect(find.textContaining('nicht rückgängig'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('anonymize-dialog-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repository.anonymizeCalls, ['d1']);
+      expect(find.text('BF-Tag anonymisiert.'), findsOneWidget);
+      expect(
+        find.byKey(const Key('bf-day-anonymized-d1')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('cancel does not call anonymize', (tester) async {
+      final repository = await _pump(
+        tester,
+        days: [_bfDay(id: 'd1', state: BfDayState.ended)],
+      );
+
+      await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abbrechen').last);
+      await tester.pumpAndSettle();
+
+      expect(repository.anonymizeCalls, isEmpty);
+    });
+
+    testWidgets(
+      'dispatch sees the screen and anonymize but not create/start/end/participants',
+      (tester) async {
+        await _pump(
+          tester,
+          days: [
+            _bfDay(id: 'd1', state: BfDayState.planning),
+            _bfDay(id: 'd2', state: BfDayState.ended),
+          ],
+          permission: Permission.dispatch,
+        );
+
+        expect(find.byKey(const Key('create-bf-day')), findsNothing);
+        expect(find.byKey(const Key('bf-day-start-d1')), findsNothing);
+        expect(
+          find.byKey(const Key('bf-day-participants-d1')),
+          findsNothing,
+        );
+        expect(find.byKey(const Key('bf-day-anonymize-d2')), findsOneWidget);
+      },
+    );
   });
 }
