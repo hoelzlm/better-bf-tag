@@ -264,6 +264,31 @@ Map<String, dynamic> _incidentUpdatedEvent({
   };
 }
 
+Map<String, dynamic> _incidentClosedEvent({
+  required int seq,
+  required String id,
+}) {
+  return {
+    'seq': seq,
+    'type': 'incident.closed',
+    'at': '2026-10-08T18:00:00Z',
+    'data': {'id': id},
+  };
+}
+
+Map<String, dynamic> _incidentCloseSuggestedEvent({
+  required int seq,
+  required String id,
+  required bool suggested,
+}) {
+  return {
+    'seq': seq,
+    'type': 'incident.close_suggested',
+    'at': '2026-10-08T18:00:00Z',
+    'data': {'id': id, 'suggested': suggested},
+  };
+}
+
 /// Builds a [RealtimeClient] wired to a fresh [_FakeConnector] and a
 /// snapshot loader whose completers are collected in [snapshotCompleters]
 /// (one appended per call, in order) so tests can control exactly when
@@ -1022,6 +1047,139 @@ void main() {
         });
       },
     );
+
+    test(
+      'incident.close_suggested suggested:true adds, false removes',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(
+              seq: 10,
+              vehicles: const [],
+              bfDay: _bfDay(),
+              incidents: [_incident(state: IncidentState.running)],
+            ),
+          );
+          async.flushMicrotasks();
+          expect(states.last.closeSuggestedIncidentIds, isEmpty);
+
+          connector.connections.single.emit(
+            _incidentCloseSuggestedEvent(seq: 11, id: 'i1', suggested: true),
+          );
+          async.flushMicrotasks();
+          expect(states.last.closeSuggestedIncidentIds, {'i1'});
+
+          connector.connections.single.emit(
+            _incidentCloseSuggestedEvent(seq: 12, id: 'i1', suggested: false),
+          );
+          async.flushMicrotasks();
+          expect(states.last.closeSuggestedIncidentIds, isEmpty);
+
+          client.dispose();
+        });
+      },
+    );
+
+    test(
+      'incident.closed removes any leftover close-suggested entry '
+      '(idempotent regardless of event order)',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(
+              seq: 10,
+              vehicles: const [],
+              bfDay: _bfDay(),
+              incidents: [_incident(state: IncidentState.running)],
+              closeSuggestedIncidentIds: {'i1'},
+            ),
+          );
+          async.flushMicrotasks();
+          expect(states.last.closeSuggestedIncidentIds, {'i1'});
+
+          // `incident.updated` (state closed) already removed the
+          // incident/alarms; `incident.closed` follows and must also
+          // clear the suggestion, with no error even though the
+          // incident is already gone.
+          connector.connections.single.emit(
+            _incidentUpdatedEvent(
+              seq: 11,
+              incident: _incident(state: IncidentState.closed),
+            ),
+          );
+          async.flushMicrotasks();
+          connector.connections.single.emit(
+            _incidentClosedEvent(seq: 12, id: 'i1'),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.incidents, isEmpty);
+          expect(states.last.closeSuggestedIncidentIds, isEmpty);
+
+          // Reverse order (incident.closed before incident.updated) must
+          // be equally safe -- applying it twice is a no-op.
+          connector.connections.single.emit(
+            _incidentClosedEvent(seq: 13, id: 'i1'),
+          );
+          async.flushMicrotasks();
+          expect(states.last.closeSuggestedIncidentIds, isEmpty);
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('snapshot close_suggested_incident_ids is exposed as-is', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client = _buildClient(
+          snapshotCompleters: completers,
+          connector: connector,
+        );
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(
+            seq: 10,
+            vehicles: const [],
+            bfDay: _bfDay(),
+            incidents: [_incident(state: IncidentState.running)],
+            closeSuggestedIncidentIds: {'i1'},
+          ),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.closeSuggestedIncidentIds, {'i1'});
+
+        client.dispose();
+      });
+    });
   });
 
   group('defaultReconnectBackoff', () {

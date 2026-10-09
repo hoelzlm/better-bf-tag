@@ -32,6 +32,7 @@ class Snapshot {
     this.currentShiftId,
     this.incidents = const <Incident>[],
     this.alarms = const <Alarm>[],
+    this.closeSuggestedIncidentIds = const <String>{},
   });
 
   final int seq;
@@ -42,4 +43,8 @@ class Snapshot {
   final String? currentShiftId;
   final List<Incident> incidents;
   final List<Alarm> alarms;
+
+  /// Ids of `running` Einsätze that are abschlussreif (ADR 0019), computed
+  /// for `dispatch`/`admin` only -- always empty for other Berechtigungen.
+  final Set<String> closeSuggestedIncidentIds;
 }

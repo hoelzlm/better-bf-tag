@@ -230,6 +230,35 @@ Map<String, dynamic> _alarmTriggeredEvent({
   };
 }
 
+Map<String, dynamic> _incidentClosedEvent({
+  required int seq,
+  required String id,
+}) {
+  return {
+    'seq': seq,
+    'type': 'incident.closed',
+    'at': '2026-10-09T08:00:00Z',
+    'data': {'id': id},
+  };
+}
+
+/// The real backend emits `incident.updated` (state `closed`) before the
+/// bare `incident.closed` signal (ADR 0019); the Einsatz/its Alarmierungen
+/// are removed on the former, `incident.closed` only drops a leftover
+/// Abschlussvorschlag.
+Map<String, dynamic> _incidentUpdatedClosedEvent({
+  required int seq,
+  required String id,
+  int number = 7,
+}) {
+  return {
+    'seq': seq,
+    'type': 'incident.updated',
+    'at': '2026-10-09T08:00:00Z',
+    'data': _incidentJson(id: id, number: number, state: 'closed'),
+  };
+}
+
 class _Env {
   _Env()
       : adapter = _FakeMonitorAdapter(),
@@ -430,6 +459,72 @@ void main() {
       expect(find.text('EINSATZ 7'), findsOneWidget);
       expect(find.textContaining('Drehbuch'), findsNothing);
       expect(find.byKey(const Key('monitor-incident-script')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'returns to standby after incident.closed for the only running Einsatz',
+    (tester) async {
+      final env = _Env();
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'incidents': [_incidentJson()],
+        'alarms': [_alarmJson()],
+      };
+      await _pumpMonitor(tester, env);
+      await _activateAndPair(tester, env);
+
+      expect(find.text('EINSATZ 7'), findsOneWidget);
+      expect(find.byKey(const Key('monitor-clock-time')), findsNothing);
+
+      env.connector.connections.single.emit(
+        _incidentUpdatedClosedEvent(seq: 2, id: 'i1'),
+      );
+      env.connector.connections.single.emit(
+        _incidentClosedEvent(seq: 3, id: 'i1'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('EINSATZ 7'), findsNothing);
+      expect(find.byKey(const Key('monitor-clock-time')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'with two running Eins\u00e4tze, closing one keeps showing the other',
+    (tester) async {
+      final env = _Env();
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'incidents': [
+          _incidentJson(id: 'i1', number: 7),
+          _incidentJson(id: 'i2', number: 8),
+        ],
+        'alarms': [
+          _alarmJson(id: 'a1', incidentId: 'i1'),
+          _alarmJson(id: 'a2', incidentId: 'i2'),
+        ],
+      };
+      await _pumpMonitor(tester, env);
+      await _activateAndPair(tester, env);
+
+      // Candidates are sorted by Einsatznummer, so the lower number (7)
+      // is shown first, deterministically.
+      expect(find.text('EINSATZ 7'), findsOneWidget);
+
+      env.connector.connections.single.emit(
+        _incidentUpdatedClosedEvent(seq: 2, id: 'i1', number: 7),
+      );
+      env.connector.connections.single.emit(
+        _incidentClosedEvent(seq: 3, id: 'i1'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('EINSATZ 7'), findsNothing);
+      expect(find.text('EINSATZ 8'), findsOneWidget);
+      expect(find.byKey(const Key('monitor-clock-time')), findsNothing);
     },
   );
 }

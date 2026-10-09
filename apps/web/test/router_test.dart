@@ -134,6 +134,9 @@ Future<void> _pumpAppAt(
         bfDayProvider.overrideWith((ref) => Stream.value(null)),
         incidentsProvider.overrideWith((ref) => Stream.value(const [])),
         alarmsProvider.overrideWith((ref) => Stream.value(const [])),
+        closeSuggestedIncidentIdsProvider.overrideWith(
+          (ref) => Stream.value(const <String>{}),
+        ),
         vehicleAdminRepositoryProvider.overrideWithValue(
           _FakeVehicleAdminRepository(),
         ),

@@ -94,8 +94,9 @@ class MonitorIncidentScreen extends ConsumerWidget {
     if (incident == null) {
       return const SizedBox.shrink();
     }
-    final incidentAlarms =
-        alarms.where((a) => a.incidentId == incidentId).toList();
+    final incidentAlarms = alarms
+        .where((a) => a.incidentId == incidentId)
+        .toList();
 
     DateTime? earliestTriggeredAt;
     for (final alarm in incidentAlarms) {
@@ -120,7 +121,13 @@ class MonitorIncidentScreen extends ConsumerWidget {
         if (vehiclesById[id] != null) vehiclesById[id]!,
     ]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-    final time = '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}:'
+    final orderedAlarms = triggeredAlarmsInOrder(incidentAlarms);
+    final latestAlarmLabel = orderedAlarms.isEmpty
+        ? null
+        : alarmSequenceLabel(orderedAlarms.last, incidentAlarms);
+
+    final time =
+        '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}:'
         '${_twoDigits(now.second)}';
     final runtime = earliestTriggeredAt == null
         ? null
@@ -129,149 +136,179 @@ class MonitorIncidentScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      'EINSATZ ${incident.number}',
-                      key: const Key('monitor-incident-number'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'EINSATZ ${incident.number}',
+                          key: const Key('monitor-incident-number'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
+                      Text(
+                        time,
+                        key: const Key('monitor-incident-clock'),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 28,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          incident.keyword.toUpperCase(),
+                          key: const Key('monitor-incident-keyword'),
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 56,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (runtime != null)
+                        Text(
+                          'seit $runtime',
+                          key: const Key('monitor-incident-runtime'),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 24,
+                          ),
+                        ),
+                    ],
                   ),
                   Text(
-                    time,
-                    key: const Key('monitor-incident-clock'),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 28,
-                    ),
+                    incident.address,
+                    key: const Key('monitor-incident-address'),
+                    style: const TextStyle(color: Colors.white, fontSize: 28),
                   ),
-                ],
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
+                  const SizedBox(height: 16),
+                  const Divider(color: Colors.white24),
                   Expanded(
-                    child: Text(
-                      incident.keyword.toUpperCase(),
-                      key: const Key('monitor-incident-keyword'),
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 56,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (runtime != null)
-                    Text(
-                      'seit $runtime',
-                      key: const Key('monitor-incident-runtime'),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 24,
-                      ),
-                    ),
-                ],
-              ),
-              Text(
-                incident.address,
-                key: const Key('monitor-incident-address'),
-                style: const TextStyle(color: Colors.white, fontSize: 28),
-              ),
-              const SizedBox(height: 16),
-              const Divider(color: Colors.white24),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Meldebild:',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Text(
-                                incident.report,
-                                key: const Key('monitor-incident-report'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Meldebild:',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    VerticalDivider(color: Colors.white24),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Quittiert',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Wrap(
-                                key: const Key('monitor-incident-recipients'),
-                                spacing: 16,
-                                runSpacing: 10,
-                                children: [
-                                  for (final recipient in recipients)
-                                    _RecipientChip(recipient: recipient),
-                                ],
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Text(
+                                    incident.report,
+                                    key: const Key('monitor-incident-report'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 24),
+                        VerticalDivider(color: Colors.white24),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Quittiert',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Wrap(
+                                    key: const Key(
+                                      'monitor-incident-recipients',
+                                    ),
+                                    spacing: 16,
+                                    runSpacing: 10,
+                                    children: [
+                                      for (final recipient in recipients)
+                                        _RecipientChip(recipient: recipient),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white24),
-              const SizedBox(height: 8),
-              Wrap(
-                key: const Key('monitor-incident-vehicles'),
-                spacing: 20,
-                runSpacing: 8,
-                children: [
-                  for (final vehicle in alarmedVehicles)
-                    _VehicleChip(vehicle: vehicle),
+                  ),
+                  const Divider(color: Colors.white24),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    key: const Key('monitor-incident-vehicles'),
+                    spacing: 20,
+                    runSpacing: 8,
+                    children: [
+                      for (final vehicle in alarmedVehicles)
+                        _VehicleChip(vehicle: vehicle),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            if (latestAlarmLabel != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  key: const Key('monitor-incident-alarm-label'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amberAccent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    latestAlarmLabel.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

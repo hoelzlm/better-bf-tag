@@ -53,6 +53,7 @@ class Incident {
     required this.state,
     required this.createdAt,
     required this.updatedAt,
+    this.closedAt,
   });
 
   final String id;
@@ -71,11 +72,15 @@ class Incident {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// When the Einsatz was geschlossen (ADR 0019), `null` otherwise.
+  final DateTime? closedAt;
+
   /// Parses the wire representation used by the backend API (REST and
   /// WebSocket events), e.g.
-  /// `{id,bf_day_id,number,keyword,address,report,state,created_at,updated_at}`
+  /// `{id,bf_day_id,number,keyword,address,report,state,created_at,updated_at,closed_at}`
   /// with `script` present only when the caller may see it.
   factory Incident.fromJson(Map<String, dynamic> json) {
+    final closedAtRaw = json['closed_at'] as String?;
     return Incident(
       id: json['id'] as String,
       bfDayId: json['bf_day_id'] as String,
@@ -87,6 +92,7 @@ class Incident {
       state: IncidentState.fromWire(json['state'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      closedAt: closedAtRaw == null ? null : DateTime.parse(closedAtRaw),
     );
   }
 
@@ -103,6 +109,7 @@ class Incident {
       'state': state.name,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      if (closedAt != null) 'closed_at': closedAt!.toIso8601String(),
       if (script != null) 'script': script,
     };
   }
@@ -114,6 +121,7 @@ class Incident {
     String? script,
     IncidentState? state,
     DateTime? updatedAt,
+    DateTime? closedAt,
   }) {
     return Incident(
       id: id,
@@ -126,6 +134,7 @@ class Incident {
       state: state ?? this.state,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      closedAt: closedAt ?? this.closedAt,
     );
   }
 
@@ -141,7 +150,8 @@ class Incident {
       other.script == script &&
       other.state == state &&
       other.createdAt == createdAt &&
-      other.updatedAt == updatedAt;
+      other.updatedAt == updatedAt &&
+      other.closedAt == closedAt;
 
   @override
   int get hashCode => Object.hash(
@@ -155,6 +165,7 @@ class Incident {
         state,
         createdAt,
         updatedAt,
+        closedAt,
       );
 
   @override
