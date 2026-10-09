@@ -18,6 +18,8 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   package_info_plus: ^8.1.2
   audioplayers: ^6.1.0
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
   bftag_core:
     path: ../../packages/core
   bftag_api_client:

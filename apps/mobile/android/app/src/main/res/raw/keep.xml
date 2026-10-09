@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keeps alarm.wav in the release build even though no Dart/Kotlin code
+     references the resource ID directly (it's addressed via
+     android.resource://<package>/raw/alarm in MainActivity.kt, which
+     R8/shrinkResources can't see). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/alarm" />
