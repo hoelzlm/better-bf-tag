@@ -4,12 +4,12 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Folien anlegen, bearbeiten, sortieren, aktivieren/deaktivieren; Text als Markdown
-- [ ] Bild-Upload (Größe und Typ begrenzt), Auslieferung an Monitore
-- [ ] Monitor rotiert aktive Folien nach Anzeigedauer neben Uhr und Fahrzeugstatus
-- [ ] Event `slides.changed`
-- [ ] Tests: nur Administrator pflegt Folien, Upload-Validierung, Monitor erhält Folien im Snapshot
+- [x] Folien anlegen, bearbeiten, sortieren, aktivieren/deaktivieren; Text als Markdown
+- [x] Bild-Upload (Größe und Typ begrenzt), Auslieferung an Monitore
+- [x] Monitor rotiert aktive Folien nach Anzeigedauer neben Uhr und Fahrzeugstatus
+- [x] Event `slides.changed`
+- [x] Tests: nur Administrator pflegt Folien, Upload-Validierung, Monitor erhält Folien im Snapshot
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`
