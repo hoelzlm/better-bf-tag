@@ -111,6 +111,8 @@ class _$GetSnapshot200ResponseIncidentsInner
   @override
   final String updatedAt;
   @override
+  final String? closedAt;
+  @override
   final String? script;
 
   factory _$GetSnapshot200ResponseIncidentsInner([
@@ -128,6 +130,7 @@ class _$GetSnapshot200ResponseIncidentsInner
     required this.state,
     required this.createdAt,
     required this.updatedAt,
+    this.closedAt,
     this.script,
   }) : super._();
   @override
@@ -152,6 +155,7 @@ class _$GetSnapshot200ResponseIncidentsInner
         state == other.state &&
         createdAt == other.createdAt &&
         updatedAt == other.updatedAt &&
+        closedAt == other.closedAt &&
         script == other.script;
   }
 
@@ -167,6 +171,7 @@ class _$GetSnapshot200ResponseIncidentsInner
     _$hash = $jc(_$hash, state.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jc(_$hash, updatedAt.hashCode);
+    _$hash = $jc(_$hash, closedAt.hashCode);
     _$hash = $jc(_$hash, script.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -184,6 +189,7 @@ class _$GetSnapshot200ResponseIncidentsInner
           ..add('state', state)
           ..add('createdAt', createdAt)
           ..add('updatedAt', updatedAt)
+          ..add('closedAt', closedAt)
           ..add('script', script))
         .toString();
   }
@@ -234,6 +240,10 @@ class GetSnapshot200ResponseIncidentsInnerBuilder
   String? get updatedAt => _$this._updatedAt;
   set updatedAt(String? updatedAt) => _$this._updatedAt = updatedAt;
 
+  String? _closedAt;
+  String? get closedAt => _$this._closedAt;
+  set closedAt(String? closedAt) => _$this._closedAt = closedAt;
+
   String? _script;
   String? get script => _$this._script;
   set script(String? script) => _$this._script = script;
@@ -254,6 +264,7 @@ class GetSnapshot200ResponseIncidentsInnerBuilder
       _state = $v.state;
       _createdAt = $v.createdAt;
       _updatedAt = $v.updatedAt;
+      _closedAt = $v.closedAt;
       _script = $v.script;
       _$v = null;
     }
@@ -324,6 +335,7 @@ class GetSnapshot200ResponseIncidentsInnerBuilder
             r'GetSnapshot200ResponseIncidentsInner',
             'updatedAt',
           ),
+          closedAt: closedAt,
           script: script,
         );
     replace(_$result);

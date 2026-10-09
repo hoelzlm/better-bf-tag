@@ -21,6 +21,7 @@ part 'get_snapshot200_response_incidents_inner.g.dart';
 /// * [state] 
 /// * [createdAt] 
 /// * [updatedAt] 
+/// * [closedAt] 
 /// * [script] 
 @BuiltValue()
 abstract class GetSnapshot200ResponseIncidentsInner implements Built<GetSnapshot200ResponseIncidentsInner, GetSnapshot200ResponseIncidentsInnerBuilder> {
@@ -51,6 +52,9 @@ abstract class GetSnapshot200ResponseIncidentsInner implements Built<GetSnapshot
 
   @BuiltValueField(wireName: r'updated_at')
   String get updatedAt;
+
+  @BuiltValueField(wireName: r'closed_at')
+  String? get closedAt;
 
   @BuiltValueField(wireName: r'script')
   String? get script;
@@ -122,6 +126,11 @@ class _$GetSnapshot200ResponseIncidentsInnerSerializer implements PrimitiveSeria
     yield serializers.serialize(
       object.updatedAt,
       specifiedType: const FullType(String),
+    );
+    yield r'closed_at';
+    yield object.closedAt == null ? null : serializers.serialize(
+      object.closedAt,
+      specifiedType: const FullType.nullable(String),
     );
     if (object.script != null) {
       yield r'script';
@@ -215,6 +224,14 @@ class _$GetSnapshot200ResponseIncidentsInnerSerializer implements PrimitiveSeria
             specifiedType: const FullType(String),
           ) as String;
           result.updatedAt = valueDes;
+          break;
+        case r'closed_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.closedAt = valueDes;
           break;
         case r'script':
           final valueDes = serializers.deserialize(

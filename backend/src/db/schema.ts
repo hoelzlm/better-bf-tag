@@ -274,6 +274,7 @@ export const incident = pgTable(
     state: incidentStateEnum('state').notNull().default('draft'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
   },
   table => [
     uniqueIndex('incident_bf_day_number_unique').on(table.bfDayId, table.number),
@@ -292,6 +293,8 @@ export const alarm = pgTable(
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     triggeredAt: timestamp('triggered_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    pushDelivered: integer('push_delivered').notNull().default(0),
+    pushRejected: integer('push_rejected').notNull().default(0),
   },
   table => [index('alarm_incident_idx').on(table.incidentId)]
 );

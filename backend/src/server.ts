@@ -3,7 +3,7 @@ import { createDb, type Db } from './db/client.js';
 import { prepare } from './startup.js';
 import { buildApp, type AppDeps } from './app.js';
 import { systemClock } from './clock.js';
-import { noopPushSender } from './push/push-sender.js';
+import { createPushSender } from './push/create-push-sender.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -17,7 +17,7 @@ async function main(): Promise<void> {
     db: db as Db,
     pool,
     clock: systemClock,
-    pushSender: noopPushSender,
+    pushSender: createPushSender(config, console),
   };
 
   const app = await buildApp(deps);

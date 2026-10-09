@@ -183,6 +183,8 @@ Map<String, dynamic> _alarmJson({
   String triggeredAt = '2026-10-09T08:00:00Z',
   List<String> vehicleIds = const ['v1'],
   List<Map<String, dynamic>> recipients = const [],
+  int pushDelivered = 0,
+  int pushRejected = 0,
 }) {
   return {
     'id': id,
@@ -192,6 +194,8 @@ Map<String, dynamic> _alarmJson({
     'triggered_at': triggeredAt,
     'vehicle_ids': vehicleIds,
     'recipients': recipients,
+    'push_delivered': pushDelivered,
+    'push_rejected': pushRejected,
   };
 }
 

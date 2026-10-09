@@ -20,6 +20,8 @@ part 'get_snapshot200_response_alarms_inner.g.dart';
 /// * [triggeredAt] 
 /// * [vehicleIds] 
 /// * [recipients] 
+/// * [pushDelivered] 
+/// * [pushRejected] 
 @BuiltValue()
 abstract class GetSnapshot200ResponseAlarmsInner implements Built<GetSnapshot200ResponseAlarmsInner, GetSnapshot200ResponseAlarmsInnerBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -43,6 +45,12 @@ abstract class GetSnapshot200ResponseAlarmsInner implements Built<GetSnapshot200
 
   @BuiltValueField(wireName: r'recipients')
   BuiltList<GetSnapshot200ResponseAlarmsInnerRecipientsInner> get recipients;
+
+  @BuiltValueField(wireName: r'push_delivered')
+  int get pushDelivered;
+
+  @BuiltValueField(wireName: r'push_rejected')
+  int get pushRejected;
 
   GetSnapshot200ResponseAlarmsInner._();
 
@@ -101,6 +109,16 @@ class _$GetSnapshot200ResponseAlarmsInnerSerializer implements PrimitiveSerializ
     yield serializers.serialize(
       object.recipients,
       specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAlarmsInnerRecipientsInner)]),
+    );
+    yield r'push_delivered';
+    yield serializers.serialize(
+      object.pushDelivered,
+      specifiedType: const FullType(int),
+    );
+    yield r'push_rejected';
+    yield serializers.serialize(
+      object.pushRejected,
+      specifiedType: const FullType(int),
     );
   }
 
@@ -175,6 +193,20 @@ class _$GetSnapshot200ResponseAlarmsInnerSerializer implements PrimitiveSerializ
             specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAlarmsInnerRecipientsInner)]),
           ) as BuiltList<GetSnapshot200ResponseAlarmsInnerRecipientsInner>;
           result.recipients.replace(valueDes);
+          break;
+        case r'push_delivered':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.pushDelivered = valueDes;
+          break;
+        case r'push_rejected':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.pushRejected = valueDes;
           break;
         default:
           unhandled.add(key);

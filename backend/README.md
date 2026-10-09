@@ -103,18 +103,25 @@ git add drizzle/
 
 All config via environment variables (validated by zod in `src/config.ts`):
 
-| Variable                    | Required | Default          | Description                      |
-| --------------------------- | -------- | ---------------- | -------------------------------- |
-| `DATABASE_URL`              | yes      | -                | PostgreSQL connection string     |
-| `PORT`                      | no       | 8080             | HTTP port                        |
-| `HOST`                      | no       | 0.0.0.0          | Bind address                     |
-| `JWT_SECRET`                | yes      | -                | HS256 signing key (min 32 chars) |
-| `ACCESS_TOKEN_TTL_SECONDS`  | no       | 900              | Access token lifetime            |
-| `REFRESH_TOKEN_TTL_DAYS`    | no       | 14               | Refresh token lifetime           |
-| `COOKIE_SECURE`             | no       | false            | Secure flag on refresh cookie    |
-| `CORS_ORIGINS`              | no       | []               | Comma-separated allowed origins  |
-| `AUTH_RATE_LIMIT_MAX`       | no       | 10               | Auth endpoint rate limit         |
-| `AUTH_RATE_LIMIT_WINDOW_MS` | no       | 60000            | Auth rate limit window           |
-| `BOOTSTRAP_ADMIN_USERNAME`  | no       | -                | Initial admin username           |
-| `BOOTSTRAP_ADMIN_PASSWORD`  | no       | -                | Initial admin password (min 8)   |
-| `OWN_FIRE_DEPARTMENT_NAME`  | no       | Eigene Feuerwehr | Name of own fire department      |
+| Variable                    | Required | Default          | Description                                                                                                             |
+| --------------------------- | -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`              | yes      | -                | PostgreSQL connection string                                                                                            |
+| `PORT`                      | no       | 8080             | HTTP port                                                                                                               |
+| `HOST`                      | no       | 0.0.0.0          | Bind address                                                                                                            |
+| `JWT_SECRET`                | yes      | -                | HS256 signing key (min 32 chars)                                                                                        |
+| `ACCESS_TOKEN_TTL_SECONDS`  | no       | 900              | Access token lifetime                                                                                                   |
+| `REFRESH_TOKEN_TTL_DAYS`    | no       | 14               | Refresh token lifetime                                                                                                  |
+| `COOKIE_SECURE`             | no       | false            | Secure flag on refresh cookie                                                                                           |
+| `CORS_ORIGINS`              | no       | []               | Comma-separated allowed origins                                                                                         |
+| `AUTH_RATE_LIMIT_MAX`       | no       | 10               | Auth endpoint rate limit                                                                                                |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | no       | 60000            | Auth rate limit window                                                                                                  |
+| `BOOTSTRAP_ADMIN_USERNAME`  | no       | -                | Initial admin username                                                                                                  |
+| `BOOTSTRAP_ADMIN_PASSWORD`  | no       | -                | Initial admin password (min 8)                                                                                          |
+| `OWN_FIRE_DEPARTMENT_NAME`  | no       | Eigene Feuerwehr | Name of own fire department                                                                                             |
+| `SLIDE_IMAGE_MAX_BYTES`     | no       | 5242880          | Max slide image upload size                                                                                             |
+| `FCM_SERVICE_ACCOUNT_FILE`  | no       | -                | Path to FCM service-account JSON (Android push, ADR 0018); unset ⇒ Android pushes are rejected                          |
+| `APNS_KEY_FILE`             | no       | -                | Path to the APNs `.p8` key (iOS push, ADR 0018)                                                                         |
+| `APNS_KEY_ID`               | no       | -                | APNs key ID (from the `.p8` download)                                                                                   |
+| `APNS_TEAM_ID`              | no       | -                | Apple Developer Team ID                                                                                                 |
+| `APNS_BUNDLE_ID`            | no       | -                | App bundle identifier, sent as `apns-topic`                                                                             |
+| `APNS_PRODUCTION`           | no       | false            | `true` ⇒ production APNs endpoint; `false` ⇒ sandbox. All four `APNS_*` vars must be set for iOS push to be configured. |

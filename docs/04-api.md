@@ -87,12 +87,13 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 ### Einsätze und Alarmierungen
 
-Einsatzzustände: `draft` → `running` (Erstalarm, Ticket 08) → `closed` (Leitstelle); ein Entwurf
-kann stattdessen nach `discarded` verworfen werden. Nummer pro BF-Tag (`number`), fortlaufend ab
-1, verworfene Nummern werden nicht wiederverwendet. Drehbuch (`script`) nur für Einsatzvorbereitung,
-Leitstelle, Admin — für Mannschaft/Monitor fehlt der Schlüssel `script` in der Antwort ganz (ADR
-0016). Mannschaft/Monitor sehen in Liste und Einzelabruf nur `running`/`closed` (Entwürfe und
-Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
+Einsatzzustände: `draft` → `running` (Erstalarm, Ticket 08) → `closed` (Leitstelle/Admin, Ticket
+10, [ADR 0019](adr/0019-nachalarmierung-abschluss.md)); ein Entwurf kann stattdessen nach
+`discarded` verworfen werden. Nummer pro BF-Tag (`number`), fortlaufend ab 1, verworfene Nummern
+werden nicht wiederverwendet. Drehbuch (`script`) nur für Einsatzvorbereitung, Leitstelle, Admin —
+für Mannschaft/Monitor fehlt der Schlüssel `script` in der Antwort ganz (ADR 0016). Mannschaft/
+Monitor sehen in Liste und Einzelabruf nur `running`/`closed` (Entwürfe und Verworfene filtert die
+Liste, der Einzelabruf antwortet 404 `not_found`).
 
 | Methode | Pfad | Berechtigung | Beschreibung |
 |---------|------|--------------|--------------|
@@ -101,13 +102,13 @@ Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
 | POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung, Leitstelle, Admin | `{ keyword, address, report?, script? }` → 201 `draft`; 409 `bf_day_ended` |
 | PATCH | `/incidents/{id}` | Einsatzvorbereitung, Leitstelle, Admin | Meldebild/Drehbuch bearbeiten, nur `draft`/`running`; sonst 409 `incident_not_editable` |
 | POST | `/incidents/{id}/discard` | Einsatzvorbereitung, Leitstelle, Admin | nur `draft`, sonst 409 `invalid_state_transition` |
-| POST | `/incidents/{id}/close` | Leitstelle | verwirft geplante Alarmierungen (später) |
-| POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm (ADR 0017), siehe unten |
+| POST | `/incidents/{id}/close` | Leitstelle, Admin | Einsatz schließen (ADR 0019), siehe unten |
+| POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm und Nachalarmierung (ADR 0017, ADR 0019), siehe unten |
 | POST | `/alarms/{id}/acknowledge` | Empfänger | Quittierung (ADR 0017), siehe unten |
 | POST | `/incidents/{id}/copy` | Einsatzvorbereitung | in einen anderen BF-Tag kopieren (später) |
 | POST | `/incidents/{id}/ready` | Einsatzvorbereitung | Bereitmeldung (später) |
 
-#### Erstalarm: `POST /incidents/{id}/alarms` (ADR 0017)
+#### Erstalarm und Nachalarmierung: `POST /incidents/{id}/alarms` (ADR 0017, [ADR 0019](adr/0019-nachalarmierung-abschluss.md))
 
 Body `{ id?: uuid, vehicle_ids: uuid[] }`. `scheduled_at` ist in diesem Ticket **nicht** erlaubt
 (400 `validation_error`; Planung kommt mit Ticket 11). `id` ist ein vom Client erzeugter
@@ -121,13 +122,21 @@ Zustandsprüfungen (in dieser Reihenfolge, alles in einer Transaktion):
 2. `vehicle_ids`: unbekannte ID → 400 `validation_error`; inaktives Fahrzeug → 409
    `vehicle_inactive`.
 3. Der BF-Tag des Einsatzes muss `running` sein, sonst 409 `bf_day_not_running`.
-4. Der Einsatz muss `draft` sein (Übergang nach `running`), sonst 409
-   `invalid_state_transition` (verhindert auch einen zweiten Erstalarm durch Doppelklick).
+4. Idempotenz-`id`-Wiederholung zuerst (s.o.), danach: Einsatz `closed`/`discarded` → 409
+   `incident_not_alarmable`. Einsatz `draft` → Erstalarm, Zustandswechsel nach `running` (löst
+   `incident.updated` aus). Einsatz `running` → **Nachalarmierung**, kein Zustandswechsel, kein
+   `incident.updated` — nur `alarm.triggered`.
+5. Steht eines der `vehicle_ids` bereits in einer `triggered` Alarmierung desselben Einsatzes
+   (Erstalarm oder frühere Nachalarmierung) → 409 `vehicle_already_alarmed`. Das ersetzt für
+   Nachalarmierungen den Doppelklick-Schutz, den der Zustandswechsel beim Erstalarm bietet.
 
 Empfänger werden zum Auslösezeitpunkt aus der aktuellen Schicht eingefroren (gefiltert auf die
 alarmierten Fahrzeuge, pro Person dedupliziert auf das erste Fahrzeug nach `sort_order`) und
 ändern sich danach nicht mehr, auch wenn die Besatzung später wechselt. `has_device` = Person
-hatte zum Auslösezeitpunkt mindestens ein nicht widerrufenes Gerät.
+hatte zum Auslösezeitpunkt mindestens ein nicht widerrufenes Gerät. Bei einer Nachalarmierung
+werden außerdem Personen ausgelassen, die bereits Empfänger einer `triggered` Alarmierung
+desselben Einsatzes sind (kein zweiter Empfänger-Eintrag, kein erneutes Alarm-Vollbild/Ton/Push);
+`double_crewed` wird dadurch nur über die neuen Empfänger berechnet.
 
 Antwort 201 (200 bei Wiederholung über `id`):
 
@@ -135,7 +144,8 @@ Antwort 201 (200 bei Wiederholung über `id`):
 { "alarm": { "id": "…", "incident_id": "…", "state": "triggered", "scheduled_at": null,
              "triggered_at": "…", "vehicle_ids": ["…"],
              "recipients": [{ "person_id": "…", "display_name": "…", "vehicle_id": "…",
-                              "function": "GF", "has_device": true, "acknowledged_at": null }] },
+                              "function": "GF", "has_device": true, "acknowledged_at": null }],
+             "push_delivered": 3, "push_rejected": 1 },
   "double_crewed": [{ "person_id": "…", "display_name": "…", "vehicle_ids": ["…", "…"] }] }
 ```
 
@@ -144,13 +154,43 @@ Antwort 201 (200 bei Wiederholung über `id`):
 auf mehr als einem der alarmierten Fahrzeuge sitzen (bei Wiederholung über `id` leer). Ein
 `Alarm` enthält nie das Drehbuch.
 
+`push_delivered`/`push_rejected` ([ADR 0018](adr/0018-push-alarm-zustellung.md)): Der Handler
+wartet den Push-Versand an alle Empfänger-Geräte ab (Gesamt-Timeout 10 s) und liefert die
+Antwort erst danach mit den aktuellen Zählern aus. Bei der idempotenten Wiederholung (200) wird
+nicht erneut gesendet, die Zähler bleiben die des ersten Versands.
+
 #### Quittierung: `POST /alarms/{id}/acknowledge` (ADR 0017)
 
 Jede angemeldete Person (kein Monitor: 403 `forbidden`), kein Body. Alarmierung unbekannt → 404.
 Aufrufer nicht in den Empfängern → 403 `not_recipient`. Alarmierung nicht `triggered` oder
-zugehöriger Einsatz nicht `running` → 409 `alarm_not_active`. Wiederholung ist idempotent (200
-ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form wie in
-`recipients` oben).
+zugehöriger Einsatz nicht `running` → 409 `alarm_not_active` (z. B. auch nach dem Schließen des
+Einsatzes: die Alarmierung selbst bleibt `triggered`, aber der Einsatz ist nicht mehr `running`).
+Wiederholung ist idempotent (200 ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag
+(gleiche Form wie in `recipients` oben).
+
+#### Einsatz schließen: `POST /incidents/{id}/close` (ADR 0019)
+
+Berechtigung Leitstelle, Admin; Einsatzvorbereitung und Mannschaft → 403 `forbidden`. Unbekannter
+Einsatz → 404 `not_found`. Kein Body.
+
+Nur aus `running`, sonst 409 `invalid_state_transition` (auch bei zweitem Aufruf). Setzt
+`incident.state = 'closed'`, `incident.closed_at = now`; alle `planned` Alarmierungen des
+Einsatzes werden `discarded` (Löschen zugehöriger Jobs kommt mit Ticket 11). Antwort 200:
+
+```json
+{ "incident": { "...": "...", "state": "closed", "closed_at": "…" },
+  "discarded_alarm_ids": ["…"] }
+```
+
+`incident` wie bei `GET /incidents/{id}` (inkl. Drehbuch für den Aufrufer). Events in dieser
+Reihenfolge: `incident.updated` (Zustand `closed`, projiziert wie gewohnt — Mannschaft/Monitor
+ohne Drehbuch), dann `incident.closed`. War der Einsatz zuvor abschlussreif
+([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“, Ticket T10-2), folgt ein
+drittes Event `incident.close_suggested { id, suggested: false }` — **noch nicht implementiert**
+(`computeCloseSuggested` existiert erst mit T10-2).
+
+Folgen: Der Einsatz verlässt `running` ⇒ Monitor/App entfernen ihn und seine Alarmierungen aus der
+aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `alarm_not_active`.
 
 ### Später
 
@@ -169,7 +209,7 @@ ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form w
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
-| PUT | `/me/device/push-token` | Push-Token aktualisieren |
+| PUT | `/me/device/push-token` | Push-Token aktualisieren ([ADR 0018](adr/0018-push-alarm-zustellung.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ token: string (1–4096) }` → 204. Setzt `device.push_token` des eigenen Geräts; trägt ein anderes Gerät dasselbe Token, wird es dort auf `null` gesetzt |
 | GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
 ## WebSocket `/ws`
@@ -198,6 +238,7 @@ ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form w
 | `incident.created` / `incident.updated` | Einsatz, Drehbuch nur für Einsatzvorbereitung/Leitstelle/Admin | Einsatzvorbereitung, Leitstelle, Admin immer; zusätzlich alle, wenn `state ∈ {running, closed}` (ohne Drehbuch) |
 | `alarm.triggered` (ADR 0017) | `{ incident, alarm }` – `incident` pro Verbindung projiziert (Drehbuch nur mit Berechtigung), `alarm` ein `Alarm` (nie mit Drehbuch) | alle; läuft im selben `Realtime.mutate` direkt nach `incident.updated` |
 | `alarm.acknowledged` (ADR 0017) | `{ alarm_id, incident_id, person_id, display_name, acknowledged_at }`, nur beim ersten Mal | alle |
+| `alarm.push_reported` (ADR 0018) | `{ alarm_id, incident_id, push_delivered, push_rejected }`, nach Abschluss des Push-Versands (keine Personendaten); bei null Zielgeräten wird kein Event ausgelöst | alle |
 | `alarm.planned` / `alarm.discarded` / `alarm.missed` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin (später, Ticket 11) |
 | `incident.close_suggested` | `{ id }` | Leitstelle |
 | `incident.closed` | `{ id }` | alle |
@@ -218,7 +259,9 @@ ohne weiteres Event). Antwort 200: der eigene Empfänger-Eintrag (gleiche Form w
 400 Validierung, 401 nicht angemeldet, 403 Berechtigung fehlt, 404, 409 Zustandskonflikt.
 Zusätzliche Codes aus ADR 0017: 409 `vehicle_inactive`, 409 `bf_day_not_running`, 409
 `invalid_state_transition`, 409 `conflict` (Idempotenz-`id` für anderen Einsatz), 403
-`not_recipient`, 409 `alarm_not_active`.
+`not_recipient`, 409 `alarm_not_active`. Aus [ADR 0019](adr/0019-nachalarmierung-abschluss.md):
+409 `incident_not_alarmable` (Alarm auf `closed`/`discarded` Einsatz), 409
+`vehicle_already_alarmed` (Fahrzeug schon in einer `triggered` Alarmierung des Einsatzes).
 
 ## Client-Generierung
 

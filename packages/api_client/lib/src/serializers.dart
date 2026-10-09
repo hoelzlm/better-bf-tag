@@ -15,6 +15,7 @@ import 'package:bftag_api_client/src/date_serializer.dart';
 import 'package:bftag_api_client/src/model/date.dart';
 
 import 'package:bftag_api_client/src/model/acknowledge_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/close_incident200_response.dart';
 import 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/create_incident_request.dart';
 import 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
@@ -70,6 +71,7 @@ import 'package:bftag_api_client/src/model/trigger_alarm_request.dart';
 import 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/update_incident_request.dart';
 import 'package:bftag_api_client/src/model/update_person_request.dart';
+import 'package:bftag_api_client/src/model/update_push_token_request.dart';
 import 'package:bftag_api_client/src/model/update_slide_request.dart';
 import 'package:bftag_api_client/src/model/update_vehicle_request.dart';
 
@@ -77,6 +79,7 @@ part 'serializers.g.dart';
 
 @SerializersFor([
   AcknowledgeAlarm200Response,
+  CloseIncident200Response,
   CreateBfDayRequest,
   CreateIncidentRequest,
   CreateMonitorPairingCode201Response,
@@ -132,6 +135,7 @@ part 'serializers.g.dart';
   UpdateBfDayRequest,
   UpdateIncidentRequest,
   UpdatePersonRequest,
+  UpdatePushTokenRequest,
   UpdateSlideRequest,
   UpdateVehicleRequest,
 ])

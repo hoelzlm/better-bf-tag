@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_web/widgets/running_incidents_section.dart';
 import 'package:flutter/material.dart';
@@ -166,5 +168,56 @@ void main() {
 
     expect(find.textContaining('#3 Zimmerbrand – Musterweg 5'), findsOneWidget);
     expect(find.textContaining('seit 7 min'), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows "Push: X zugestellt · Y abgelehnt" and updates after an '
+      'alarm.push_reported event', (tester) async {
+    final alarm = Alarm(
+      id: 'a1',
+      incidentId: 'i1',
+      state: AlarmState.triggered,
+      triggeredAt: DateTime.now().subtract(const Duration(minutes: 5)),
+      vehicleIds: const ['v1'],
+      recipients: const [],
+      pushDelivered: 3,
+      pushRejected: 1,
+    );
+    final alarmsController = StreamController<List<Alarm>>();
+    addTearDown(alarmsController.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          incidentsProvider
+              .overrideWith((ref) => Stream.value([_incident(id: 'i1')])),
+          alarmsProvider.overrideWith((ref) => alarmsController.stream),
+          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: RunningIncidentsSection()),
+        ),
+      ),
+    );
+    alarmsController.add([alarm]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Push: 3 zugestellt · 1 abgelehnt'), findsOneWidget);
+
+    alarmsController.add([
+      Alarm(
+        id: alarm.id,
+        incidentId: alarm.incidentId,
+        state: alarm.state,
+        triggeredAt: alarm.triggeredAt,
+        vehicleIds: alarm.vehicleIds,
+        recipients: alarm.recipients,
+        pushDelivered: 5,
+        pushRejected: 2,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Push: 5 zugestellt · 2 abgelehnt'), findsOneWidget);
   });
 }

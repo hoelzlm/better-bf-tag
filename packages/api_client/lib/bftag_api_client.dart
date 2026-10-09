@@ -24,6 +24,7 @@ export 'package:bftag_api_client/src/api/snapshot_api.dart';
 export 'package:bftag_api_client/src/api/vehicles_api.dart';
 
 export 'package:bftag_api_client/src/model/acknowledge_alarm200_response.dart';
+export 'package:bftag_api_client/src/model/close_incident200_response.dart';
 export 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 export 'package:bftag_api_client/src/model/create_incident_request.dart';
 export 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
@@ -79,6 +80,7 @@ export 'package:bftag_api_client/src/model/trigger_alarm_request.dart';
 export 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 export 'package:bftag_api_client/src/model/update_incident_request.dart';
 export 'package:bftag_api_client/src/model/update_person_request.dart';
+export 'package:bftag_api_client/src/model/update_push_token_request.dart';
 export 'package:bftag_api_client/src/model/update_slide_request.dart';
 export 'package:bftag_api_client/src/model/update_vehicle_request.dart';
 

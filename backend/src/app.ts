@@ -71,6 +71,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.decorate('pushSender', pushSender);
   app.decorate('realtime', new Realtime(db, clock));
 
+  // ADR 0018: real push senders (ApnsPushSender via PlatformPushSender) hold
+  // a reusable HTTP/2 session; close it on shutdown if the configured
+  // sender supports it (noopPushSender / test fakes don't).
+  app.addHook('onClose', async () => {
+    const closable = pushSender as PushSender & { close?: () => Promise<void> };
+    if (closable.close) {
+      await closable.close();
+    }
+  });
+
   // Zod type provider
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);

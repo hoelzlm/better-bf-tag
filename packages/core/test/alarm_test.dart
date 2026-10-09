@@ -126,6 +126,26 @@ void main() {
       expect(alarm.recipients, hasLength(1));
       expect(alarm.recipients.single.displayName, 'Max Muster');
       expect(alarm.recipients.single.ackState, AckState.pending);
+      expect(alarm.pushDelivered, 0);
+      expect(alarm.pushRejected, 0);
+    });
+
+    test('parses push_delivered/push_rejected when present', () {
+      final json = {
+        'id': 'a1',
+        'incident_id': 'i1',
+        'state': 'triggered',
+        'scheduled_at': null,
+        'triggered_at': '2026-10-09T10:00:00Z',
+        'vehicle_ids': ['v1'],
+        'recipients': const <Map<String, dynamic>>[],
+        'push_delivered': 3,
+        'push_rejected': 1,
+      };
+
+      final alarm = Alarm.fromJson(json);
+      expect(alarm.pushDelivered, 3);
+      expect(alarm.pushRejected, 1);
     });
   });
 

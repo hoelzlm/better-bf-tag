@@ -118,6 +118,16 @@ sealed class RealtimeEvent {
           displayName: map['display_name'] as String,
           acknowledgedAt: DateTime.parse(map['acknowledged_at'] as String),
         );
+      case 'alarm.push_reported':
+        final map = data as Map<String, dynamic>;
+        return AlarmPushReported(
+          seq: seq,
+          at: at,
+          alarmId: map['alarm_id'] as String,
+          incidentId: map['incident_id'] as String,
+          pushDelivered: map['push_delivered'] as int,
+          pushRejected: map['push_rejected'] as int,
+        );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
     }
@@ -268,6 +278,24 @@ class AlarmAcknowledged extends RealtimeEvent {
   final String personId;
   final String displayName;
   final DateTime acknowledgedAt;
+}
+
+/// `alarm.push_reported` (ADR 0018): the push delivery for an Alarmierung
+/// finished; carries only the updated counters, never Personendaten.
+class AlarmPushReported extends RealtimeEvent {
+  const AlarmPushReported({
+    required super.seq,
+    required super.at,
+    required this.alarmId,
+    required this.incidentId,
+    required this.pushDelivered,
+    required this.pushRejected,
+  });
+
+  final String alarmId;
+  final String incidentId;
+  final int pushDelivered;
+  final int pushRejected;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

@@ -12,6 +12,8 @@ export interface AlarmRow {
   scheduledAt: Date | null;
   triggeredAt: Date | null;
   createdAt: Date;
+  pushDelivered: number;
+  pushRejected: number;
 }
 
 export interface AlarmRecipientInput {
@@ -40,6 +42,8 @@ export interface AlarmJson {
   triggered_at: string | null;
   vehicle_ids: string[];
   recipients: AlarmRecipientJson[];
+  push_delivered: number;
+  push_rejected: number;
 }
 
 /**
@@ -69,6 +73,8 @@ export function toAlarmJson(
       has_device: r.hasDevice,
       acknowledged_at: r.acknowledgedAt ? r.acknowledgedAt.toISOString() : null,
     })),
+    push_delivered: row.pushDelivered,
+    push_rejected: row.pushRejected,
   };
 }
 

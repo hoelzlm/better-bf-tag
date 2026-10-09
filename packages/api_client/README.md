@@ -77,6 +77,7 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**monitorRefresh**](doc/AuthApi.md#monitorrefresh) | **POST** /api/v1/auth/monitor/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
+[*AuthApi*](doc/AuthApi.md) | [**updatePushToken**](doc/AuthApi.md#updatepushtoken) | **PUT** /api/v1/me/device/push-token | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**createBfDay**](doc/BfDaysApi.md#createbfday) | **POST** /api/v1/bf-days | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**endBfDay**](doc/BfDaysApi.md#endbfday) | **POST** /api/v1/bf-days/{id}/end | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**getBfDay**](doc/BfDaysApi.md#getbfday) | **GET** /api/v1/bf-days/{day} | 
@@ -87,6 +88,7 @@ Class | Method | HTTP request | Description
 [*BfDaysApi*](doc/BfDaysApi.md) | [**updateBfDay**](doc/BfDaysApi.md#updatebfday) | **PATCH** /api/v1/bf-days/{id} | 
 [*DevicesApi*](doc/DevicesApi.md) | [**revokeDevice**](doc/DevicesApi.md#revokedevice) | **DELETE** /api/v1/devices/{id} | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
+[*IncidentsApi*](doc/IncidentsApi.md) | [**closeIncident**](doc/IncidentsApi.md#closeincident) | **POST** /api/v1/incidents/{id}/close | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**createIncident**](doc/IncidentsApi.md#createincident) | **POST** /api/v1/bf-days/{day}/incidents | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**discardIncident**](doc/IncidentsApi.md#discardincident) | **POST** /api/v1/incidents/{id}/discard | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**getIncident**](doc/IncidentsApi.md#getincident) | **GET** /api/v1/incidents/{id} | 
@@ -131,6 +133,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [AcknowledgeAlarm200Response](doc/AcknowledgeAlarm200Response.md)
+ - [CloseIncident200Response](doc/CloseIncident200Response.md)
  - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateIncidentRequest](doc/CreateIncidentRequest.md)
  - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)
@@ -186,6 +189,7 @@ Class | Method | HTTP request | Description
  - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
  - [UpdateIncidentRequest](doc/UpdateIncidentRequest.md)
  - [UpdatePersonRequest](doc/UpdatePersonRequest.md)
+ - [UpdatePushTokenRequest](doc/UpdatePushTokenRequest.md)
  - [UpdateSlideRequest](doc/UpdateSlideRequest.md)
  - [UpdateVehicleRequest](doc/UpdateVehicleRequest.md)
 

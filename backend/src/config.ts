@@ -39,6 +39,14 @@ export const configSchema = z.object({
   BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
   OWN_FIRE_DEPARTMENT_NAME: z.string().default('Eigene Feuerwehr'),
   SLIDE_IMAGE_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
+  // Push (ADR 0018): all optional. Without them, the corresponding platform
+  // is unconfigured and its pushes are rejected (see createPushSender).
+  FCM_SERVICE_ACCOUNT_FILE: z.string().optional(),
+  APNS_KEY_FILE: z.string().optional(),
+  APNS_KEY_ID: z.string().optional(),
+  APNS_TEAM_ID: z.string().optional(),
+  APNS_BUNDLE_ID: z.string().optional(),
+  APNS_PRODUCTION: strictBooleanEnv(false),
 });
 
 export type Config = z.infer<typeof configSchema>;

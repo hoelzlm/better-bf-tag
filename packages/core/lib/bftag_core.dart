@@ -9,6 +9,7 @@ export 'src/api/dio_provider.dart';
 export 'src/api/incident_repository.dart';
 export 'src/api/monitor_admin_repository.dart';
 export 'src/api/person_admin_repository.dart';
+export 'src/api/push_token_repository.dart';
 export 'src/api/shift_repository.dart';
 export 'src/api/slide_admin_repository.dart';
 export 'src/api/slide_image_loader.dart';

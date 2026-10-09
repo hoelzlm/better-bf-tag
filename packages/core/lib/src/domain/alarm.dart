@@ -145,6 +145,8 @@ class Alarm {
     this.triggeredAt,
     required this.vehicleIds,
     required this.recipients,
+    this.pushDelivered = 0,
+    this.pushRejected = 0,
   });
 
   final String id;
@@ -154,6 +156,12 @@ class Alarm {
   final DateTime? triggeredAt;
   final List<String> vehicleIds;
   final List<AlarmRecipient> recipients;
+
+  /// Anzahl der zugestellten Push-Benachrichtigungen (ADR 0018).
+  final int pushDelivered;
+
+  /// Anzahl der abgelehnten/ungültigen Push-Benachrichtigungen (ADR 0018).
+  final int pushRejected;
 
   /// Zähler über [recipients] nach [AlarmRecipient.ackState].
   AckSummary get summary {
@@ -177,7 +185,9 @@ class Alarm {
     );
   }
 
-  /// Parses `{id,incident_id,state,scheduled_at,triggered_at,vehicle_ids,recipients}`.
+  /// Parses `{id,incident_id,state,scheduled_at,triggered_at,vehicle_ids,
+  /// recipients,push_delivered,push_rejected}` (ADR 0018: the last two
+  /// default to 0 if absent).
   factory Alarm.fromJson(Map<String, dynamic> json) {
     final scheduledAtRaw = json['scheduled_at'] as String?;
     final triggeredAtRaw = json['triggered_at'] as String?;
@@ -195,6 +205,8 @@ class Alarm {
       recipients: recipientsJson
           .map((e) => AlarmRecipient.fromJson(e as Map<String, dynamic>))
           .toList(),
+      pushDelivered: (json['push_delivered'] as int?) ?? 0,
+      pushRejected: (json['push_rejected'] as int?) ?? 0,
     );
   }
 
@@ -202,6 +214,8 @@ class Alarm {
     AlarmState? state,
     DateTime? triggeredAt,
     List<AlarmRecipient>? recipients,
+    int? pushDelivered,
+    int? pushRejected,
   }) {
     return Alarm(
       id: id,
@@ -211,6 +225,8 @@ class Alarm {
       triggeredAt: triggeredAt ?? this.triggeredAt,
       vehicleIds: vehicleIds,
       recipients: recipients ?? this.recipients,
+      pushDelivered: pushDelivered ?? this.pushDelivered,
+      pushRejected: pushRejected ?? this.pushRejected,
     );
   }
 
@@ -223,7 +239,9 @@ class Alarm {
       other.scheduledAt == scheduledAt &&
       other.triggeredAt == triggeredAt &&
       _listEquals(other.vehicleIds, vehicleIds) &&
-      _listEquals(other.recipients, recipients);
+      _listEquals(other.recipients, recipients) &&
+      other.pushDelivered == pushDelivered &&
+      other.pushRejected == pushRejected;
 
   static bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
@@ -242,6 +260,8 @@ class Alarm {
         triggeredAt,
         Object.hashAll(vehicleIds),
         Object.hashAll(recipients),
+        pushDelivered,
+        pushRejected,
       );
 
   @override

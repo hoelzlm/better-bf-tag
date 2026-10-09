@@ -13,6 +13,7 @@ export interface IncidentRow {
   state: IncidentState;
   createdAt: Date;
   updatedAt: Date;
+  closedAt: Date | null;
 }
 
 /**
@@ -31,6 +32,7 @@ export const incidentJsonSchema = z.object({
   state: z.enum(['draft', 'running', 'closed', 'discarded']),
   created_at: z.string(),
   updated_at: z.string(),
+  closed_at: z.string().nullable(),
   script: z.string().optional(),
 });
 
@@ -53,6 +55,7 @@ export function toIncidentJson(row: IncidentRow, opts: { includeScript: boolean 
     state: row.state,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
+    closed_at: row.closedAt ? row.closedAt.toISOString() : null,
     ...(opts.includeScript ? { script: row.script } : {}),
   };
 }

@@ -9,6 +9,7 @@ part of 'serializers.dart';
 Serializers _$serializers =
     (Serializers().toBuilder()
           ..add(AcknowledgeAlarm200Response.serializer)
+          ..add(CloseIncident200Response.serializer)
           ..add(CreateBfDayRequest.serializer)
           ..add(CreateIncidentRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
@@ -86,6 +87,7 @@ Serializers _$serializers =
           ..add(UpdatePersonRequest.serializer)
           ..add(UpdatePersonRequestPermissionEnum.serializer)
           ..add(UpdatePersonRequestPersonTypeEnum.serializer)
+          ..add(UpdatePushTokenRequest.serializer)
           ..add(UpdateSlideRequest.serializer)
           ..add(UpdateVehicleRequest.serializer)
           ..addBuilderFactory(
@@ -147,6 +149,10 @@ Serializers _$serializers =
               const FullType(SetShiftCrewRequestAssignmentsInner),
             ]),
             () => ListBuilder<SetShiftCrewRequestAssignmentsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [const FullType(String)]),

@@ -22,6 +22,7 @@ lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/date_serializer.dart
 lib/src/model/acknowledge_alarm200_response.dart
+lib/src/model/close_incident200_response.dart
 lib/src/model/create_bf_day_request.dart
 lib/src/model/create_incident_request.dart
 lib/src/model/create_monitor_pairing_code201_response.dart
@@ -78,6 +79,7 @@ lib/src/model/trigger_alarm_request.dart
 lib/src/model/update_bf_day_request.dart
 lib/src/model/update_incident_request.dart
 lib/src/model/update_person_request.dart
+lib/src/model/update_push_token_request.dart
 lib/src/model/update_slide_request.dart
 lib/src/model/update_vehicle_request.dart
 lib/src/serializers.dart
