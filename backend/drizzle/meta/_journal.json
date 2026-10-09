@@ -43,6 +43,13 @@
       "when": 1791500584705,
       "tag": "0005_quick_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791517236028,
+      "tag": "0006_cooing_zombie",
+      "breakpoints": true
     }
   ]
 }

@@ -37,6 +37,12 @@ export const vehicleStatusSourceEnum = pgEnum('vehicle_status_source', [
   'system',
 ]);
 export const bfDayStateEnum = pgEnum('bf_day_state', ['planning', 'running', 'ended']);
+export const incidentStateEnum = pgEnum('incident_state', [
+  'draft',
+  'running',
+  'closed',
+  'discarded',
+]);
 
 export const fireDepartment = pgTable(
   'fire_department',
@@ -245,6 +251,28 @@ export const slide = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
   },
   table => [check('slide_duration_seconds_range', sql`${table.durationSeconds} between 3 and 300`)]
+);
+
+export const incident = pgTable(
+  'incident',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(),
+    keyword: text('keyword').notNull(),
+    address: text('address').notNull(),
+    report: text('report').notNull().default(''),
+    script: text('script').notNull().default(''),
+    state: incidentStateEnum('state').notNull().default('draft'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  table => [
+    uniqueIndex('incident_bf_day_number_unique').on(table.bfDayId, table.number),
+    index('incident_bf_day_state_idx').on(table.bfDayId, table.state),
+  ]
 );
 
 export const slideImage = pgTable('slide_image', {

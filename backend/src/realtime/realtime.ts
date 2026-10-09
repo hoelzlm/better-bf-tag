@@ -18,12 +18,23 @@ export interface RealtimeEvent {
    * the event's data.
    */
   audience?: (permission: Permission) => boolean;
+  /**
+   * Per-connection projection (ADR 0016): when set, `ws.ts` sends
+   * `project(permission)` instead of `data` to connections that pass the
+   * audience check, so one event with one `seq` can carry a privileged
+   * view (e.g. with Drehbuch) and a restricted view at once. Absent means
+   * every connection in the audience gets the same `data`.
+   */
+  project?: (permission: Permission) => unknown;
 }
 
 export type Emit = (
   type: string,
   data: unknown,
-  opts?: { audience?: (permission: Permission) => boolean }
+  opts?: {
+    audience?: (permission: Permission) => boolean;
+    project?: (permission: Permission) => unknown;
+  }
 ) => Promise<void>;
 
 /** T02-2 wraps this with permission filtering before delivering to WebSocket clients. */
@@ -75,6 +86,7 @@ export class Realtime {
             at: this.clock.now().toISOString(),
             data,
             audience: opts?.audience,
+            project: opts?.project,
           });
         };
         return fn(tx as Tx, emit);

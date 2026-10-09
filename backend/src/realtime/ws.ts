@@ -166,9 +166,8 @@ async function handleConnection(
         socket.send(JSON.stringify({ seq: event.seq, type: 'skip' }));
         return;
       }
-      socket.send(
-        JSON.stringify({ seq: event.seq, type: event.type, at: event.at, data: event.data })
-      );
+      const data = event.project ? event.project(permission) : event.data;
+      socket.send(JSON.stringify({ seq: event.seq, type: event.type, at: event.at, data }));
     },
   };
 

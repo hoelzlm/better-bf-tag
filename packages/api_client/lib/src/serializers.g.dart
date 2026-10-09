@@ -9,6 +9,7 @@ part of 'serializers.dart';
 Serializers _$serializers =
     (Serializers().toBuilder()
           ..add(CreateBfDayRequest.serializer)
+          ..add(CreateIncidentRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
           ..add(CreateMonitorRequest.serializer)
           ..add(CreatePairingCode201Response.serializer)
@@ -31,6 +32,8 @@ Serializers _$serializers =
           ..add(GetSnapshot200Response.serializer)
           ..add(GetSnapshot200ResponseBfDay.serializer)
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
+          ..add(GetSnapshot200ResponseIncidentsInner.serializer)
+          ..add(GetSnapshot200ResponseIncidentsInnerStateEnum.serializer)
           ..add(GetSnapshot200ResponseShiftsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInnerCrewInner.serializer)
           ..add(GetSnapshot200ResponseSlidesInner.serializer)
@@ -70,6 +73,7 @@ Serializers _$serializers =
           ..add(SetVehicleStatusRequest.serializer)
           ..add(SetWebAccessRequest.serializer)
           ..add(UpdateBfDayRequest.serializer)
+          ..add(UpdateIncidentRequest.serializer)
           ..add(UpdatePersonRequest.serializer)
           ..add(UpdatePersonRequestPermissionEnum.serializer)
           ..add(UpdatePersonRequestPersonTypeEnum.serializer)
@@ -110,6 +114,12 @@ Serializers _$serializers =
               const FullType(GetSnapshot200ResponseShiftsInner),
             ]),
             () => ListBuilder<GetSnapshot200ResponseShiftsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseIncidentsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseIncidentsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

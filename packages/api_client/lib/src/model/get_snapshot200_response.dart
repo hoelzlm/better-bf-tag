@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:bftag_api_client/src/model/list_vehicles200_response_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
@@ -22,6 +23,7 @@ part 'get_snapshot200_response.g.dart';
 /// * [bfDay] 
 /// * [shifts] 
 /// * [currentShiftId] 
+/// * [incidents] 
 @BuiltValue()
 abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, GetSnapshot200ResponseBuilder> {
   @BuiltValueField(wireName: r'seq')
@@ -41,6 +43,9 @@ abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, G
 
   @BuiltValueField(wireName: r'current_shift_id')
   String? get currentShiftId;
+
+  @BuiltValueField(wireName: r'incidents')
+  BuiltList<GetSnapshot200ResponseIncidentsInner> get incidents;
 
   GetSnapshot200Response._();
 
@@ -94,6 +99,11 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
     yield object.currentShiftId == null ? null : serializers.serialize(
       object.currentShiftId,
       specifiedType: const FullType.nullable(String),
+    );
+    yield r'incidents';
+    yield serializers.serialize(
+      object.incidents,
+      specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseIncidentsInner)]),
     );
   }
 
@@ -161,6 +171,13 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
           ) as String?;
           if (valueDes == null) continue;
           result.currentShiftId = valueDes;
+          break;
+        case r'incidents':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseIncidentsInner)]),
+          ) as BuiltList<GetSnapshot200ResponseIncidentsInner>;
+          result.incidents.replace(valueDes);
           break;
         default:
           unhandled.add(key);

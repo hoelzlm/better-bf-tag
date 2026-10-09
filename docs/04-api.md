@@ -87,13 +87,20 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 ### Einsätze und Alarmierungen
 
+Einsatzzustände: `draft` → `running` (Erstalarm, Ticket 08) → `closed` (Leitstelle); ein Entwurf
+kann stattdessen nach `discarded` verworfen werden. Nummer pro BF-Tag (`number`), fortlaufend ab
+1, verworfene Nummern werden nicht wiederverwendet. Drehbuch (`script`) nur für Einsatzvorbereitung,
+Leitstelle, Admin — für Mannschaft/Monitor fehlt der Schlüssel `script` in der Antwort ganz (ADR
+0016). Mannschaft/Monitor sehen in Liste und Einzelabruf nur `running`/`closed` (Entwürfe und
+Verworfene filtert die Liste, der Einzelabruf antwortet 404 `not_found`).
+
 | Methode | Pfad | Berechtigung | Beschreibung |
 |---------|------|--------------|--------------|
-| GET | `/bf-days/{day}/incidents?state=…` | alle | Liste (Drehbuch je nach Berechtigung) |
-| GET | `/incidents/{id}` | alle | inkl. Alarmierungen, Empfänger und Quittierungen |
-| POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung | anlegen (`draft`) |
-| PATCH | `/incidents/{id}` | Einsatzvorbereitung | Meldebild/Drehbuch bearbeiten, solange nicht `closed` |
-| POST | `/incidents/{id}/discard` | Einsatzvorbereitung | nur `draft` |
+| GET | `/bf-days/{day}/incidents?state=draft\|running\|closed\|discarded` | alle | Liste, sortiert nach `number` (Drehbuch je nach Berechtigung, Zustandsfilter nach Sichtbarkeit) |
+| GET | `/incidents/{id}` | alle | Einzelabruf; Mannschaft/Monitor 404 für `draft`/`discarded` (Alarmierungen folgen mit Ticket 08) |
+| POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung, Leitstelle, Admin | `{ keyword, address, report?, script? }` → 201 `draft`; 409 `bf_day_ended` |
+| PATCH | `/incidents/{id}` | Einsatzvorbereitung, Leitstelle, Admin | Meldebild/Drehbuch bearbeiten, nur `draft`/`running`; sonst 409 `incident_not_editable` |
+| POST | `/incidents/{id}/discard` | Einsatzvorbereitung, Leitstelle, Admin | nur `draft`, sonst 409 `invalid_state_transition` |
 | POST | `/incidents/{id}/close` | Leitstelle | verwirft geplante Alarmierungen |
 | POST | `/incidents/{id}/alarms` | Leitstelle | `{ vehicle_ids, scheduled_at? }`: ohne Zeit sofort, sonst geplant |
 | PATCH | `/alarms/{id}` | Leitstelle | geplante Zeit oder Fahrzeuge ändern |
@@ -118,7 +125,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 |---------|------|--------------|
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren |
-| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze, Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
 
 ## WebSocket `/ws`
 
@@ -143,7 +150,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 | Typ | Daten | Empfänger |
 |-----|-------|-----------|
-| `incident.created` / `incident.updated` | Einsatz | Einsatzvorbereitung, Leitstelle, Admin |
+| `incident.created` / `incident.updated` | Einsatz, Drehbuch nur für Einsatzvorbereitung/Leitstelle/Admin | Einsatzvorbereitung, Leitstelle, Admin immer; zusätzlich alle, wenn `state ∈ {running, closed}` (ohne Drehbuch) |
 | `alarm.planned` / `alarm.discarded` | Alarmierung | Einsatzvorbereitung, Leitstelle, Admin |
 | `alarm.triggered` | Einsatz (Meldebild) + Alarmierung + Empfänger | alle |
 | `alarm.missed` | Alarmierung | Leitstelle, Admin |
