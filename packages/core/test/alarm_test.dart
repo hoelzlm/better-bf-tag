@@ -224,4 +224,62 @@ void main() {
       expect(doubleCrewedIn(shift, const []), isEmpty);
     });
   });
+
+  group('triggeredAlarmsInOrder / alarmSequenceLabel', () {
+    test('sorts triggered alarms by triggeredAt, then id', () {
+      final a1 = _alarm(
+        id: 'a2',
+        triggeredAt: DateTime.parse('2026-10-09T10:05:00Z'),
+      );
+      final a2 = _alarm(
+        id: 'a1',
+        triggeredAt: DateTime.parse('2026-10-09T10:05:00Z'),
+      );
+      final a3 = _alarm(
+        id: 'a3',
+        triggeredAt: DateTime.parse('2026-10-09T10:00:00Z'),
+      );
+
+      final ordered = triggeredAlarmsInOrder([a1, a2, a3]);
+      expect(ordered.map((a) => a.id).toList(), ['a3', 'a1', 'a2']);
+    });
+
+    test('excludes non-triggered alarms', () {
+      final planned = _alarm(id: 'a1', state: AlarmState.planned);
+      final triggered = _alarm(
+        id: 'a2',
+        triggeredAt: DateTime.parse('2026-10-09T10:00:00Z'),
+      );
+
+      expect(
+        triggeredAlarmsInOrder([planned, triggered]).map((a) => a.id),
+        ['a2'],
+      );
+    });
+
+    test('alarmSequenceLabel: Erstalarm, 1./2. Nachalarmierung', () {
+      final erst = _alarm(
+        id: 'a1',
+        triggeredAt: DateTime.parse('2026-10-09T10:00:00Z'),
+      );
+      final nach1 = _alarm(
+        id: 'a2',
+        triggeredAt: DateTime.parse('2026-10-09T10:05:00Z'),
+      );
+      final nach2 = _alarm(
+        id: 'a3',
+        triggeredAt: DateTime.parse('2026-10-09T10:10:00Z'),
+      );
+      final alarms = [erst, nach1, nach2];
+
+      expect(alarmSequenceLabel(erst, alarms), 'Erstalarm');
+      expect(alarmSequenceLabel(nach1, alarms), '1. Nachalarmierung');
+      expect(alarmSequenceLabel(nach2, alarms), '2. Nachalarmierung');
+    });
+
+    test('alarmSequenceLabel falls back to "Alarmierung" for a planned alarm', () {
+      final planned = _alarm(id: 'a1', state: AlarmState.planned);
+      expect(alarmSequenceLabel(planned, [planned]), 'Alarmierung');
+    });
+  });
 }

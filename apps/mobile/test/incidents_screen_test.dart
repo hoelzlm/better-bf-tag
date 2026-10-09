@@ -74,6 +74,9 @@ class _FakeIncidentRepository implements IncidentRepository {
 
   @override
   Future<Incident> discard(String id) => throw UnimplementedError();
+
+  @override
+  Future<CloseIncidentResult> close(String id) => throw UnimplementedError();
 }
 
 Future<void> _pumpIncidentsScreen(

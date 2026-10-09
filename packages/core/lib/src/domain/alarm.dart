@@ -314,6 +314,44 @@ class DoubleCrewed {
   String toString() => 'DoubleCrewed($displayName, $vehicleIds)';
 }
 
+/// Die `triggered` Alarmierungen von [alarmsOfIncident] (ADR 0019),
+/// sortiert nach `triggered_at`, dann `id` -- Index 0 ist der Erstalarm,
+/// jeder weitere Index eine Nachalarmierung (siehe [alarmSequenceLabel]).
+List<Alarm> triggeredAlarmsInOrder(Iterable<Alarm> alarmsOfIncident) {
+  final triggered = alarmsOfIncident
+      .where((a) => a.state == AlarmState.triggered)
+      .toList()
+    ..sort((a, b) {
+      final at = a.triggeredAt;
+      final bt = b.triggeredAt;
+      final byTriggeredAt = switch ((at, bt)) {
+        (null, null) => 0,
+        (null, _) => -1,
+        (_, null) => 1,
+        (_, _) => at!.compareTo(bt!),
+      };
+      return byTriggeredAt != 0 ? byTriggeredAt : a.id.compareTo(b.id);
+    });
+  return triggered;
+}
+
+/// German display label for [alarm] within its Einsatz (ADR 0019): the
+/// first (by [triggeredAlarmsInOrder]) is "Erstalarm", every further one
+/// "n. Nachalarmierung". [alarmsOfIncident] should be every (not just
+/// `triggered`) Alarmierung of the Einsatz that contains [alarm] --
+/// filtering to `triggered` happens inside this helper.
+///
+/// Returns "Alarmierung" if [alarm] isn't found among the triggered
+/// Alarmierungen (e.g. it's still `planned`), since there is no sequence
+/// position yet.
+String alarmSequenceLabel(Alarm alarm, Iterable<Alarm> alarmsOfIncident) {
+  final ordered = triggeredAlarmsInOrder(alarmsOfIncident);
+  final index = ordered.indexWhere((a) => a.id == alarm.id);
+  if (index == -1) return 'Alarmierung';
+  if (index == 0) return 'Erstalarm';
+  return '$index. Nachalarmierung';
+}
+
 /// Vorabwarnung bei Doppelbesetzung (ADR 0017): Personen aus [shift]' Crew,
 /// die auf mehr als einem der [vehicleIds] sitzen. Pure Funktion, damit sie
 /// im Alarmieren-Dialog ohne Serverantwort berechnet werden kann. `null`

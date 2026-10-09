@@ -128,6 +128,21 @@ sealed class RealtimeEvent {
           pushDelivered: map['push_delivered'] as int,
           pushRejected: map['push_rejected'] as int,
         );
+      case 'incident.closed':
+        final map = data as Map<String, dynamic>;
+        return IncidentClosed(
+          seq: seq,
+          at: at,
+          id: map['id'] as String,
+        );
+      case 'incident.close_suggested':
+        final map = data as Map<String, dynamic>;
+        return IncidentCloseSuggested(
+          seq: seq,
+          at: at,
+          id: map['id'] as String,
+          suggested: map['suggested'] as bool,
+        );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
     }
@@ -296,6 +311,35 @@ class AlarmPushReported extends RealtimeEvent {
   final String incidentId;
   final int pushDelivered;
   final int pushRejected;
+}
+
+/// `incident.closed` (ADR 0019): a running Einsatz was geschlossen. The
+/// Einsatz and its Alarmierungen are already removed by the preceding
+/// `incident.updated` (state `closed`); this is a pure follow-up signal
+/// (e.g. for the Alarm-Vollbild closing), applying it again is a no-op.
+class IncidentClosed extends RealtimeEvent {
+  const IncidentClosed({
+    required super.seq,
+    required super.at,
+    required this.id,
+  });
+
+  final String id;
+}
+
+/// `incident.close_suggested` (ADR 0019): whether a running Einsatz is
+/// abschlussreif changed. Audience `dispatch`/`admin` only -- other
+/// connections never receive this event.
+class IncidentCloseSuggested extends RealtimeEvent {
+  const IncidentCloseSuggested({
+    required super.seq,
+    required super.at,
+    required this.id,
+    required this.suggested,
+  });
+
+  final String id;
+  final bool suggested;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

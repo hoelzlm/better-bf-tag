@@ -17,6 +17,7 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'state': i.state.name,
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
+    if (i.closedAt != null) 'closed_at': i.closedAt,
     // The generated model always exposes `script` (as `null` when the
     // wire payload omitted it), so the `containsKey` check in
     // [Incident.fromJson] would always be true here; explicitly drop the
@@ -42,6 +43,7 @@ Incident _incidentFromGetIncidentApi(GetIncident200Response i) {
     'state': i.state.name,
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
+    if (i.closedAt != null) 'closed_at': i.closedAt,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -127,6 +129,24 @@ abstract class IncidentRepository {
   /// `POST /incidents/{id}/discard`. Fails (`invalid_state_transition`)
   /// unless the Einsatz is still `draft`.
   Future<Incident> discard(String id);
+
+  /// `POST /incidents/{id}/close` (ADR 0019). Fails
+  /// (`invalid_state_transition`) unless the Einsatz is `running`.
+  /// Returns the closed Einsatz and the ids of `planned` Alarmierungen
+  /// that were discarded as a result.
+  Future<CloseIncidentResult> close(String id);
+}
+
+/// Result of [IncidentRepository.close]: the closed [Incident], and the
+/// ids of `planned` Alarmierungen discarded as a side effect (ADR 0019).
+class CloseIncidentResult {
+  const CloseIncidentResult({
+    required this.incident,
+    required this.discardedAlarmIds,
+  });
+
+  final Incident incident;
+  final List<String> discardedAlarmIds;
 }
 
 /// [IncidentRepository] backed by the generated [IncidentsApi].
@@ -215,6 +235,19 @@ class ApiIncidentRepository implements IncidentRepository {
       throw StateError('POST /incidents/{id}/discard returned no body');
     }
     return _incidentFromApi(data);
+  }
+
+  @override
+  Future<CloseIncidentResult> close(String id) async {
+    final response = await _api.closeIncident(id: id);
+    final data = response.data;
+    if (data == null) {
+      throw StateError('POST /incidents/{id}/close returned no body');
+    }
+    return CloseIncidentResult(
+      incident: _incidentFromApi(data.incident),
+      discardedAlarmIds: data.discardedAlarmIds.toList(),
+    );
   }
 }
 
