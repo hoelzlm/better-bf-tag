@@ -15,6 +15,7 @@ import 'package:bftag_api_client/src/date_serializer.dart';
 import 'package:bftag_api_client/src/model/date.dart';
 
 import 'package:bftag_api_client/src/model/acknowledge_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/anonymize_bf_day200_response.dart';
 import 'package:bftag_api_client/src/model/close_incident200_response.dart';
 import 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/create_incident_request.dart';
@@ -27,6 +28,7 @@ import 'package:bftag_api_client/src/model/create_person_request.dart';
 import 'package:bftag_api_client/src/model/create_slide_request.dart';
 import 'package:bftag_api_client/src/model/create_vehicle_request.dart';
 import 'package:bftag_api_client/src/model/device_refresh_request.dart';
+import 'package:bftag_api_client/src/model/get_bf_day_anonymization_preview200_response.dart';
 import 'package:bftag_api_client/src/model/get_health200_response.dart';
 import 'package:bftag_api_client/src/model/get_health503_response.dart';
 import 'package:bftag_api_client/src/model/get_incident200_response.dart';
@@ -79,6 +81,7 @@ part 'serializers.g.dart';
 
 @SerializersFor([
   AcknowledgeAlarm200Response,
+  AnonymizeBfDay200Response,
   CloseIncident200Response,
   CreateBfDayRequest,
   CreateIncidentRequest,
@@ -91,6 +94,7 @@ part 'serializers.g.dart';
   CreateSlideRequest,
   CreateVehicleRequest,
   DeviceRefreshRequest,
+  GetBfDayAnonymizationPreview200Response,
   GetHealth200Response,
   GetHealth503Response,
   GetIncident200Response,

@@ -9,9 +9,16 @@ import {
   toBfDayJson,
   participantJsonSchema,
   toParticipantJson,
+  anonymizationSummaryJsonSchema,
+  anonymizeBfDayResponseSchema,
+  toAnonymizationSummaryJson,
   type BfDayRow,
 } from './bf-day-schemas.js';
 import { resolveBfDay, bfDayNotFound } from '../bf-days/resolve-day.js';
+import {
+  computeAnonymization,
+  anonymizeBfDay as performAnonymization,
+} from '../bf-days/anonymize.js';
 import { loadShiftJson } from '../shifts/shift-json.js';
 import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
@@ -58,6 +65,28 @@ function assertEndsAfterStarts(startsAt: Date, endsAt: Date): void {
   if (endsAt <= startsAt) {
     throw new ApiError(400, 'validation_error', 'ends_at muss nach starts_at liegen.');
   }
+}
+
+/** ADR 0020: distinct 404 code from the `{day}` resolver's generic `not_found`. */
+function anonymizationBfDayNotFound(): ApiError {
+  return new ApiError(404, 'bf_day_not_found', 'BF-Tag nicht gefunden.');
+}
+
+/** Loads the bf_day row, checking state/anonymized_at (ADR 0020). Locks it with
+ *  `FOR UPDATE` when `lock` is true (required before the anonymize mutation itself). */
+async function loadBfDayForAnonymization(tx: Tx, id: string, lock: boolean): Promise<BfDayRow> {
+  const query = tx.select().from(bfDay).where(eq(bfDay.id, id));
+  const [row] = await (lock ? query.for('update') : query).limit(1);
+  if (!row) {
+    throw anonymizationBfDayNotFound();
+  }
+  if (row.state !== 'ended') {
+    throw new ApiError(409, 'bf_day_not_ended', 'Nur beendete BF-Tage können anonymisiert werden.');
+  }
+  if (row.anonymizedAt !== null) {
+    throw new ApiError(409, 'bf_day_already_anonymized', 'BF-Tag ist bereits anonymisiert.');
+  }
+  return row;
 }
 
 export const bfDayRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -512,6 +541,71 @@ export const bfDayRoutes: FastifyPluginAsyncZod = async fastify => {
           .orderBy(asc(person.displayName));
 
         return rows.map(toParticipantJson);
+      });
+    }
+  );
+
+  fastify.get(
+    '/bf-days/:id/anonymization-preview',
+    {
+      preHandler: [requireAuth(), requirePermission('dispatch')],
+      schema: {
+        operationId: 'getBfDayAnonymizationPreview',
+        tags: ['bf-days'],
+        params: idParamsSchema,
+        response: {
+          200: anonymizationSummaryJsonSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async request => {
+      const auth = request.auth;
+      if (!auth || auth.kind !== 'person') {
+        throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
+      }
+      return fastify.db.transaction(async tx => {
+        const bfDayRow = await loadBfDayForAnonymization(tx, request.params.id, false);
+        const { summary } = await computeAnonymization(tx, bfDayRow.id, auth.personId);
+        return toAnonymizationSummaryJson(summary);
+      });
+    }
+  );
+
+  fastify.post(
+    '/bf-days/:id/anonymize',
+    {
+      preHandler: [requireAuth(), requirePermission('dispatch')],
+      schema: {
+        operationId: 'anonymizeBfDay',
+        tags: ['bf-days'],
+        params: idParamsSchema,
+        response: {
+          200: anonymizeBfDayResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async request => {
+      const auth = request.auth;
+      if (!auth || auth.kind !== 'person') {
+        throw new ApiError(401, 'unauthorized', 'Nicht authentifiziert.');
+      }
+      return fastify.realtime.mutate(async (tx, emit) => {
+        const bfDayRow = await loadBfDayForAnonymization(tx, request.params.id, true);
+        const now = fastify.clock.now();
+        const summary = await performAnonymization(tx, bfDayRow.id, auth.personId, now);
+
+        const [updated] = await tx.select().from(bfDay).where(eq(bfDay.id, bfDayRow.id)).limit(1);
+        if (!updated) {
+          throw anonymizationBfDayNotFound();
+        }
+
+        const json = toBfDayJson(updated);
+        await emit('bf_day.updated', json);
+        return { bf_day: json, summary: toAnonymizationSummaryJson(summary) };
       });
     }
   );

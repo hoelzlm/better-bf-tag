@@ -153,17 +153,26 @@ export const vehicle = pgTable(
   table => [check('vehicle_status_range', sql`${table.status} between 1 and 8`)]
 );
 
-export const vehicleStatusEvent = pgTable('vehicle_status_event', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  vehicleId: uuid('vehicle_id')
-    .notNull()
-    .references(() => vehicle.id),
-  kind: vehicleStatusEventKindEnum('kind').notNull(),
-  status: smallint('status'),
-  source: vehicleStatusSourceEnum('source').notNull(),
-  personId: uuid('person_id').references(() => person.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-});
+export const vehicleStatusEvent = pgTable(
+  'vehicle_status_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    vehicleId: uuid('vehicle_id')
+      .notNull()
+      .references(() => vehicle.id),
+    kind: vehicleStatusEventKindEnum('kind').notNull(),
+    status: smallint('status'),
+    source: vehicleStatusSourceEnum('source').notNull(),
+    personId: uuid('person_id').references(() => person.id, { onDelete: 'set null' }),
+    // Nullable (ADR 0020): the running BF-Tag's id at the time of the status
+    // change, or null when no BF-Tag was running. Used by the Anonymisierung
+    // to remove the Personenbezug (`person_id = null`) of this day's events
+    // without touching events outside it.
+    bfDayId: uuid('bf_day_id').references(() => bfDay.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  table => [index('vehicle_status_event_bf_day_idx').on(table.bfDayId)]
+);
 
 export const realtimeState = pgTable(
   'realtime_state',

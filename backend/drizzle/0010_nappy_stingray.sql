@@ -1,0 +1,4 @@
+ALTER TABLE "vehicle_status_event" ADD COLUMN "bf_day_id" uuid;--> statement-breakpoint
+ALTER TABLE "vehicle_status_event" ADD CONSTRAINT "vehicle_status_event_bf_day_id_bf_day_id_fk" FOREIGN KEY ("bf_day_id") REFERENCES "public"."bf_day"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "vehicle_status_event_bf_day_idx" ON "vehicle_status_event" USING btree ("bf_day_id");--> statement-breakpoint
+UPDATE "vehicle_status_event" e SET "bf_day_id" = d."id" FROM "bf_day" d WHERE e."bf_day_id" IS NULL AND e."created_at" >= d."starts_at" AND e."created_at" <= d."ends_at";

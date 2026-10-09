@@ -8,6 +8,7 @@ import {
   incident,
   alarm,
   alarmVehicle,
+  bfDay,
 } from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import { errorResponseSchema } from '../access/schemas.js';
@@ -329,12 +330,22 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
           throw vehicleNotFound();
         }
 
+        // Stamps the currently running BF-Tag (if any) onto the event, so an
+        // Anonymisierung can later remove just this day's Personenbezug
+        // (ADR 0020).
+        const [runningDay] = await tx
+          .select({ id: bfDay.id })
+          .from(bfDay)
+          .where(eq(bfDay.state, 'running'))
+          .limit(1);
+
         await tx.insert(vehicleStatusEvent).values({
           vehicleId: row.id,
           kind: 'status',
           status: request.body.status,
           source,
           personId: auth.personId,
+          bfDayId: runningDay?.id ?? null,
           createdAt: now,
         });
 

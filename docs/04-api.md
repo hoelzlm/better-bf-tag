@@ -69,6 +69,7 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | GET/POST/PATCH | `/bf-days[/{id}]` (GET: alle Personen) |
 | POST | `/bf-days/{id}/start`, `/bf-days/{id}/end` (ADR 0013) |
 | POST | `/bf-days/{id}/anonymize` (auch Leitstelle) |
+| GET | `/bf-days/{id}/anonymization-preview` (auch Leitstelle; gleiche Response-`summary` wie `/anonymize`) |
 
 ### Pro BF-Tag
 
