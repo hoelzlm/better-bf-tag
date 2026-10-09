@@ -106,6 +106,8 @@ class _$GetIncident200Response extends GetIncident200Response {
   @override
   final String updatedAt;
   @override
+  final String? closedAt;
+  @override
   final String? script;
   @override
   final BuiltList<GetSnapshot200ResponseAlarmsInner> alarms;
@@ -124,6 +126,7 @@ class _$GetIncident200Response extends GetIncident200Response {
     required this.state,
     required this.createdAt,
     required this.updatedAt,
+    this.closedAt,
     this.script,
     required this.alarms,
   }) : super._();
@@ -149,6 +152,7 @@ class _$GetIncident200Response extends GetIncident200Response {
         state == other.state &&
         createdAt == other.createdAt &&
         updatedAt == other.updatedAt &&
+        closedAt == other.closedAt &&
         script == other.script &&
         alarms == other.alarms;
   }
@@ -165,6 +169,7 @@ class _$GetIncident200Response extends GetIncident200Response {
     _$hash = $jc(_$hash, state.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jc(_$hash, updatedAt.hashCode);
+    _$hash = $jc(_$hash, closedAt.hashCode);
     _$hash = $jc(_$hash, script.hashCode);
     _$hash = $jc(_$hash, alarms.hashCode);
     _$hash = $jf(_$hash);
@@ -183,6 +188,7 @@ class _$GetIncident200Response extends GetIncident200Response {
           ..add('state', state)
           ..add('createdAt', createdAt)
           ..add('updatedAt', updatedAt)
+          ..add('closedAt', closedAt)
           ..add('script', script)
           ..add('alarms', alarms))
         .toString();
@@ -229,6 +235,10 @@ class GetIncident200ResponseBuilder
   String? get updatedAt => _$this._updatedAt;
   set updatedAt(String? updatedAt) => _$this._updatedAt = updatedAt;
 
+  String? _closedAt;
+  String? get closedAt => _$this._closedAt;
+  set closedAt(String? closedAt) => _$this._closedAt = closedAt;
+
   String? _script;
   String? get script => _$this._script;
   set script(String? script) => _$this._script = script;
@@ -255,6 +265,7 @@ class GetIncident200ResponseBuilder
       _state = $v.state;
       _createdAt = $v.createdAt;
       _updatedAt = $v.updatedAt;
+      _closedAt = $v.closedAt;
       _script = $v.script;
       _alarms = $v.alarms.toBuilder();
       _$v = null;
@@ -326,6 +337,7 @@ class GetIncident200ResponseBuilder
               r'GetIncident200Response',
               'updatedAt',
             ),
+            closedAt: closedAt,
             script: script,
             alarms: alarms.build(),
           );

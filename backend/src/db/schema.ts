@@ -274,6 +274,7 @@ export const incident = pgTable(
     state: incidentStateEnum('state').notNull().default('draft'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
   },
   table => [
     uniqueIndex('incident_bf_day_number_unique').on(table.bfDayId, table.number),

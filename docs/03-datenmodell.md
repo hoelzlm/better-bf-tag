@@ -182,7 +182,7 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | copied_from_id | uuid null | Einsatz aus früherem BF-Tag kopiert (später) |
 | prewarning_minutes | int null | Vorwarnung (später) |
 | ready_at | timestamptz null | Bereitmeldung (später) |
-| closed_at | timestamptz null | |
+| closed_at | timestamptz null | gesetzt beim Schließen ([ADR 0019](adr/0019-nachalarmierung-abschluss.md)) |
 
 ### `alarm` – Alarmierung
 

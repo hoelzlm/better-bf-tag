@@ -88,6 +88,7 @@ Class | Method | HTTP request | Description
 [*BfDaysApi*](doc/BfDaysApi.md) | [**updateBfDay**](doc/BfDaysApi.md#updatebfday) | **PATCH** /api/v1/bf-days/{id} | 
 [*DevicesApi*](doc/DevicesApi.md) | [**revokeDevice**](doc/DevicesApi.md#revokedevice) | **DELETE** /api/v1/devices/{id} | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
+[*IncidentsApi*](doc/IncidentsApi.md) | [**closeIncident**](doc/IncidentsApi.md#closeincident) | **POST** /api/v1/incidents/{id}/close | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**createIncident**](doc/IncidentsApi.md#createincident) | **POST** /api/v1/bf-days/{day}/incidents | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**discardIncident**](doc/IncidentsApi.md#discardincident) | **POST** /api/v1/incidents/{id}/discard | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**getIncident**](doc/IncidentsApi.md#getincident) | **GET** /api/v1/incidents/{id} | 
@@ -132,6 +133,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [AcknowledgeAlarm200Response](doc/AcknowledgeAlarm200Response.md)
+ - [CloseIncident200Response](doc/CloseIncident200Response.md)
  - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateIncidentRequest](doc/CreateIncidentRequest.md)
  - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)

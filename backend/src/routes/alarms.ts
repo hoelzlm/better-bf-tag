@@ -37,6 +37,10 @@ function incidentNotFound(): ApiError {
   return new ApiError(404, 'not_found', 'Einsatz nicht gefunden.');
 }
 
+function incidentNotAlarmable(): ApiError {
+  return new ApiError(409, 'incident_not_alarmable', 'Einsatz ist nicht alarmierbar.');
+}
+
 function alarmNotFound(): ApiError {
   return new ApiError(404, 'not_found', 'Alarmierung nicht gefunden.');
 }
@@ -133,16 +137,51 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
           throw new ApiError(409, 'bf_day_not_running', 'BF-Tag läuft nicht.');
         }
 
-        const now = fastify.clock.now();
-        const [updatedIncident] = await tx
-          .update(incident)
-          .set({ state: 'running', updatedAt: now })
-          .where(and(eq(incident.id, incidentRow.id), eq(incident.state, 'draft')))
-          .returning();
-        if (!updatedIncident) {
-          throw new ApiError(409, 'invalid_state_transition', 'Einsatz wurde bereits alarmiert.');
+        // ADR 0019: Nachalarmierung bei laufendem Einsatz. `closed`/
+        // `discarded` sind nie alarmierbar; `draft` löst den Erstalarm aus
+        // (Zustandswechsel), `running` eine Nachalarmierung (kein
+        // Zustandswechsel).
+        if (incidentRow.state === 'closed' || incidentRow.state === 'discarded') {
+          throw incidentNotAlarmable();
         }
-        const runningIncident = updatedIncident as IncidentRow;
+
+        // Fahrzeuge nur einmal pro Einsatz (ADR 0019): ersetzt für
+        // Nachalarmierungen den Doppelklick-Schutz des Zustandswechsels.
+        const alreadyAlarmedVehicleRows = await tx
+          .select({ vehicleId: alarmVehicle.vehicleId })
+          .from(alarmVehicle)
+          .innerJoin(alarm, eq(alarmVehicle.alarmId, alarm.id))
+          .where(and(eq(alarm.incidentId, incidentRow.id), eq(alarm.state, 'triggered')));
+        const alreadyAlarmedVehicleIds = new Set(alreadyAlarmedVehicleRows.map(r => r.vehicleId));
+        for (const id of vehicleIds) {
+          if (alreadyAlarmedVehicleIds.has(id)) {
+            throw new ApiError(
+              409,
+              'vehicle_already_alarmed',
+              'Fahrzeug ist bereits bei diesem Einsatz alarmiert.'
+            );
+          }
+        }
+
+        const now = fastify.clock.now();
+        let runningIncident: IncidentRow;
+        let incidentJustStarted = false;
+        if (incidentRow.state === 'draft') {
+          const [updatedIncident] = await tx
+            .update(incident)
+            .set({ state: 'running', updatedAt: now })
+            .where(and(eq(incident.id, incidentRow.id), eq(incident.state, 'draft')))
+            .returning();
+          if (!updatedIncident) {
+            throw new ApiError(409, 'invalid_state_transition', 'Einsatz wurde bereits alarmiert.');
+          }
+          runningIncident = updatedIncident as IncidentRow;
+          incidentJustStarted = true;
+        } else {
+          // state === 'running' (closed/discarded already rejected above):
+          // Nachalarmierung ohne Zustandswechsel.
+          runningIncident = incidentRow;
+        }
 
         const [alarmRow] = await tx
           .insert(alarm)
@@ -166,10 +205,23 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
         // Empfänger einfrieren (ADR 0017): Besatzung der aktuellen Schicht,
         // gefiltert auf die alarmierten Fahrzeuge, pro Person dedupliziert
         // (erstes Fahrzeug nach sort_order — `loadCurrentCrewAssignments`
-        // already orders by vehicle.sort_order).
+        // already orders by vehicle.sort_order). ADR 0019: Personen, die
+        // bereits Empfänger einer `triggered` Alarmierung dieses Einsatzes
+        // sind, werden ausgelassen (keine doppelten Empfänger bei
+        // Nachalarmierungen); `double_crewed` wird dadurch automatisch nur
+        // über die neuen Empfänger berechnet.
+        const alreadyRecipientRows = await tx
+          .select({ personId: alarmRecipient.personId })
+          .from(alarmRecipient)
+          .innerJoin(alarm, eq(alarmRecipient.alarmId, alarm.id))
+          .where(and(eq(alarm.incidentId, incidentRow.id), eq(alarm.state, 'triggered')));
+        const alreadyRecipientPersonIds = new Set(alreadyRecipientRows.map(r => r.personId));
+
         const vehicleIdSet = new Set(vehicleIds);
         const crew = await loadCurrentCrewAssignments(tx, now);
-        const alarmedCrew = crew.filter(c => vehicleIdSet.has(c.vehicleId));
+        const alarmedCrew = crew.filter(
+          c => vehicleIdSet.has(c.vehicleId) && !alreadyRecipientPersonIds.has(c.personId)
+        );
 
         const vehicleIdsByPerson = new Map<string, string[]>();
         const firstAssignmentByPerson = new Map<string, { vehicleId: string; function: string }>();
@@ -224,7 +276,11 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
           }));
         }
 
-        await emit('incident.updated', null, incidentUpdatedEventOpts(runningIncident));
+        // ADR 0019: Nachalarmierungen (running -> running) lösen kein
+        // `incident.updated` aus — nur der Erstalarm (draft -> running).
+        if (incidentJustStarted) {
+          await emit('incident.updated', null, incidentUpdatedEventOpts(runningIncident));
+        }
 
         const [alarmJson] = await loadAlarms(tx, { alarmIds: [alarmRow.id] });
         if (!alarmJson) {

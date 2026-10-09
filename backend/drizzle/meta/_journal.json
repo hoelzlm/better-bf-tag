@@ -64,6 +64,13 @@
       "when": 1791534983308,
       "tag": "0008_ancient_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791536664665,
+      "tag": "0009_low_riptide",
+      "breakpoints": true
     }
   ]
 }

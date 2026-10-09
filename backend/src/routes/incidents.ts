@@ -1,7 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { and, asc, eq, max } from 'drizzle-orm';
-import { incident } from '../db/schema.js';
+import { incident, alarm } from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import type { AuthContext } from '../access/authenticate.js';
 import { errorResponseSchema } from '../access/schemas.js';
@@ -25,6 +25,10 @@ import {
 const incidentListResponseSchema = z.array(incidentJsonSchema);
 const incidentWithAlarmsJsonSchema = incidentJsonSchema.extend({
   alarms: z.array(alarmJsonSchema),
+});
+const closeIncidentResponseSchema = z.object({
+  incident: incidentJsonSchema,
+  discarded_alarm_ids: z.array(z.string()),
 });
 
 function incidentNotFound(): ApiError {
@@ -272,6 +276,69 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         const incidentRow = row as IncidentRow;
         await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
         return toIncidentJson(incidentRow, { includeScript: true });
+      });
+    }
+  );
+
+  fastify.post(
+    '/incidents/:id/close',
+    {
+      preHandler: [requireAuth(), requirePermission('dispatch')],
+      schema: {
+        operationId: 'closeIncident',
+        tags: ['incidents'],
+        params: incidentIdParamsSchema,
+        response: {
+          200: closeIncidentResponseSchema,
+          403: errorResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async request => {
+      return fastify.realtime.mutate(async (tx, emit) => {
+        const existing = await loadIncidentRow(tx, request.params.id);
+        if (!existing) {
+          throw incidentNotFound();
+        }
+
+        const now = fastify.clock.now();
+        const [row] = await tx
+          .update(incident)
+          .set({ state: 'closed', closedAt: now, updatedAt: now })
+          .where(and(eq(incident.id, existing.id), eq(incident.state, 'running')))
+          .returning();
+        if (!row) {
+          throw new ApiError(
+            409,
+            'invalid_state_transition',
+            'Einsatz kann nur aus dem laufenden Zustand geschlossen werden.'
+          );
+        }
+        const incidentRow = row as IncidentRow;
+
+        // Geplante Alarmierungen verwerfen (ADR 0019); das Löschen der
+        // zugehörigen Jobs kommt mit Ticket 11.
+        const discarded = await tx
+          .update(alarm)
+          .set({ state: 'discarded' })
+          .where(and(eq(alarm.incidentId, incidentRow.id), eq(alarm.state, 'planned')))
+          .returning({ id: alarm.id });
+        const discardedAlarmIds = discarded.map(r => r.id);
+
+        await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
+        await emit('incident.closed', { id: incidentRow.id });
+
+        // TODO(T10-2, ADR 0019 "Abschlussvorschlag"): if the incident was
+        // close-suggested before this close, emit
+        // `incident.close_suggested { id, suggested: false }` here, after
+        // `incident.closed`. `computeCloseSuggested` doesn't exist yet.
+
+        return {
+          incident: toIncidentJson(incidentRow, { includeScript: true }),
+          discarded_alarm_ids: discardedAlarmIds,
+        };
       });
     }
   );
