@@ -13,6 +13,7 @@ import {
   bigint,
   primaryKey,
   customType,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -304,6 +305,15 @@ export const alarm = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     pushDelivered: integer('push_delivered').notNull().default(0),
     pushRejected: integer('push_rejected').notNull().default(0),
+    // Zeitgesteuerte Alarmierung (ADR 0022): relative Alarmierungen verweisen
+    // auf ihre Basis-Alarmierung (Erstalarm); wird die Basis gelöscht,
+    // bleibt die abhängige Alarmierung erhalten, nur ohne Basis
+    // (`set null`) — in der Praxis sollte das nie vorkommen, da eine
+    // Alarmierung nie gelöscht wird (nur `discarded`).
+    relativeToAlarmId: uuid('relative_to_alarm_id').references((): AnyPgColumn => alarm.id, {
+      onDelete: 'set null',
+    }),
+    offsetMinutes: integer('offset_minutes'),
   },
   table => [index('alarm_incident_idx').on(table.incidentId)]
 );

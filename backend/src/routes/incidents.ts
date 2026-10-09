@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { and, asc, eq, max } from 'drizzle-orm';
+import { and, asc, eq, max, or } from 'drizzle-orm';
 import { incident, alarm } from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import type { AuthContext } from '../access/authenticate.js';
@@ -118,14 +118,20 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
       }
       return fastify.db.transaction(async tx => {
         const row = await loadVisibleIncident(tx, request.params.id, principal);
-        const alarms = await loadAlarms(tx, { incidentIds: [row.id] });
+        const canSeeFullScript = canSeeScript(principal);
+        let alarms = await loadAlarms(tx, { incidentIds: [row.id] });
+        if (!canSeeFullScript) {
+          // ADR 0022: planned/missed/discarded Alarmierungen gehören zum
+          // Drehbuch — nur `triggered` ist für Mannschaft/Monitor sichtbar.
+          alarms = alarms.filter(a => a.state === 'triggered');
+        }
         alarms.sort((a, b) => {
           const at = a.triggered_at ?? '';
           const bt = b.triggered_at ?? '';
           if (at !== bt) return at.localeCompare(bt);
           return 0;
         });
-        return { ...toIncidentJson(row, { includeScript: canSeeScript(principal) }), alarms };
+        return { ...toIncidentJson(row, { includeScript: canSeeFullScript }), alarms };
       });
     }
   );
@@ -278,7 +284,28 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         }
 
         const incidentRow = row as IncidentRow;
+
+        // Geplante und verpasste Alarmierungen verwerfen (ADR 0022), je ein
+        // `alarm.discarded`-Event.
+        const discarded = await tx
+          .update(alarm)
+          .set({ state: 'discarded' })
+          .where(
+            and(
+              eq(alarm.incidentId, incidentRow.id),
+              or(eq(alarm.state, 'planned'), eq(alarm.state, 'missed'))
+            )
+          )
+          .returning({ id: alarm.id });
+
         await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
+        for (const alarmId of discarded) {
+          await emit(
+            'alarm.discarded',
+            { alarm_id: alarmId.id, incident_id: incidentRow.id },
+            { audience: scriptAudience }
+          );
+        }
         return toIncidentJson(incidentRow, { includeScript: true });
       });
     }
@@ -327,16 +354,28 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         }
         const incidentRow = row as IncidentRow;
 
-        // Geplante Alarmierungen verwerfen (ADR 0019); das Löschen der
-        // zugehörigen Jobs kommt mit Ticket 11.
+        // Geplante und verpasste Alarmierungen verwerfen (ADR 0022): ihre
+        // Jobs werden gelöscht, je ein `alarm.discarded`-Event.
         const discarded = await tx
           .update(alarm)
           .set({ state: 'discarded' })
-          .where(and(eq(alarm.incidentId, incidentRow.id), eq(alarm.state, 'planned')))
+          .where(
+            and(
+              eq(alarm.incidentId, incidentRow.id),
+              or(eq(alarm.state, 'planned'), eq(alarm.state, 'missed'))
+            )
+          )
           .returning({ id: alarm.id });
         const discardedAlarmIds = discarded.map(r => r.id);
 
         await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
+        for (const alarmId of discardedAlarmIds) {
+          await emit(
+            'alarm.discarded',
+            { alarm_id: alarmId, incident_id: incidentRow.id },
+            { audience: scriptAudience }
+          );
+        }
         await emit('incident.closed', { id: incidentRow.id });
 
         await emitCloseSuggestionChanges(tx, emit, [incidentRow.id], closeSuggestedBefore);

@@ -104,32 +104,57 @@ Liste, der Einzelabruf antwortet 404 `not_found`).
 | PATCH | `/incidents/{id}` | Einsatzvorbereitung, Leitstelle, Admin | Meldebild/Drehbuch bearbeiten, nur `draft`/`running`; sonst 409 `incident_not_editable` |
 | POST | `/incidents/{id}/discard` | Einsatzvorbereitung, Leitstelle, Admin | nur `draft`, sonst 409 `invalid_state_transition` |
 | POST | `/incidents/{id}/close` | Leitstelle, Admin | Einsatz schließen (ADR 0019), siehe unten |
-| POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm und Nachalarmierung (ADR 0017, ADR 0019), siehe unten |
+| POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm, Nachalarmierung und Planung (ADR 0017, ADR 0019, [ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md)), siehe unten |
+| PATCH | `/alarms/{id}` | Leitstelle, Admin | geplante Alarmierung ändern (ADR 0022), siehe unten |
+| POST | `/alarms/{id}/discard` | Leitstelle, Admin | geplante/verpasste Alarmierung verwerfen (ADR 0022), siehe unten |
 | POST | `/alarms/{id}/acknowledge` | Empfänger | Quittierung (ADR 0017), siehe unten |
 | POST | `/incidents/{id}/copy` | Einsatzvorbereitung | in einen anderen BF-Tag kopieren (später) |
 | POST | `/incidents/{id}/ready` | Einsatzvorbereitung | Bereitmeldung (später) |
 
-#### Erstalarm und Nachalarmierung: `POST /incidents/{id}/alarms` (ADR 0017, [ADR 0019](adr/0019-nachalarmierung-abschluss.md))
+#### Erstalarm, Nachalarmierung und Planung: `POST /incidents/{id}/alarms` (ADR 0017, [ADR 0019](adr/0019-nachalarmierung-abschluss.md), [ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md))
 
-Body `{ id?: uuid, vehicle_ids: uuid[] }`. `scheduled_at` ist in diesem Ticket **nicht** erlaubt
-(400 `validation_error`; Planung kommt mit Ticket 11). `id` ist ein vom Client erzeugter
-Idempotenz-Schlüssel: existiert bereits eine Alarmierung mit dieser `id` für denselben Einsatz,
-antwortet der Server 200 mit genau dieser Alarmierung, ohne Event; für einen anderen Einsatz 409
-`conflict`.
+Body `{ id?: uuid, vehicle_ids: uuid[], scheduled_at?: string, offset_minutes?: number }`.
+`scheduled_at` (absoluter Zeitpunkt) und `offset_minutes` (relativ zum Erstalarm/zur frühesten
+geplanten Alarmierung ohne eigene Basis) schließen sich gegenseitig aus (400 `validation_error`,
+wenn beide gesetzt sind). Werden beide ausgelassen, wird sofort alarmiert (bisheriges Verhalten).
+`id` ist ein vom Client erzeugter Idempotenz-Schlüssel: existiert bereits eine Alarmierung mit
+dieser `id` für denselben Einsatz, antwortet der Server 200 mit genau dieser Alarmierung, ohne
+Event; für einen anderen Einsatz 409 `conflict`.
 
 Zustandsprüfungen (in dieser Reihenfolge, alles in einer Transaktion):
 
 1. Einsatz unbekannt bzw. für den Aufrufer unsichtbar → 404.
 2. `vehicle_ids`: unbekannte ID → 400 `validation_error`; inaktives Fahrzeug → 409
    `vehicle_inactive`.
-3. Der BF-Tag des Einsatzes muss `running` sein, sonst 409 `bf_day_not_running`.
+3. Planen (`scheduled_at`/`offset_minutes` gesetzt) ist bereits vor Beginn des BF-Tags erlaubt
+   (BF-Tag `planning` oder `running`); sofortiges Alarmieren weiterhin nur während der BF-Tag
+   `running` ist. Sonst 409 `bf_day_not_running`.
 4. Idempotenz-`id`-Wiederholung zuerst (s.o.), danach: Einsatz `closed`/`discarded` → 409
    `incident_not_alarmable`. Einsatz `draft` → Erstalarm, Zustandswechsel nach `running` (löst
    `incident.updated` aus). Einsatz `running` → **Nachalarmierung**, kein Zustandswechsel, kein
-   `incident.updated` — nur `alarm.triggered`.
-5. Steht eines der `vehicle_ids` bereits in einer `triggered` Alarmierung desselben Einsatzes
-   (Erstalarm oder frühere Nachalarmierung) → 409 `vehicle_already_alarmed`. Das ersetzt für
-   Nachalarmierungen den Doppelklick-Schutz, den der Zustandswechsel beim Erstalarm bietet.
+   `incident.updated` — nur `alarm.triggered`. Planung löst keinen Zustandswechsel aus, egal
+   welchen Zustand der Einsatz hat.
+5. Steht eines der `vehicle_ids` bereits in einer `triggered` **oder `planned`** Alarmierung
+   desselben Einsatzes → 409 `vehicle_already_alarmed`. Das ersetzt für Nachalarmierungen den
+   Doppelklick-Schutz, den der Zustandswechsel beim Erstalarm bietet, und verhindert, dass ein
+   Fahrzeug doppelt eingeplant wird.
+6. Bei `offset_minutes`: gibt es keinen Erstalarm (`triggered`) und keine geplante Alarmierung
+   ohne eigene Basis (`planned`, `relative_to_alarm_id = null`) für den Einsatz → 409
+   `no_first_alarm`.
+7. Der berechnete bzw. übergebene `scheduled_at` liegt nicht in der Zukunft → 409
+   `scheduled_at_in_past`.
+
+Eine geplante Alarmierung (`state: "planned"`) hat keine Empfänger und löst keinen Push/keine
+Benachrichtigung aus. Sie wird zum `scheduled_at`-Zeitpunkt von einem Scheduler ausgelöst (Ticket
+11-2) und durchläuft dann denselben Auslöse-Pfad wie eine sofortige Alarmierung (Empfänger
+einfrieren, Push, `alarm.triggered`). Wird der Zeitpunkt verpasst (Einsatz schließt vorher, oder
+der Scheduler erreicht sie nicht mehr rechtzeitig), wechselt sie nach `missed` und danach auf
+`discarded`, sobald sie explizit verworfen wird oder der Einsatz schließt.
+
+Sichtbarkeit: `planned`/`missed`/`discarded` Alarmierungen erscheinen nur im vollen Drehbuch
+(Einsatzvorbereitung/Leitstelle/Admin, `GET /incidents/{id}`, `GET /snapshot` → `scheduled_alarms`)
+— für Mannschaft/Monitor sind in `alarms` nur `triggered` Alarmierungen enthalten. `alarm.planned`
+und `alarm.discarded` Events gehen nur an dieses Drehbuch-Publikum.
 
 Empfänger werden zum Auslösezeitpunkt aus der aktuellen Schicht eingefroren (gefiltert auf die
 alarmierten Fahrzeuge, pro Person dedupliziert auf das erste Fahrzeug nach `sort_order`) und
@@ -143,7 +168,8 @@ Antwort 201 (200 bei Wiederholung über `id`):
 
 ```json
 { "alarm": { "id": "…", "incident_id": "…", "state": "triggered", "scheduled_at": null,
-             "triggered_at": "…", "vehicle_ids": ["…"],
+             "triggered_at": "…", "relative_to_alarm_id": null, "offset_minutes": null,
+             "vehicle_ids": ["…"],
              "recipients": [{ "person_id": "…", "display_name": "…", "vehicle_id": "…",
                               "function": "GF", "has_device": true, "acknowledged_at": null }],
              "push_delivered": 3, "push_rejected": 1 },
@@ -158,7 +184,24 @@ auf mehr als einem der alarmierten Fahrzeuge sitzen (bei Wiederholung über `id`
 `push_delivered`/`push_rejected` ([ADR 0018](adr/0018-push-alarm-zustellung.md)): Der Handler
 wartet den Push-Versand an alle Empfänger-Geräte ab (Gesamt-Timeout 10 s) und liefert die
 Antwort erst danach mit den aktuellen Zählern aus. Bei der idempotenten Wiederholung (200) wird
-nicht erneut gesendet, die Zähler bleiben die des ersten Versands.
+nicht erneut gesendet, die Zähler bleiben die des ersten Versands. Für geplante Alarmierungen
+entfällt das (keine Empfänger vor dem Auslösen).
+
+#### Geplante Alarmierung ändern: `PATCH /alarms/{id}` ([ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md))
+
+Body `{ vehicle_ids?: uuid[], scheduled_at?: string, offset_minutes?: number }`. Nur für
+Alarmierungen im Zustand `planned`, sonst 409 `alarm_not_planned`. `scheduled_at` ist nur für
+absolute Alarmierungen (ohne `relative_to_alarm_id`) erlaubt, `offset_minutes` nur für relative
+(400 `validation_error` sonst). Dieselben Prüfungen wie beim Anlegen (Fahrzeuge, BF-Tag-Zustand,
+`scheduled_at_in_past`, `vehicle_already_alarmed`). Ändert sich der Zeitpunkt, werden alle
+relativen Alarmierungen, die sich auf diese Alarmierung beziehen (`relative_to_alarm_id`), in
+derselben Transaktion neu berechnet und per `alarm.planned` gemeldet. Antwort 200 `{ alarm }`.
+
+#### Geplante/verpasste Alarmierung verwerfen: `POST /alarms/{id}/discard` ([ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md))
+
+Nur für `planned`/`missed`, sonst 409 `invalid_state_transition`. Setzt `state: "discarded"` und
+kaskadiert auf alle `planned` Alarmierungen, die sich relativ auf diese beziehen (werden ebenfalls
+`discarded`, je ein eigenes `alarm.discarded` Event). Antwort 200 `{ alarm }`.
 
 #### Quittierung: `POST /alarms/{id}/acknowledge` (ADR 0017)
 
