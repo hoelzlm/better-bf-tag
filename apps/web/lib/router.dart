@@ -11,6 +11,7 @@ import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
 import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
+import 'screens/shifts_screen.dart';
 import 'screens/slides_screen.dart';
 import 'screens/vehicles_screen.dart';
 
@@ -81,6 +82,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               person.permission != Permission.admin) {
             return '/admin';
           }
+          final isSchichtenRoute = state.matchedLocation == '/admin/schichten';
+          if (isSchichtenRoute &&
+              person.permission != Permission.admin &&
+              person.permission != Permission.dispatch) {
+            return '/admin';
+          }
           return null;
       }
     },
@@ -122,6 +129,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/slides',
         builder: (context, state) =>
             const _SessionGate(child: SlidesScreen()),
+      ),
+      GoRoute(
+        path: '/admin/schichten',
+        builder: (context, state) =>
+            const _SessionGate(child: ShiftsScreen()),
       ),
       GoRoute(
         path: '/monitor',

@@ -26,6 +26,13 @@ class LageScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Lage'),
         actions: [
+          if (permission == Permission.dispatch || permission == Permission.admin)
+            IconButton(
+              key: const Key('nav-schichten'),
+              icon: const Icon(Icons.schedule),
+              tooltip: 'Schichten',
+              onPressed: () => context.go('/admin/schichten'),
+            ),
           if (permission == Permission.admin) ...[
             IconButton(
               key: const Key('nav-fahrzeuge'),
