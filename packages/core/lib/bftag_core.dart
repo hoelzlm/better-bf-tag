@@ -8,6 +8,7 @@ export 'src/api/dio_provider.dart';
 export 'src/api/monitor_admin_repository.dart';
 export 'src/api/person_admin_repository.dart';
 export 'src/api/shift_repository.dart';
+export 'src/api/slide_admin_repository.dart';
 export 'src/api/slide_image_loader.dart';
 export 'src/api/vehicle_admin_repository.dart';
 export 'src/auth/auth_session_binding.dart';
