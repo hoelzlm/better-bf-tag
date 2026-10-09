@@ -15,6 +15,7 @@ class ApnsPushService implements PushService {
 
   final _tokenRefreshController = StreamController<String>.broadcast();
   final _alarmOpenedController = StreamController<String>.broadcast();
+  final _testAlarmReceivedController = StreamController<void>.broadcast();
   bool _handlerInstalled = false;
 
   void _ensureHandler() {
@@ -26,6 +27,8 @@ class ApnsPushService implements PushService {
           _tokenRefreshController.add(call.arguments as String);
         case 'onAlarmOpened':
           _alarmOpenedController.add(call.arguments as String);
+        case 'testAlarmReceived':
+          _testAlarmReceivedController.add(null);
       }
       return null;
     });
@@ -54,4 +57,10 @@ class ApnsPushService implements PushService {
 
   @override
   Stream<String> get onAlarmOpened => _alarmOpenedController.stream;
+
+  @override
+  Stream<void> get onTestAlarmReceived {
+    _ensureHandler();
+    return _testAlarmReceivedController.stream;
+  }
 }

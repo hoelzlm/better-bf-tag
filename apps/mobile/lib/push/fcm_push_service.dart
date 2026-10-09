@@ -52,4 +52,12 @@ class FcmPushService implements PushService {
       .map((message) => message.data['alarm_id'] as String?)
       .where((alarmId) => alarmId != null)
       .cast<String>();
+
+  // Only a `test_alarm` (ADR 0021) is relevant in the foreground: a real
+  // Alarmierung is already shown via the WS-driven Alarm-Vollbild (ADR
+  // 0017), so other foreground messages are intentionally ignored.
+  @override
+  Stream<void> get onTestAlarmReceived => FirebaseMessaging.onMessage
+      .where((message) => message.data['type'] == 'test_alarm')
+      .map((_) {});
 }

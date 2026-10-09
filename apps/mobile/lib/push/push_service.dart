@@ -27,6 +27,12 @@ abstract class PushService {
   /// Emits an `alarm_id` whenever the user taps a push notification while
   /// the app is running (foreground or background).
   Stream<String> get onAlarmOpened;
+
+  /// Emits whenever a `test_alarm` push (ADR 0021) is received while the
+  /// app is in the foreground. There is no `alarm_id` for a test alarm --
+  /// callers only use this to show a "Testalarm empfangen" notice and
+  /// (on Android) play the alarm sound once.
+  Stream<void> get onTestAlarmReceived;
 }
 
 /// No-op [PushService] for platforms/builds without push credentials
@@ -49,6 +55,9 @@ class NoopPushService implements PushService {
 
   @override
   Stream<String> get onAlarmOpened => const Stream<String>.empty();
+
+  @override
+  Stream<void> get onTestAlarmReceived => const Stream<void>.empty();
 }
 
 const _fcmApiKey = String.fromEnvironment('FCM_API_KEY');
