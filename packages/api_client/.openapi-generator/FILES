@@ -6,6 +6,7 @@ lib/src/api/auth_api.dart
 lib/src/api/bf_days_api.dart
 lib/src/api/devices_api.dart
 lib/src/api/health_api.dart
+lib/src/api/incidents_api.dart
 lib/src/api/monitors_api.dart
 lib/src/api/persons_api.dart
 lib/src/api/shifts_api.dart
@@ -20,6 +21,7 @@ lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/date_serializer.dart
 lib/src/model/create_bf_day_request.dart
+lib/src/model/create_incident_request.dart
 lib/src/model/create_monitor_pairing_code201_response.dart
 lib/src/model/create_monitor_request.dart
 lib/src/model/create_pairing_code201_response.dart
@@ -36,6 +38,7 @@ lib/src/model/get_me200_response.dart
 lib/src/model/get_me200_response_crew_assignments_inner.dart
 lib/src/model/get_snapshot200_response.dart
 lib/src/model/get_snapshot200_response_bf_day.dart
+lib/src/model/get_snapshot200_response_incidents_inner.dart
 lib/src/model/get_snapshot200_response_shifts_inner.dart
 lib/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart
 lib/src/model/get_snapshot200_response_slides_inner.dart
@@ -65,6 +68,7 @@ lib/src/model/set_shift_crew_request_assignments_inner.dart
 lib/src/model/set_vehicle_status_request.dart
 lib/src/model/set_web_access_request.dart
 lib/src/model/update_bf_day_request.dart
+lib/src/model/update_incident_request.dart
 lib/src/model/update_person_request.dart
 lib/src/model/update_slide_request.dart
 lib/src/model/update_vehicle_request.dart
