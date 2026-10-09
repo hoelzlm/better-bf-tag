@@ -215,6 +215,55 @@ Map<String, dynamic> _bfDayUpdatedEvent({
   };
 }
 
+Incident _incident({
+  String id = 'i1',
+  String bfDayId = 'day1',
+  int number = 1,
+  IncidentState state = IncidentState.draft,
+  String? script,
+}) {
+  return Incident(
+    id: id,
+    bfDayId: bfDayId,
+    number: number,
+    keyword: 'Verkehrsunfall',
+    address: 'Hauptstraße 1',
+    report: 'PKW gegen Baum',
+    script: script,
+    state: state,
+    createdAt: DateTime.parse('2026-10-08T18:00:00Z'),
+    updatedAt: DateTime.parse('2026-10-08T18:00:00Z'),
+  );
+}
+
+Map<String, dynamic> _incidentJson(Incident incident) {
+  return incident.toJson();
+}
+
+Map<String, dynamic> _incidentCreatedEvent({
+  required int seq,
+  required Incident incident,
+}) {
+  return {
+    'seq': seq,
+    'type': 'incident.created',
+    'at': '2026-10-08T18:00:00Z',
+    'data': _incidentJson(incident),
+  };
+}
+
+Map<String, dynamic> _incidentUpdatedEvent({
+  required int seq,
+  required Incident incident,
+}) {
+  return {
+    'seq': seq,
+    'type': 'incident.updated',
+    'at': '2026-10-08T18:00:00Z',
+    'data': _incidentJson(incident),
+  };
+}
+
 /// Builds a [RealtimeClient] wired to a fresh [_FakeConnector] and a
 /// snapshot loader whose completers are collected in [snapshotCompleters]
 /// (one appended per call, in order) so tests can control exactly when
@@ -784,6 +833,195 @@ void main() {
         client.dispose();
       });
     });
+
+    test(
+      'incident.created with state running upserts into the running BF-Tag',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(seq: 10, vehicles: const [], bfDay: _bfDay()),
+          );
+          async.flushMicrotasks();
+
+          connector.connections.single.emit(
+            _incidentCreatedEvent(
+              seq: 11,
+              incident: _incident(state: IncidentState.running),
+            ),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.incidents, hasLength(1));
+          expect(states.last.incidents.single.id, 'i1');
+
+          client.dispose();
+        });
+      },
+    );
+
+    test('incident.created with state draft is ignored', () {
+      fakeAsync((async) {
+        final completers = <Completer<Snapshot>>[];
+        final connector = _FakeConnector();
+        final client = _buildClient(
+          snapshotCompleters: completers,
+          connector: connector,
+        );
+        final states = <RealtimeState>[];
+        client.states.listen(states.add);
+
+        client.start();
+        async.flushMicrotasks();
+        completers[0].complete(
+          Snapshot(seq: 10, vehicles: const [], bfDay: _bfDay()),
+        );
+        async.flushMicrotasks();
+
+        connector.connections.single.emit(
+          _incidentCreatedEvent(
+            seq: 11,
+            incident: _incident(state: IncidentState.draft),
+          ),
+        );
+        async.flushMicrotasks();
+
+        expect(states.last.incidents, isEmpty);
+
+        client.dispose();
+      });
+    });
+
+    test(
+      'incident.updated transitioning to closed removes the incident',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(
+              seq: 10,
+              vehicles: const [],
+              bfDay: _bfDay(),
+              incidents: [_incident(state: IncidentState.running)],
+            ),
+          );
+          async.flushMicrotasks();
+          expect(states.last.incidents, hasLength(1));
+
+          connector.connections.single.emit(
+            _incidentUpdatedEvent(
+              seq: 11,
+              incident: _incident(state: IncidentState.closed),
+            ),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.incidents, isEmpty);
+
+          client.dispose();
+        });
+      },
+    );
+
+    test(
+      'incident.updated transitioning to discarded removes the incident',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(
+              seq: 10,
+              vehicles: const [],
+              bfDay: _bfDay(),
+              incidents: [_incident(state: IncidentState.running)],
+            ),
+          );
+          async.flushMicrotasks();
+          expect(states.last.incidents, hasLength(1));
+
+          connector.connections.single.emit(
+            _incidentUpdatedEvent(
+              seq: 11,
+              incident: _incident(state: IncidentState.discarded),
+            ),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.incidents, isEmpty);
+
+          client.dispose();
+        });
+      },
+    );
+
+    test(
+      'incident.updated for a different BF-Tag is ignored',
+      () {
+        fakeAsync((async) {
+          final completers = <Completer<Snapshot>>[];
+          final connector = _FakeConnector();
+          final client = _buildClient(
+            snapshotCompleters: completers,
+            connector: connector,
+          );
+          final states = <RealtimeState>[];
+          client.states.listen(states.add);
+
+          client.start();
+          async.flushMicrotasks();
+          completers[0].complete(
+            Snapshot(seq: 10, vehicles: const [], bfDay: _bfDay(id: 'day1')),
+          );
+          async.flushMicrotasks();
+
+          connector.connections.single.emit(
+            _incidentUpdatedEvent(
+              seq: 11,
+              incident: _incident(
+                bfDayId: 'other-day',
+                state: IncidentState.running,
+              ),
+            ),
+          );
+          async.flushMicrotasks();
+
+          expect(states.last.incidents, isEmpty);
+          expect(states.last.seq, 11, reason: 'seq still advances');
+
+          client.dispose();
+        });
+      },
+    );
   });
 
   group('defaultReconnectBackoff', () {
