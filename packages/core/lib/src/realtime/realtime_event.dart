@@ -1,4 +1,7 @@
+import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
+import '../domain/shift.dart';
+import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 
 /// Server->client WebSocket event, per ADR 0009 ("Client-Protokoll") and
@@ -48,6 +51,38 @@ sealed class RealtimeEvent {
           at: at,
           vehicle: Vehicle.fromJson(map),
         );
+      case 'slides.changed':
+        final map = data as Map<String, dynamic>;
+        final slidesJson = map['slides'] as List<dynamic>;
+        return SlidesChanged(
+          seq: seq,
+          at: at,
+          slides: slidesJson
+              .map((e) => Slide.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      case 'shift.crew_changed':
+        final map = data as Map<String, dynamic>;
+        return ShiftCrewChanged(
+          seq: seq,
+          at: at,
+          shift: Shift.fromJson(map),
+        );
+      case 'shift.deleted':
+        final map = data as Map<String, dynamic>;
+        return ShiftDeleted(
+          seq: seq,
+          at: at,
+          id: map['id'] as String,
+          bfDayId: map['bf_day_id'] as String,
+        );
+      case 'bf_day.updated':
+        final map = data as Map<String, dynamic>;
+        return BfDayUpdated(
+          seq: seq,
+          at: at,
+          bfDay: BfDay.fromJson(map),
+        );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
     }
@@ -81,6 +116,58 @@ class VehicleUpdated extends RealtimeEvent {
   });
 
   final Vehicle vehicle;
+}
+
+/// `slides.changed` (ADR 0014): any change to Folien (create, edit, delete,
+/// reorder, image set/cleared). Carries the full, replacement list of
+/// active Folien, sorted by `sort_order` -- the client replaces its list
+/// wholesale rather than merging.
+class SlidesChanged extends RealtimeEvent {
+  const SlidesChanged({
+    required super.seq,
+    required super.at,
+    required this.slides,
+  });
+
+  final List<Slide> slides;
+}
+
+/// `shift.crew_changed` (ADR 0013): a shift was created/edited or its crew
+/// was replaced, or a participant removal cleared some of its crew.
+/// Carries the full shift with crew.
+class ShiftCrewChanged extends RealtimeEvent {
+  const ShiftCrewChanged({
+    required super.seq,
+    required super.at,
+    required this.shift,
+  });
+
+  final Shift shift;
+}
+
+/// `shift.deleted` (ADR 0013): a shift was deleted.
+class ShiftDeleted extends RealtimeEvent {
+  const ShiftDeleted({
+    required super.seq,
+    required super.at,
+    required this.id,
+    required this.bfDayId,
+  });
+
+  final String id;
+  final String bfDayId;
+}
+
+/// `bf_day.updated` (ADR 0013): a BF-Tag was created, edited, started, or
+/// ended. Carries the full BF-Tag.
+class BfDayUpdated extends RealtimeEvent {
+  const BfDayUpdated({
+    required super.seq,
+    required super.at,
+    required this.bfDay,
+  });
+
+  final BfDay bfDay;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

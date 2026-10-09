@@ -45,6 +45,18 @@ class LageScreen extends ConsumerWidget {
               tooltip: 'Monitore',
               onPressed: () => context.go('/admin/monitors'),
             ),
+            IconButton(
+              key: const Key('nav-bf-tage'),
+              icon: const Icon(Icons.event),
+              tooltip: 'BF-Tage',
+              onPressed: () => context.go('/admin/bf-tage'),
+            ),
+            IconButton(
+              key: const Key('nav-slides'),
+              icon: const Icon(Icons.slideshow),
+              tooltip: 'Folien',
+              onPressed: () => context.go('/admin/slides'),
+            ),
           ],
           if (displayName.isNotEmpty)
             Padding(

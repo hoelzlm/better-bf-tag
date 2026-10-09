@@ -251,6 +251,56 @@ Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
   );
 }
 
+Slide _slideFromApi(GetSnapshot200ResponseSlidesInner s) {
+  final image = s.image;
+  return Slide(
+    id: s.id,
+    title: s.title,
+    body: s.body,
+    durationSeconds: s.durationSeconds,
+    sortOrder: s.sortOrder,
+    active: s.active,
+    image: image == null
+        ? null
+        : SlideImage(
+            contentType: image.contentType,
+            sizeBytes: image.sizeBytes,
+            version: image.version,
+          ),
+  );
+}
+
+BfDay? _bfDayFromApi(GetSnapshot200ResponseBfDay? day) {
+  if (day == null) return null;
+  return BfDay(
+    id: day.id,
+    name: day.name,
+    startsAt: DateTime.parse(day.startsAt),
+    endsAt: DateTime.parse(day.endsAt),
+    state: BfDayState.fromWire(day.state.name),
+  );
+}
+
+Shift _shiftFromApi(GetSnapshot200ResponseShiftsInner s) {
+  return Shift(
+    id: s.id,
+    bfDayId: s.bfDayId,
+    name: s.name,
+    startsAt: DateTime.parse(s.startsAt),
+    endsAt: DateTime.parse(s.endsAt),
+    crew: s.crew
+        .map(
+          (c) => CrewAssignment(
+            vehicleId: c.vehicleId,
+            personId: c.personId,
+            displayName: c.displayName,
+            function: c.function_,
+          ),
+        )
+        .toList(),
+  );
+}
+
 /// The [WebSocketConnector] used by the monitor's [RealtimeClient].
 /// Production uses the real [connectWebSocket]; tests override this with a
 /// fake connector instead of hitting the network.
@@ -279,6 +329,10 @@ RealtimeClient? _buildMonitorRealtimeClient(Ref ref) {
       return Snapshot(
         seq: data.seq,
         vehicles: data.vehicles.map(_vehicleFromApi).toList(),
+        slides: data.slides.map(_slideFromApi).toList(),
+        bfDay: _bfDayFromApi(data.bfDay),
+        shifts: data.shifts.map(_shiftFromApi).toList(),
+        currentShiftId: data.currentShiftId,
       );
     },
     accessToken: () async {
@@ -307,6 +361,30 @@ Stream<List<Vehicle>> _buildMonitorVehicles(Ref ref) {
     return Stream.value(const <Vehicle>[]);
   }
   return client.states.map((state) => state.vehicles);
+}
+
+Stream<List<Slide>> _buildMonitorSlides(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Slide>[]);
+  }
+  return client.states.map((state) => state.slides);
+}
+
+Stream<BfDay?> _buildMonitorBfDay(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(null);
+  }
+  return client.states.map((state) => state.bfDay);
+}
+
+Stream<List<Shift>> _buildMonitorShifts(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Shift>[]);
+  }
+  return client.states.map((state) => state.shifts);
 }
 
 Stream<ConnectionStatus> _buildMonitorConnection(Ref ref) {
@@ -356,6 +434,9 @@ List<Override> monitorProviderOverrides({
     ),
     realtimeClientProvider.overrideWith(_buildMonitorRealtimeClient),
     vehiclesProvider.overrideWith(_buildMonitorVehicles),
+    slidesProvider.overrideWith(_buildMonitorSlides),
+    bfDayProvider.overrideWith(_buildMonitorBfDay),
+    shiftsProvider.overrideWith(_buildMonitorShifts),
     realtimeConnectionProvider.overrideWith(_buildMonitorConnection),
   ];
 }

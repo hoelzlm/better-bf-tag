@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import '../domain/bf_day.dart';
+import '../domain/shift.dart';
+import '../domain/slide.dart';
 import '../domain/vehicle.dart';
 import 'realtime_event.dart';
 import 'snapshot.dart';
@@ -14,17 +17,25 @@ import 'web_socket_connection.dart';
 enum ConnectionStatus { connecting, live, reconnecting, revoked }
 
 /// A snapshot of realtime state: the current `seq`, the active vehicles
-/// (sorted by `sort_order`), and the connection status.
+/// (sorted by `sort_order`), the active Folien (ADR 0014, in `sort_order`),
+/// the running BF-Tag and its shifts (ADR 0013),
+/// and the connection status.
 class RealtimeState {
   const RealtimeState({
     required this.seq,
     required this.vehicles,
     required this.status,
+    this.slides = const <Slide>[],
+    this.bfDay,
+    this.shifts = const [],
   });
 
   final int seq;
   final List<Vehicle> vehicles;
+  final List<Slide> slides;
   final ConnectionStatus status;
+  final BfDay? bfDay;
+  final List<Shift> shifts;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -90,6 +101,9 @@ class RealtimeClient {
 
   int _lastSeq = 0;
   final Map<String, Vehicle> _vehiclesById = <String, Vehicle>{};
+  List<Slide> _slides = <Slide>[];
+  BfDay? _bfDay;
+  final Map<String, Shift> _shiftsById = <String, Shift>{};
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -174,6 +188,11 @@ class RealtimeClient {
       _vehiclesById
         ..clear()
         ..addEntries(snapshot.vehicles.map((v) => MapEntry(v.id, v)));
+      _slides = List.of(snapshot.slides);
+      _bfDay = snapshot.bfDay;
+      _shiftsById
+        ..clear()
+        ..addEntries(snapshot.shifts.map((s) => MapEntry(s.id, s)));
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -261,6 +280,21 @@ class RealtimeClient {
           _vehiclesById[vehicleId] =
               existing.copyWith(status: status, statusChangedAt: at);
         }
+      case SlidesChanged(:final slides):
+        _slides = List.of(slides);
+      case ShiftCrewChanged(:final shift):
+        // Upsert only if it belongs to the currently running BF-Tag;
+        // otherwise ignore (ADR 0013, "Client-Verhalten").
+        if (_bfDay != null && shift.bfDayId == _bfDay!.id) {
+          _shiftsById[shift.id] = shift;
+        }
+      case ShiftDeleted(:final id):
+        _shiftsById.remove(id);
+      case BfDayUpdated():
+        // The current BF-Tag/shifts changed in a way too varied to patch
+        // incrementally (new BF-Tag started, time range changed, ...);
+        // reload the whole snapshot (ADR 0013), same mechanism as a gap.
+        _handleGap();
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
         break;
@@ -309,13 +343,25 @@ class RealtimeClient {
     return vehicles;
   }
 
+  List<Shift> get _sortedShifts {
+    final shifts = _shiftsById.values.toList()
+      ..sort((a, b) {
+        final byStart = a.startsAt.compareTo(b.startsAt);
+        return byStart != 0 ? byStart : a.name.compareTo(b.name);
+      });
+    return shifts;
+  }
+
   void _emit() {
     if (_disposed) return;
     _controller.add(
       RealtimeState(
         seq: _lastSeq,
         vehicles: _sortedActiveVehicles,
+        slides: List.of(_slides),
         status: _status,
+        bfDay: _bfDay,
+        shifts: _sortedShifts,
       ),
     );
   }

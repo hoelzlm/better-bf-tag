@@ -8,6 +8,7 @@ part of 'serializers.dart';
 
 Serializers _$serializers =
     (Serializers().toBuilder()
+          ..add(CreateBfDayRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
           ..add(CreateMonitorRequest.serializer)
           ..add(CreatePairingCode201Response.serializer)
@@ -16,6 +17,7 @@ Serializers _$serializers =
           ..add(CreatePersonRequest.serializer)
           ..add(CreatePersonRequestPermissionEnum.serializer)
           ..add(CreatePersonRequestPersonTypeEnum.serializer)
+          ..add(CreateSlideRequest.serializer)
           ..add(CreateVehicleRequest.serializer)
           ..add(DeviceRefreshRequest.serializer)
           ..add(GetHealth200Response.serializer)
@@ -26,9 +28,20 @@ Serializers _$serializers =
           ..add(GetHealth503ResponseStatusEnum.serializer)
           ..add(GetMe200Response.serializer)
           ..add(GetSnapshot200Response.serializer)
+          ..add(GetSnapshot200ResponseBfDay.serializer)
+          ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
+          ..add(GetSnapshot200ResponseShiftsInner.serializer)
+          ..add(GetSnapshot200ResponseShiftsInnerCrewInner.serializer)
+          ..add(GetSnapshot200ResponseSlidesInner.serializer)
+          ..add(GetSnapshot200ResponseSlidesInnerImage.serializer)
           ..add(GetVehicleStatusHistory200ResponseInner.serializer)
           ..add(GetVehicleStatusHistory200ResponseInnerSource_Enum.serializer)
+          ..add(ListBfDays200ResponseInner.serializer)
+          ..add(ListBfDays200ResponseInnerStateEnum.serializer)
           ..add(ListMonitors200ResponseInner.serializer)
+          ..add(ListParticipants200ResponseInner.serializer)
+          ..add(ListParticipants200ResponseInnerPermissionEnum.serializer)
+          ..add(ListParticipants200ResponseInnerPersonTypeEnum.serializer)
           ..add(ListPersonDevices200ResponseInner.serializer)
           ..add(ListPersonDevices200ResponseInnerPlatformEnum.serializer)
           ..add(ListPersons200ResponseInner.serializer)
@@ -48,12 +61,18 @@ Serializers _$serializers =
           ..add(Pair200Response.serializer)
           ..add(PairRequest.serializer)
           ..add(PairRequestPlatformEnum.serializer)
+          ..add(ReorderSlidesRequest.serializer)
           ..add(ReorderVehiclesRequest.serializer)
+          ..add(SetParticipantsRequest.serializer)
+          ..add(SetShiftCrewRequest.serializer)
+          ..add(SetShiftCrewRequestAssignmentsInner.serializer)
           ..add(SetVehicleStatusRequest.serializer)
           ..add(SetWebAccessRequest.serializer)
+          ..add(UpdateBfDayRequest.serializer)
           ..add(UpdatePersonRequest.serializer)
           ..add(UpdatePersonRequestPermissionEnum.serializer)
           ..add(UpdatePersonRequestPersonTypeEnum.serializer)
+          ..add(UpdateSlideRequest.serializer)
           ..add(UpdateVehicleRequest.serializer)
           ..addBuilderFactory(
             const FullType(BuiltList, const [
@@ -63,9 +82,41 @@ Serializers _$serializers =
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseShiftsInnerCrewInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseShiftsInnerCrewInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
               const FullType(ListVehicles200ResponseInner),
             ]),
             () => ListBuilder<ListVehicles200ResponseInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseSlidesInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseSlidesInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseShiftsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseShiftsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(SetShiftCrewRequestAssignmentsInner),
+            ]),
+            () => ListBuilder<SetShiftCrewRequestAssignmentsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [const FullType(String)]),

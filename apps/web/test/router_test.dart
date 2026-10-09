@@ -70,6 +70,42 @@ class _FakeMonitorAdminRepository implements MonitorAdminRepository {
       throw UnimplementedError();
 }
 
+class _FakeBfDayAdminRepository implements BfDayAdminRepository {
+  @override
+  Future<List<BfDay>> list() async => const [];
+
+  @override
+  Future<BfDay> create({
+    required String name,
+    required DateTime startsAt,
+    required DateTime endsAt,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> update(
+    String id, {
+    String? name,
+    DateTime? startsAt,
+    DateTime? endsAt,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> start(String id) => throw UnimplementedError();
+
+  @override
+  Future<BfDay> end(String id) => throw UnimplementedError();
+
+  @override
+  Future<List<Participant>> listParticipants(String day) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> setParticipants(String day, List<String> personIds) =>
+      throw UnimplementedError();
+}
+
 Future<void> _pumpAppAt(
   WidgetTester tester, {
   required SessionState session,
@@ -92,6 +128,9 @@ Future<void> _pumpAppAt(
         ),
         monitorAdminRepositoryProvider.overrideWithValue(
           _FakeMonitorAdminRepository(),
+        ),
+        bfDayAdminRepositoryProvider.overrideWithValue(
+          _FakeBfDayAdminRepository(),
         ),
       ],
       child: const BftagWebApp(),
@@ -243,6 +282,54 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Fahrzeuge'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'non-admin navigating to /admin/bf-tage is redirected to /admin',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-bf-tage')), findsNothing);
+
+      final context = tester.element(find.text('Keine laufenden Einsätze'));
+      context.go('/admin/bf-tage');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'admin can navigate to /admin/bf-tage via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.admin,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-bf-tage')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-bf-tage')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('BF-Tage'), findsOneWidget);
     },
   );
 }

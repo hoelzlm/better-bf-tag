@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import 'monitor/local_storage_token_store.dart';
 import 'monitor/monitor_session.dart';
+import 'screens/bf_days_screen.dart';
 import 'screens/lage_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
 import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
+import 'screens/slides_screen.dart';
 import 'screens/vehicles_screen.dart';
 
 /// Bridges a Riverpod provider's changes into a [Listenable] that go_router's
@@ -69,7 +71,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           final isPersonsRoute = state.matchedLocation == '/admin/persons';
           final isMonitorsRoute =
               state.matchedLocation == '/admin/monitors';
-          if ((isFahrzeugeRoute || isPersonsRoute || isMonitorsRoute) &&
+          final isBfTageRoute = state.matchedLocation == '/admin/bf-tage';
+          final isSlidesRoute = state.matchedLocation == '/admin/slides';
+          if ((isFahrzeugeRoute ||
+                  isPersonsRoute ||
+                  isMonitorsRoute ||
+                  isBfTageRoute ||
+                  isSlidesRoute) &&
               person.permission != Permission.admin) {
             return '/admin';
           }
@@ -104,6 +112,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/monitors',
         builder: (context, state) =>
             const _SessionGate(child: MonitorsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/bf-tage',
+        builder: (context, state) =>
+            const _SessionGate(child: BfDaysScreen()),
+      ),
+      GoRoute(
+        path: '/admin/slides',
+        builder: (context, state) =>
+            const _SessionGate(child: SlidesScreen()),
       ),
       GoRoute(
         path: '/monitor',

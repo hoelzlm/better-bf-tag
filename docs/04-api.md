@@ -65,15 +65,16 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | DELETE | `/devices/{id}` |
 | GET/POST/PATCH/DELETE | `/vehicles[/{id}]` |
 | GET/POST/PATCH/DELETE | `/monitors[/{id}]`, `POST /monitors/{id}/pairing-code` |
-| GET/POST/PATCH/DELETE | `/slides[/{id}]`, `POST /slides/{id}/image` |
-| GET/POST/PATCH | `/bf-days[/{id}]` |
+| GET/POST/PATCH/DELETE | `/slides[/{id}]`, `PUT /slides/order`, `POST/DELETE /slides/{id}/image` (ADR 0014); `GET /slides/{id}/image` auch Monitor |
+| GET/POST/PATCH | `/bf-days[/{id}]` (GET: alle Personen) |
+| POST | `/bf-days/{id}/start`, `/bf-days/{id}/end` (ADR 0013) |
 | POST | `/bf-days/{id}/anonymize` (auch Leitstelle) |
 
 ### Pro BF-Tag
 
 | Methode | Pfad | Berechtigung |
 |---------|------|--------------|
-| GET/PUT | `/bf-days/{day}/participants` | Admin |
+| GET/PUT | `/bf-days/{day}/participants` | GET: Admin, Leitstelle; PUT: Admin |
 | GET | `/bf-days/{day}/shifts` | alle |
 | POST/PATCH/DELETE | `/bf-days/{day}/shifts[/{id}]` | Leitstelle |
 | PUT | `/shifts/{id}/crew` | Leitstelle; Body: Liste aus `{vehicle_id, person_id, function}` |
@@ -150,8 +151,10 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | `incident.close_suggested` | `{ id }` | Leitstelle |
 | `incident.closed` | `{ id }` | alle |
 | `vehicle.status_changed` | `{ vehicle_id, status, at }` | alle |
-| `shift.crew_changed` | Schicht + Besatzungen | alle |
-| `slides.changed` | – | Monitore |
+| `bf_day.updated` | BF-Tag | alle |
+| `shift.crew_changed` | Schicht + Besatzungen (auch bei Anlegen/Bearbeiten einer Schicht) | alle |
+| `shift.deleted` | `{ id, bf_day_id }` | alle |
+| `slides.changed` | `{ slides }` = alle aktiven Folien (ADR 0014) | alle |
 | `session.revoked` | – | betroffenes Gerät (kein `seq`, Verbindung wird danach mit Close-Code **4403** geschlossen) |
 | später: `announcement.created`, `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 

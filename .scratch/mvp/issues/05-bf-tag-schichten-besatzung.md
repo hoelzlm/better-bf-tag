@@ -4,7 +4,7 @@
 
 **Blocked by:** 03, 04
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] BF-Tag anlegen mit Name und Zeitraum; Zustände in Planung → läuft → beendet; höchstens ein BF-Tag läuft gleichzeitig
 - [ ] Teilnahmen pflegen (Personen ↔ BF-Tag)

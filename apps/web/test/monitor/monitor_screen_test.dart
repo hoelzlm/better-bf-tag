@@ -318,6 +318,46 @@ void main() {
     expect(find.text('HLF 1'), findsOneWidget);
   });
 
+  testWidgets(
+    'standby shows a slide from a fake snapshot (image loader is faked)',
+    (tester) async {
+      final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
+      env.adapter.pairBody = _pairResponseBody(
+        accessToken: 'at1',
+        refreshToken: 'rt1',
+        monitorId: 'mon1',
+      );
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'slides': [
+          {
+            'id': 'sl1',
+            'title': 'Hinweis',
+            'body': 'Willkommen beim **BF-Tag**',
+            'duration_seconds': 10,
+            'sort_order': 1,
+            'active': true,
+            'created_at': '2026-10-01T00:00:00Z',
+            'updated_at': '2026-10-01T00:00:00Z',
+          },
+        ],
+      };
+      await _pumpMonitor(tester, env);
+      await _activate(tester);
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'abcd-efgh',
+      );
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('slide-sl1')), findsOneWidget);
+      expect(find.text('Hinweis'), findsOneWidget);
+      expect(find.textContaining('Willkommen beim'), findsOneWidget);
+    },
+  );
+
   testWidgets('revoked signal shows the pairing screen with the gesperrt '
       'text and clears the store', (tester) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
@@ -452,6 +492,214 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(env.adapter.webAuthRefreshPaths, isEmpty);
+    },
+  );
+
+  Map<String, dynamic> bfDayJson({
+    String id = 'day1',
+    String name = 'BF-Tag 2026',
+    String state = 'running',
+  }) {
+    return {
+      'id': id,
+      'name': name,
+      'starts_at': '2026-10-09T00:00:00Z',
+      'ends_at': '2026-10-10T00:00:00Z',
+      'state': state,
+      'created_at': '2026-10-01T00:00:00Z',
+    };
+  }
+
+  Map<String, dynamic> shiftJson({
+    String id = 'shift1',
+    String bfDayId = 'day1',
+    String name = 'Tagschicht',
+    required String startsAt,
+    required String endsAt,
+    List<Map<String, dynamic>> crew = const [],
+  }) {
+    return {
+      'id': id,
+      'bf_day_id': bfDayId,
+      'name': name,
+      'starts_at': startsAt,
+      'ends_at': endsAt,
+      'crew': crew,
+    };
+  }
+
+  testWidgets(
+    'crew is shown for the current shift when a BF-Tag runs',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final env = _Env(clock: DateTime.utc(2026, 10, 9, 10, 0, 0));
+      env.adapter.pairBody = _pairResponseBody(
+        accessToken: 'at1',
+        refreshToken: 'rt1',
+        monitorId: 'mon1',
+      );
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': [
+          {
+            'id': 'v1',
+            'call_sign': 'Florian 1',
+            'short_name': 'HLF 1',
+            'type': 'HLF',
+            'status': 2,
+            'status_changed_at': null,
+            'sort_order': 1,
+            'active': true,
+          },
+        ],
+        'bf_day': bfDayJson(),
+        'shifts': [
+          shiftJson(
+            id: 'shift1',
+            startsAt: '2026-10-09T08:00:00Z',
+            endsAt: '2026-10-09T20:00:00Z',
+            crew: [
+              {
+                'vehicle_id': 'v1',
+                'person_id': 'p1',
+                'display_name': 'Max Mustermann',
+                'function': 'GF',
+              },
+            ],
+          ),
+        ],
+      };
+      await _pumpMonitor(tester, env);
+      await _activate(tester);
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'ABCDEFGH',
+      );
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('crew-panel-heading')), findsOneWidget);
+      expect(find.textContaining('Tagschicht'), findsOneWidget);
+      expect(find.textContaining('GF Max Mustermann'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'crew panel switches to the night shift once the clock passes its start',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final clockController = StreamController<DateTime>.broadcast();
+      addTearDown(clockController.close);
+      final env = _Env();
+      final adapter = env.adapter;
+      adapter.pairBody = _pairResponseBody(
+        accessToken: 'at1',
+        refreshToken: 'rt1',
+        monitorId: 'mon1',
+      );
+      adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': [
+          {
+            'id': 'v1',
+            'call_sign': 'Florian 1',
+            'short_name': 'HLF 1',
+            'type': 'HLF',
+            'status': 2,
+            'status_changed_at': null,
+            'sort_order': 1,
+            'active': true,
+          },
+        ],
+        'bf_day': bfDayJson(),
+        'shifts': [
+          shiftJson(
+            id: 'day-shift',
+            name: 'Tagschicht',
+            startsAt: '2026-10-09T00:00:00Z',
+            endsAt: '2026-10-09T22:00:00Z',
+            crew: const [],
+          ),
+          shiftJson(
+            id: 'night-shift',
+            name: 'Nachtschicht',
+            startsAt: '2026-10-09T22:00:00Z',
+            endsAt: '2026-10-10T06:00:00Z',
+            crew: const [],
+          ),
+        ],
+      };
+      final dio = Dio(BaseOptions(baseUrl: ''));
+      dio.httpClientAdapter = adapter;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...monitorProviderOverrides(tokenStore: env.tokenStore, dio: dio),
+            monitorPlatformProvider.overrideWithValue(env.platform),
+            monitorWebSocketConnectorProvider
+                .overrideWithValue((uri) => _FakeWsConnection()),
+            monitorClockProvider.overrideWith(
+              (ref) => clockController.stream,
+            ),
+          ],
+          child: const MaterialApp(home: MonitorScreen()),
+        ),
+      );
+      clockController.add(DateTime.utc(2026, 10, 9, 10, 0, 0));
+      await tester.pump();
+      await _activate(tester);
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'ABCDEFGH',
+      );
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
+
+      // The standby screen only subscribes to monitorClockProvider once
+      // mounted (after pairing); re-emit now that there's a listener.
+      clockController.add(DateTime.utc(2026, 10, 9, 10, 0, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Tagschicht'), findsOneWidget);
+
+      clockController.add(DateTime.utc(2026, 10, 9, 23, 0, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Nachtschicht'), findsOneWidget);
+      expect(find.textContaining('Tagschicht'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'crew panel is hidden when no BF-Tag is running',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final env = _Env(clock: DateTime.utc(2026, 10, 9, 10, 0, 0));
+      env.adapter.pairBody = _pairResponseBody(
+        accessToken: 'at1',
+        refreshToken: 'rt1',
+        monitorId: 'mon1',
+      );
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+      };
+      await _pumpMonitor(tester, env);
+      await _activate(tester);
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'ABCDEFGH',
+      );
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('crew-panel-heading')), findsNothing);
     },
   );
 }

@@ -11,8 +11,17 @@ import {
   smallint,
   integer,
   bigint,
+  primaryKey,
+  customType,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+
+/** Raw binary data (ADR 0014): Folienbilder liegen als `bytea` in Postgres. */
+const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return 'bytea';
+  },
+});
 
 export const personTypeEnum = pgEnum('person_type', ['youth', 'supervisor']);
 export const permissionEnum = pgEnum('permission', ['crew', 'preparation', 'dispatch', 'admin']);
@@ -27,6 +36,7 @@ export const vehicleStatusSourceEnum = pgEnum('vehicle_status_source', [
   'dispatch',
   'system',
 ]);
+export const bfDayStateEnum = pgEnum('bf_day_state', ['planning', 'running', 'ended']);
 
 export const fireDepartment = pgTable(
   'fire_department',
@@ -151,3 +161,99 @@ export const realtimeState = pgTable(
   },
   table => [check('realtime_state_single_row', sql`${table.id} = 1`)]
 );
+
+export const bfDay = pgTable(
+  'bf_day',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    state: bfDayStateEnum('state').notNull().default('planning'),
+    anonymizedAt: timestamp('anonymized_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  table => [
+    check('bf_day_period', sql`${table.endsAt} > ${table.startsAt}`),
+    // Partial unique index (ADR 0013): the database guarantees at most one
+    // running BF-Tag; the race is caught here and mapped to 409
+    // bf_day_already_running at the route layer.
+    uniqueIndex('bf_day_single_running')
+      .on(table.state)
+      .where(sql`${table.state} = 'running'`),
+  ]
+);
+
+export const participation = pgTable(
+  'participation',
+  {
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    personId: uuid('person_id')
+      .notNull()
+      .references(() => person.id),
+  },
+  table => [primaryKey({ columns: [table.bfDayId, table.personId] })]
+);
+
+export const shift = pgTable(
+  'shift',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  table => [
+    check('shift_period', sql`${table.endsAt} > ${table.startsAt}`),
+    index('shift_bf_day_idx').on(table.bfDayId),
+  ]
+);
+
+export const crewAssignment = pgTable(
+  'crew_assignment',
+  {
+    shiftId: uuid('shift_id')
+      .notNull()
+      .references(() => shift.id, { onDelete: 'cascade' }),
+    vehicleId: uuid('vehicle_id')
+      .notNull()
+      .references(() => vehicle.id),
+    personId: uuid('person_id')
+      .notNull()
+      .references(() => person.id),
+    function: text('function').notNull(),
+  },
+  table => [primaryKey({ columns: [table.shiftId, table.vehicleId, table.personId] })]
+);
+
+export const slide = pgTable(
+  'slide',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    durationSeconds: integer('duration_seconds').notNull().default(10),
+    sortOrder: integer('sort_order').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  table => [check('slide_duration_seconds_range', sql`${table.durationSeconds} between 3 and 300`)]
+);
+
+export const slideImage = pgTable('slide_image', {
+  slideId: uuid('slide_id')
+    .primaryKey()
+    .references(() => slide.id, { onDelete: 'cascade' }),
+  contentType: text('content_type').notNull(),
+  data: bytea('data').notNull(),
+  sha256: text('sha256').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+});
