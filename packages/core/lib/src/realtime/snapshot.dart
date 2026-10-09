@@ -1,4 +1,5 @@
 import '../domain/bf_day.dart';
+import '../domain/incident.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -14,7 +15,10 @@ import '../domain/vehicle.dart';
 /// [bfDay] (ADR 0013) is the currently running BF-Tag, or `null`; [shifts]
 /// holds all shifts of that BF-Tag with their crew (empty if none is
 /// running); [currentShiftId] is the id of the "aktuelle Schicht" at the
-/// time the snapshot was taken, per `currentShift`.
+/// time the snapshot was taken, per `currentShift`. [incidents] (ADR 0016)
+/// holds the `running` Einsätze of the running BF-Tag, sorted by `number`,
+/// with Drehbuch only when the caller may see it; empty when no BF-Tag is
+/// running.
 class Snapshot {
   const Snapshot({
     required this.seq,
@@ -23,6 +27,7 @@ class Snapshot {
     this.bfDay,
     this.shifts = const [],
     this.currentShiftId,
+    this.incidents = const <Incident>[],
   });
 
   final int seq;
@@ -31,4 +36,5 @@ class Snapshot {
   final BfDay? bfDay;
   final List<Shift> shifts;
   final String? currentShiftId;
+  final List<Incident> incidents;
 }

@@ -1,12 +1,14 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { asc, eq, inArray } from 'drizzle-orm';
-import { vehicle, slide, slideImage, bfDay, shift } from '../db/schema.js';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { vehicle, slide, slideImage, bfDay, shift, incident } from '../db/schema.js';
 import { requireAuth } from '../access/authenticate.js';
 import { vehicleSchema, toVehicleJson } from './vehicle-schemas.js';
 import { slideSchema, toSlideJson, type SlideRow } from './slide-schemas.js';
 import { bfDayJsonSchema, toBfDayJson } from './bf-day-schemas.js';
 import { loadShiftJson, shiftJsonSchema } from './shift-schemas.js';
+import { incidentJsonSchema, toIncidentJson, type IncidentRow } from './incident-schemas.js';
+import { canSeeScript } from '../incidents/visibility.js';
 import { currentShift } from '../shifts/current-shift.js';
 
 const snapshotResponseSchema = z.object({
@@ -16,6 +18,7 @@ const snapshotResponseSchema = z.object({
   bf_day: bfDayJsonSchema.nullable(),
   shifts: z.array(shiftJsonSchema),
   current_shift_id: z.string().nullable(),
+  incidents: z.array(incidentJsonSchema),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -31,7 +34,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
         },
       },
     },
-    async () => {
+    async request => {
       return fastify.db.transaction(
         async tx => {
           const seq = await fastify.realtime.currentSeq(tx);
@@ -71,6 +74,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
 
           let shiftsJson: Array<Awaited<ReturnType<typeof loadShiftJson>>> = [];
           let currentShiftId: string | null = null;
+          let incidentsJson: ReturnType<typeof toIncidentJson>[] = [];
 
           if (runningBfDay) {
             const shiftRows = await tx
@@ -94,6 +98,14 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
               fastify.clock.now()
             );
             currentShiftId = current ? current.id : null;
+
+            const includeScript = request.auth ? canSeeScript(request.auth) : false;
+            const incidentRows = (await tx
+              .select()
+              .from(incident)
+              .where(and(eq(incident.bfDayId, runningBfDay.id), eq(incident.state, 'running')))
+              .orderBy(asc(incident.number))) as IncidentRow[];
+            incidentsJson = incidentRows.map(row => toIncidentJson(row, { includeScript }));
           }
 
           return {
@@ -103,6 +115,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             bf_day: runningBfDay ? toBfDayJson(runningBfDay) : null,
             shifts: shiftsJson.filter((s): s is NonNullable<typeof s> => s !== undefined),
             current_shift_id: currentShiftId,
+            incidents: incidentsJson,
           };
         },
         { isolationLevel: 'repeatable read' }

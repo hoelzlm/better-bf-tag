@@ -4,14 +4,14 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Einsätze anlegen (Entwurf), bearbeiten (auch laufend, nicht abgeschlossen), verwerfen (nur Entwurf); Nummerierung pro BF-Tag
-- [ ] Einsatzliste im Web mit Filter Entwurf/laufend/abgeschlossen
-- [ ] Editor: Drehbuch-Feld visuell klar als „geheim“ abgesetzt
-- [ ] Serverseitige Filterung: Drehbuch fehlt in allen Antworten, Snapshots und Events für Mannschaft und Monitor
-- [ ] App: Einsatzliste und Einsatzdetail mit Meldebild; Drehbuch nur bei Einsatzvorbereitung/Leitstelle/Administrator
-- [ ] Events `incident.created`, `incident.updated` (Empfänger nach Berechtigung)
-- [ ] Tests: Berechtigungen (Einsatzvorbereitung/Leitstelle anlegen, Mannschaft nicht), Drehbuch-Filter auf jedem Weg (REST-Liste, Detail, Snapshot, WebSocket), Zustandsregeln beim Bearbeiten/Verwerfen
+- [x] Einsätze anlegen (Entwurf), bearbeiten (auch laufend, nicht abgeschlossen), verwerfen (nur Entwurf); Nummerierung pro BF-Tag
+- [x] Einsatzliste im Web mit Filter Entwurf/laufend/abgeschlossen
+- [x] Editor: Drehbuch-Feld visuell klar als „geheim“ abgesetzt
+- [x] Serverseitige Filterung: Drehbuch fehlt in allen Antworten, Snapshots und Events für Mannschaft und Monitor
+- [x] App: Einsatzliste und Einsatzdetail mit Meldebild; Drehbuch nur bei Einsatzvorbereitung/Leitstelle/Administrator
+- [x] Events `incident.created`, `incident.updated` (Empfänger nach Berechtigung)
+- [x] Tests: Berechtigungen (Einsatzvorbereitung/Leitstelle anlegen, Mannschaft nicht), Drehbuch-Filter auf jedem Weg (REST-Liste, Detail, Snapshot, WebSocket), Zustandsregeln beim Bearbeiten/Verwerfen
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`

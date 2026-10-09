@@ -9,6 +9,7 @@ import '../auth/paired_session.dart';
 import '../auth/session.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
+import '../domain/incident.dart';
 import '../domain/my_crew.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
@@ -81,6 +82,21 @@ Shift _shiftFromApi(GetSnapshot200ResponseShiftsInner s) {
   );
 }
 
+Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
+  return Incident.fromJson({
+    'id': i.id,
+    'bf_day_id': i.bfDayId,
+    'number': i.number,
+    'keyword': i.keyword,
+    'address': i.address,
+    'report': i.report,
+    'state': i.state.name,
+    'created_at': i.createdAt,
+    'updated_at': i.updatedAt,
+    if (i.script != null) 'script': i.script,
+  });
+}
+
 Snapshot _snapshotFromApi(GetSnapshot200Response data) {
   return Snapshot(
     seq: data.seq,
@@ -89,6 +105,7 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     bfDay: _bfDayFromApi(data.bfDay),
     shifts: data.shifts.map(_shiftFromApi).toList(),
     currentShiftId: data.currentShiftId,
+    incidents: data.incidents.map(_incidentFromApi).toList(),
   );
 }
 
@@ -192,6 +209,17 @@ final shiftsProvider = StreamProvider<List<Shift>>((ref) {
   return client.states.map((state) => state.shifts);
 });
 
+/// The running Einsätze of the currently running BF-Tag (ADR 0016), sorted
+/// by `number`, with Drehbuch only when permitted -- empty while signed
+/// out, before the first snapshot has loaded, or when none are running.
+final incidentsProvider = StreamProvider<List<Incident>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Incident>[]);
+  }
+  return client.states.map((state) => state.incidents);
+});
+
 /// The [RealtimeClient] for the current paired device session (mobile app,
 /// or the web monitor via Ticket 03), or `null` when unpaired. Mirrors
 /// [realtimeClientProvider] but is bound to [pairedSessionControllerProvider]
@@ -267,6 +295,18 @@ final pairedShiftsProvider = StreamProvider<List<Shift>>((ref) {
     return Stream.value(const <Shift>[]);
   }
   return client.states.map((state) => state.shifts);
+});
+
+/// The running Einsätze of the currently running BF-Tag from
+/// [pairedRealtimeClientProvider] -- empty while unpaired, before the
+/// first snapshot has loaded, or when none are running. Mirrors
+/// [incidentsProvider].
+final pairedIncidentsProvider = StreamProvider<List<Incident>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Incident>[]);
+  }
+  return client.states.map((state) => state.incidents);
 });
 
 /// How often [myCrewTickProvider] ticks, so [myCrewAssignmentsProvider]

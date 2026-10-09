@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import '../domain/bf_day.dart';
+import '../domain/incident.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -18,8 +19,8 @@ enum ConnectionStatus { connecting, live, reconnecting, revoked }
 
 /// A snapshot of realtime state: the current `seq`, the active vehicles
 /// (sorted by `sort_order`), the active Folien (ADR 0014, in `sort_order`),
-/// the running BF-Tag and its shifts (ADR 0013),
-/// and the connection status.
+/// the running BF-Tag and its shifts (ADR 0013), the running Einsätze of
+/// that BF-Tag (ADR 0016, sorted by `number`), and the connection status.
 class RealtimeState {
   const RealtimeState({
     required this.seq,
@@ -28,6 +29,7 @@ class RealtimeState {
     this.slides = const <Slide>[],
     this.bfDay,
     this.shifts = const [],
+    this.incidents = const <Incident>[],
   });
 
   final int seq;
@@ -36,6 +38,7 @@ class RealtimeState {
   final ConnectionStatus status;
   final BfDay? bfDay;
   final List<Shift> shifts;
+  final List<Incident> incidents;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -104,6 +107,7 @@ class RealtimeClient {
   List<Slide> _slides = <Slide>[];
   BfDay? _bfDay;
   final Map<String, Shift> _shiftsById = <String, Shift>{};
+  final Map<String, Incident> _incidentsById = <String, Incident>{};
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -193,6 +197,9 @@ class RealtimeClient {
       _shiftsById
         ..clear()
         ..addEntries(snapshot.shifts.map((s) => MapEntry(s.id, s)));
+      _incidentsById
+        ..clear()
+        ..addEntries(snapshot.incidents.map((i) => MapEntry(i.id, i)));
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -290,6 +297,10 @@ class RealtimeClient {
         }
       case ShiftDeleted(:final id):
         _shiftsById.remove(id);
+      case IncidentCreated(:final incident):
+        _applyIncident(incident);
+      case IncidentUpdated(:final incident):
+        _applyIncident(incident);
       case BfDayUpdated():
         // The current BF-Tag/shifts changed in a way too varied to patch
         // incrementally (new BF-Tag started, time range changed, ...);
@@ -298,6 +309,20 @@ class RealtimeClient {
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
         break;
+    }
+  }
+
+  /// Upserts [incident] if it's `running` and belongs to the currently
+  /// running BF-Tag, otherwise removes it (ADR 0016, "Snapshot"): covers
+  /// both a transition away from `running` (closed/discarded) and an
+  /// Einsatz belonging to a BF-Tag that isn't the running one.
+  void _applyIncident(Incident incident) {
+    final matchesRunningDay =
+        _bfDay != null && incident.bfDayId == _bfDay!.id;
+    if (incident.state == IncidentState.running && matchesRunningDay) {
+      _incidentsById[incident.id] = incident;
+    } else {
+      _incidentsById.remove(incident.id);
     }
   }
 
@@ -352,6 +377,12 @@ class RealtimeClient {
     return shifts;
   }
 
+  List<Incident> get _sortedIncidents {
+    final incidents = _incidentsById.values.toList()
+      ..sort((a, b) => a.number.compareTo(b.number));
+    return incidents;
+  }
+
   void _emit() {
     if (_disposed) return;
     _controller.add(
@@ -362,6 +393,7 @@ class RealtimeClient {
         status: _status,
         bfDay: _bfDay,
         shifts: _sortedShifts,
+        incidents: _sortedIncidents,
       ),
     );
   }
