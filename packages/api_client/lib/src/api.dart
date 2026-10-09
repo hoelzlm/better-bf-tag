@@ -9,6 +9,7 @@ import 'package:bftag_api_client/src/auth/api_key_auth.dart';
 import 'package:bftag_api_client/src/auth/basic_auth.dart';
 import 'package:bftag_api_client/src/auth/bearer_auth.dart';
 import 'package:bftag_api_client/src/auth/oauth.dart';
+import 'package:bftag_api_client/src/api/alarms_api.dart';
 import 'package:bftag_api_client/src/api/auth_api.dart';
 import 'package:bftag_api_client/src/api/bf_days_api.dart';
 import 'package:bftag_api_client/src/api/devices_api.dart';
@@ -73,6 +74,12 @@ class BftagApiClient {
     if (this.dio.interceptors.any((i) => i is ApiKeyAuthInterceptor)) {
       (this.dio.interceptors.firstWhere((element) => element is ApiKeyAuthInterceptor) as ApiKeyAuthInterceptor).apiKeys[name] = apiKey;
     }
+  }
+
+  /// Get AlarmsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AlarmsApi getAlarmsApi() {
+    return AlarmsApi(dio, serializers);
   }
 
   /// Get AuthApi instance, base route and serializer can be overridden by a given but be careful,

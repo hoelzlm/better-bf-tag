@@ -189,10 +189,11 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | Spalte | Typ | Hinweis |
 |--------|-----|---------|
 | id | uuid PK | |
-| incident_id | uuid FK | |
-| state | enum `planned`, `triggered`, `missed`, `discarded` | geplant / ausgelöst / verpasst / verworfen |
+| incident_id | uuid FK | cascade |
+| state | enum `alarm_state` (`planned`, `triggered`, `missed`, `discarded`) | geplant / ausgelöst / verpasst / verworfen |
 | scheduled_at | timestamptz null | null = sofort |
 | triggered_at | timestamptz null | |
+| created_at | timestamptz not null | |
 
 Die erste ausgelöste Alarmierung eines Einsatzes ist der **Erstalarm**, alle weiteren sind
 **Nachalarmierungen**. Das wird über die Reihenfolge abgeleitet, nicht gespeichert.
@@ -201,24 +202,26 @@ Die erste ausgelöste Alarmierung eines Einsatzes ist der **Erstalarm**, alle we
 
 | Spalte | Typ |
 |--------|-----|
-| alarm_id | uuid FK |
+| alarm_id | uuid FK (cascade) |
 | vehicle_id | uuid FK |
 | PK | (alarm_id, vehicle_id) |
 
-### `alarm_recipient` – Besatzung zum Alarmzeitpunkt und Quittierung
+### `alarm_recipient` – Empfänger zum Alarmzeitpunkt und Quittierung
 
 Wird beim Auslösen aus der Besatzung der aktiven Schicht **eingefroren**. Ein späterer
-Schichtwechsel ändert die Empfänger nicht.
+Schichtwechsel ändert die Empfänger nicht. Eine Person ist pro Alarmierung genau einmal
+Empfänger (Doppelbesetzung auf mehreren alarmierten Fahrzeugen führt zu einer Zeile mit dem
+ersten Fahrzeug nach `sort_order`, s. ADR 0017).
 
 | Spalte | Typ | Hinweis |
 |--------|-----|---------|
-| alarm_id | uuid FK | |
+| alarm_id | uuid FK (cascade) | |
 | person_id | uuid FK | |
-| vehicle_id | uuid FK | |
-| function | text | |
-| has_device | bool | false = „kein Gerät“, zählt nicht als fehlende Quittierung |
+| vehicle_id | uuid FK | erstes alarmiertes Fahrzeug nach `sort_order`, auf dem die Person sitzt |
+| function | text not null | |
+| has_device | bool not null | false = „kein Gerät“, zählt nicht als fehlende Quittierung |
 | acknowledged_at | timestamptz null | Quittierung |
-| PK | (alarm_id, person_id, vehicle_id) | |
+| PK | (alarm_id, person_id) | **nicht** `vehicle_id` – sonst wäre eine Person pro Alarmierung mehrfach Empfänger (ADR 0017) |
 
 ## Später
 

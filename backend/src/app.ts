@@ -30,6 +30,7 @@ import { bfDayRoutes } from './routes/bf-days.js';
 import { slideRoutes } from './routes/slides.js';
 import { shiftRoutes } from './routes/shifts.js';
 import { incidentRoutes } from './routes/incidents.js';
+import { alarmRoutes } from './routes/alarms.js';
 import { Realtime } from './realtime/realtime.js';
 import { createWsPlugin } from './realtime/ws.js';
 import './access/authenticate.js';
@@ -142,6 +143,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await fastify.register(slideRoutes, { prefix: '/api/v1' });
     await fastify.register(shiftRoutes, { prefix: '/api/v1' });
     await fastify.register(incidentRoutes, { prefix: '/api/v1' });
+    await fastify.register(alarmRoutes, { prefix: '/api/v1' });
 
     // The generated spec is served for the Dart client codegen; hidden from
     // the spec itself to avoid a self-referential entry.

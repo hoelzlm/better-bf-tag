@@ -9,7 +9,9 @@ import { resolveBfDay } from '../bf-days/resolve-day.js';
 import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
 import { canSeeIncident, canSeeScript, scriptAudience } from '../incidents/visibility.js';
+import { incidentUpdatedEventOpts } from '../incidents/incident-events.js';
 import type { IncidentRow } from '../incidents/incident-json.js';
+import { alarmJsonSchema, loadAlarms } from './alarm-schemas.js';
 import {
   incidentJsonSchema,
   toIncidentJson,
@@ -21,6 +23,9 @@ import {
 } from './incident-schemas.js';
 
 const incidentListResponseSchema = z.array(incidentJsonSchema);
+const incidentWithAlarmsJsonSchema = incidentJsonSchema.extend({
+  alarms: z.array(alarmJsonSchema),
+});
 
 function incidentNotFound(): ApiError {
   return new ApiError(404, 'not_found', 'Einsatz nicht gefunden.');
@@ -93,7 +98,7 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         tags: ['incidents'],
         params: incidentIdParamsSchema,
         response: {
-          200: incidentJsonSchema,
+          200: incidentWithAlarmsJsonSchema,
           404: errorResponseSchema,
         },
       },
@@ -105,7 +110,14 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
       }
       return fastify.db.transaction(async tx => {
         const row = await loadVisibleIncident(tx, request.params.id, principal);
-        return toIncidentJson(row, { includeScript: canSeeScript(principal) });
+        const alarms = await loadAlarms(tx, { incidentIds: [row.id] });
+        alarms.sort((a, b) => {
+          const at = a.triggered_at ?? '';
+          const bt = b.triggered_at ?? '';
+          if (at !== bt) return at.localeCompare(bt);
+          return 0;
+        });
+        return { ...toIncidentJson(row, { includeScript: canSeeScript(principal) }), alarms };
       });
     }
   );
@@ -213,11 +225,7 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         }
 
         const incidentRow = row as IncidentRow;
-        await emit('incident.updated', null, {
-          audience: p =>
-            scriptAudience(p) || incidentRow.state === 'running' || incidentRow.state === 'closed',
-          project: p => toIncidentJson(incidentRow, { includeScript: scriptAudience(p) }),
-        });
+        await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
         return toIncidentJson(incidentRow, { includeScript: true });
       });
     }
@@ -262,11 +270,7 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         }
 
         const incidentRow = row as IncidentRow;
-        await emit('incident.updated', null, {
-          audience: p =>
-            scriptAudience(p) || incidentRow.state === 'running' || incidentRow.state === 'closed',
-          project: p => toIncidentJson(incidentRow, { includeScript: scriptAudience(p) }),
-        });
+        await emit('incident.updated', null, incidentUpdatedEventOpts(incidentRow));
         return toIncidentJson(incidentRow, { includeScript: true });
       });
     }

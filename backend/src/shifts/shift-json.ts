@@ -8,7 +8,8 @@ import type { Tx } from '../realtime/realtime.js';
  */
 const FUNCTION_ORDER = ['GF', 'MA', 'ATF', 'ATM', 'WTF', 'WTM', 'ME'];
 
-function functionRank(fn: string): number {
+/** Shared with `backend/src/alarms/alarm-json.ts` (ADR 0017: Empfänger-Reihenfolge). */
+export function functionRank(fn: string): number {
   const idx = FUNCTION_ORDER.indexOf(fn);
   return idx === -1 ? FUNCTION_ORDER.length : idx;
 }
