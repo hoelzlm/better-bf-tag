@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'monitor/local_storage_token_store.dart';
 import 'monitor/monitor_session.dart';
 import 'screens/bf_days_screen.dart';
+import 'screens/incidents_screen.dart';
 import 'screens/lage_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
@@ -88,6 +89,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               person.permission != Permission.dispatch) {
             return '/admin';
           }
+          final isEinsaetzeRoute = state.matchedLocation == '/admin/einsaetze';
+          if (isEinsaetzeRoute && person.permission == Permission.crew) {
+            return '/admin';
+          }
           return null;
       }
     },
@@ -134,6 +139,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/schichten',
         builder: (context, state) =>
             const _SessionGate(child: ShiftsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/einsaetze',
+        builder: (context, state) =>
+            const _SessionGate(child: IncidentsScreen()),
       ),
       GoRoute(
         path: '/monitor',

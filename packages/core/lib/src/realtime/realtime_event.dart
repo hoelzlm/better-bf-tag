@@ -1,5 +1,6 @@
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
+import '../domain/incident.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -82,6 +83,20 @@ sealed class RealtimeEvent {
           seq: seq,
           at: at,
           bfDay: BfDay.fromJson(map),
+        );
+      case 'incident.created':
+        final map = data as Map<String, dynamic>;
+        return IncidentCreated(
+          seq: seq,
+          at: at,
+          incident: Incident.fromJson(map),
+        );
+      case 'incident.updated':
+        final map = data as Map<String, dynamic>;
+        return IncidentUpdated(
+          seq: seq,
+          at: at,
+          incident: Incident.fromJson(map),
         );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
@@ -168,6 +183,34 @@ class BfDayUpdated extends RealtimeEvent {
   });
 
   final BfDay bfDay;
+}
+
+/// `incident.created` (ADR 0016): a new Einsatz was created (always
+/// `draft`, so clients that track only `running` Einsätze ignore it).
+/// Only delivered to `preparation`/`dispatch`/`admin`, always with
+/// Drehbuch.
+class IncidentCreated extends RealtimeEvent {
+  const IncidentCreated({
+    required super.seq,
+    required super.at,
+    required this.incident,
+  });
+
+  final Incident incident;
+}
+
+/// `incident.updated` (ADR 0016): an Einsatz was edited or discarded.
+/// Delivered to `preparation`/`dispatch`/`admin` always, and to
+/// Mannschaft/Monitor when `state` is `running` or `closed`; Drehbuch is
+/// projected per connection (present only with permission).
+class IncidentUpdated extends RealtimeEvent {
+  const IncidentUpdated({
+    required super.seq,
+    required super.at,
+    required this.incident,
+  });
+
+  final Incident incident;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

@@ -22,13 +22,31 @@ class LageScreen extends ConsumerWidget {
     };
     final permissionLabel = permission?.label ?? '';
 
+    // Compact so the growing number of /admin/* nav entries keeps fitting
+    // the AppBar's trailing area (which doesn't scroll/wrap on overflow).
+    const navButtonStyle = ButtonStyle(
+      visualDensity: VisualDensity.compact,
+      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 4)),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lage'),
         actions: [
+          if (permission == Permission.preparation ||
+              permission == Permission.dispatch ||
+              permission == Permission.admin)
+            IconButton(
+              key: const Key('nav-einsaetze'),
+              style: navButtonStyle,
+              icon: const Icon(Icons.local_fire_department),
+              tooltip: 'Einsätze',
+              onPressed: () => context.go('/admin/einsaetze'),
+            ),
           if (permission == Permission.dispatch || permission == Permission.admin)
             IconButton(
               key: const Key('nav-schichten'),
+              style: navButtonStyle,
               icon: const Icon(Icons.schedule),
               tooltip: 'Schichten',
               onPressed: () => context.go('/admin/schichten'),
@@ -36,30 +54,35 @@ class LageScreen extends ConsumerWidget {
           if (permission == Permission.admin) ...[
             IconButton(
               key: const Key('nav-fahrzeuge'),
+              style: navButtonStyle,
               icon: const Icon(Icons.fire_truck),
               tooltip: 'Fahrzeuge',
               onPressed: () => context.go('/admin/fahrzeuge'),
             ),
             IconButton(
               key: const Key('nav-persons'),
+              style: navButtonStyle,
               icon: const Icon(Icons.people),
               tooltip: 'Personen',
               onPressed: () => context.go('/admin/persons'),
             ),
             IconButton(
               key: const Key('nav-monitors'),
+              style: navButtonStyle,
               icon: const Icon(Icons.tv),
               tooltip: 'Monitore',
               onPressed: () => context.go('/admin/monitors'),
             ),
             IconButton(
               key: const Key('nav-bf-tage'),
+              style: navButtonStyle,
               icon: const Icon(Icons.event),
               tooltip: 'BF-Tage',
               onPressed: () => context.go('/admin/bf-tage'),
             ),
             IconButton(
               key: const Key('nav-slides'),
+              style: navButtonStyle,
               icon: const Icon(Icons.slideshow),
               tooltip: 'Folien',
               onPressed: () => context.go('/admin/slides'),
@@ -67,13 +90,14 @@ class LageScreen extends ConsumerWidget {
           ],
           if (displayName.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Center(
                 child: Text('$displayName ($permissionLabel)'),
               ),
             ),
           IconButton(
             key: const Key('logout'),
+            style: navButtonStyle,
             icon: const Icon(Icons.logout),
             tooltip: 'Abmelden',
             onPressed: () {
