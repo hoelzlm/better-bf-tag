@@ -4,14 +4,14 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Anonymisierung nur für beendete BF-Tage; setzt `anonymized_at`; nicht wiederholbar
-- [ ] Löscht Teilnahmen, Besatzungen und Empfänger/Quittierungen des BF-Tags
-- [ ] Entfernt den Personenbezug in der Statushistorie
-- [ ] Löscht Personen anderer Feuerwehren ohne weitere Teilnahme
-- [ ] Behält Einsätze (Meldebild, Drehbuch), Alarmierungen und Fahrzeuge
-- [ ] Bestätigungsdialog im Web mit Zusammenfassung, was gelöscht wird
-- [ ] Tests: Ergebnis pro Datenart, Berechtigung (Leitstelle/Admin), laufender BF-Tag nicht anonymisierbar
+- [x] Anonymisierung nur für beendete BF-Tage; setzt `anonymized_at`; nicht wiederholbar
+- [x] Löscht Teilnahmen, Besatzungen und Empfänger/Quittierungen des BF-Tags
+- [x] Entfernt den Personenbezug in der Statushistorie
+- [x] Löscht Personen anderer Feuerwehren ohne weitere Teilnahme
+- [x] Behält Einsätze (Meldebild, Drehbuch), Alarmierungen und Fahrzeuge
+- [x] Bestätigungsdialog im Web mit Zusammenfassung, was gelöscht wird
+- [x] Tests: Ergebnis pro Datenart, Berechtigung (Leitstelle/Admin), laufender BF-Tag nicht anonymisierbar
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`
