@@ -8,6 +8,7 @@ import { slideSchema, toSlideJson, type SlideRow } from './slide-schemas.js';
 import { bfDayJsonSchema, toBfDayJson } from './bf-day-schemas.js';
 import { loadShiftJson, shiftJsonSchema } from './shift-schemas.js';
 import { incidentJsonSchema, toIncidentJson, type IncidentRow } from './incident-schemas.js';
+import { alarmJsonSchema, loadAlarms } from './alarm-schemas.js';
 import { canSeeScript } from '../incidents/visibility.js';
 import { currentShift } from '../shifts/current-shift.js';
 
@@ -19,6 +20,7 @@ const snapshotResponseSchema = z.object({
   shifts: z.array(shiftJsonSchema),
   current_shift_id: z.string().nullable(),
   incidents: z.array(incidentJsonSchema),
+  alarms: z.array(alarmJsonSchema),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -75,6 +77,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
           let shiftsJson: Array<Awaited<ReturnType<typeof loadShiftJson>>> = [];
           let currentShiftId: string | null = null;
           let incidentsJson: ReturnType<typeof toIncidentJson>[] = [];
+          let alarmsJson: Awaited<ReturnType<typeof loadAlarms>> = [];
 
           if (runningBfDay) {
             const shiftRows = await tx
@@ -106,6 +109,19 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
               .where(and(eq(incident.bfDayId, runningBfDay.id), eq(incident.state, 'running')))
               .orderBy(asc(incident.number))) as IncidentRow[];
             incidentsJson = incidentRows.map(row => toIncidentJson(row, { includeScript }));
+
+            if (incidentRows.length > 0) {
+              const loadedAlarms = await loadAlarms(tx, {
+                incidentIds: incidentRows.map(row => row.id),
+              });
+              alarmsJson = loadedAlarms
+                .filter(a => a.state === 'triggered')
+                .sort((a, b) => {
+                  const at = a.triggered_at ?? '';
+                  const bt = b.triggered_at ?? '';
+                  return at.localeCompare(bt);
+                });
+            }
           }
 
           return {
@@ -116,6 +132,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             shifts: shiftsJson.filter((s): s is NonNullable<typeof s> => s !== undefined),
             current_shift_id: currentShiftId,
             incidents: incidentsJson,
+            alarms: alarmsJson,
           };
         },
         { isolationLevel: 'repeatable read' }
