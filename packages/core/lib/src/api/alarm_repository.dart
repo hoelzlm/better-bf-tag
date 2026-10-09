@@ -38,7 +38,7 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
 }
 
 DoubleCrewed _doubleCrewedFromApi(
-  TriggerAlarm200ResponseDoubleCrewedInner d,
+  CreateAlarm200ResponseDoubleCrewedInner d,
 ) {
   return DoubleCrewed(
     personId: d.personId,
@@ -91,9 +91,9 @@ class ApiAlarmRepository implements AlarmRepository {
     List<String> vehicleIds, {
     required String id,
   }) async {
-    final response = await _api.triggerAlarm(
+    final response = await _api.createAlarm(
       id: incidentId,
-      triggerAlarmRequest: TriggerAlarmRequest(
+      createAlarmRequest: CreateAlarmRequest(
         (b) => b
           ..id = id
           ..vehicleIds.addAll(vehicleIds),
