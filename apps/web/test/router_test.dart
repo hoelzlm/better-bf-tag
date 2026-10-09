@@ -104,6 +104,13 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
   @override
   Future<void> setParticipants(String day, List<String> personIds) =>
       throw UnimplementedError();
+
+  @override
+  Future<AnonymizationSummary> anonymizationPreview(String bfDayId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> anonymize(String bfDayId) => throw UnimplementedError();
 }
 
 Future<void> _pumpAppAt(
@@ -290,13 +297,13 @@ void main() {
   );
 
   testWidgets(
-    'non-admin navigating to /admin/bf-tage is redirected to /admin',
+    'crew permission navigating to /admin/bf-tage is redirected to /admin',
     (tester) async {
       const person = Person(
         id: 'p1',
         displayName: 'Max Mustermann',
         personType: PersonType.supervisor,
-        permission: Permission.dispatch,
+        permission: Permission.crew,
       );
       await _pumpAppAt(
         tester,
@@ -311,6 +318,29 @@ void main() {
 
       expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
       expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'dispatch permission can navigate to /admin/bf-tage via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-bf-tage')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-bf-tage')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('BF-Tage'), findsOneWidget);
     },
   );
 

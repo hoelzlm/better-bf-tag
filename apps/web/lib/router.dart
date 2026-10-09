@@ -78,9 +78,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           if ((isFahrzeugeRoute ||
                   isPersonsRoute ||
                   isMonitorsRoute ||
-                  isBfTageRoute ||
                   isSlidesRoute) &&
               person.permission != Permission.admin) {
+            return '/admin';
+          }
+          if (isBfTageRoute &&
+              person.permission != Permission.admin &&
+              person.permission != Permission.dispatch) {
             return '/admin';
           }
           final isSchichtenRoute = state.matchedLocation == '/admin/schichten';
