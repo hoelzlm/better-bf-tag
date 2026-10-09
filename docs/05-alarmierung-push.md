@@ -113,7 +113,7 @@ Im Push stehen nur Stichwort und Adresse aus dem Meldebild sowie die IDs. Keine 
 {
   "aps": {
     "alert": { "title": "B2 – Wohnungsbrand", "body": "Musterstraße 1" },
-    "sound": "alarm.caf",
+    "sound": "alarm.wav",
     "interruption-level": "time-sensitive",
     "thread-id": "incident-<id>"
   },
@@ -136,7 +136,7 @@ Header: `apns-push-type: alert`, `apns-priority: 10`, `apns-expiration: now+300`
 ### Android
 
 - Eigener **Notification Channel** `alarm` mit Importance `HIGH`, eigenem Sound
-  (`res/raw/alarm.ogg`) und Vibrationsmuster. Achtung: Sound und Importance eines Channels lassen
+  (`res/raw/alarm.wav`) und Vibrationsmuster. Achtung: Sound und Importance eines Channels lassen
   sich nach dem Anlegen nicht mehr per Code ändern. Bei Änderungen eine neue Channel-ID wählen.
 - **Nicht stören:** Ein Channel darf DND nur umgehen, wenn der Nutzer das erlaubt. Die App führt
   beim Onboarding in die Einstellungen (Benachrichtigungsrichtlinie / Channel-Einstellungen).
@@ -155,8 +155,17 @@ Header: `apns-push-type: alert`, `apns-priority: 10`, `apns-expiration: now+300`
   Apple. Für eine Übungs-App wird das sehr wahrscheinlich nicht genehmigt, daher nicht eingeplant.
 - **Time Sensitive Notifications** (Capability in Xcode aktivieren) durchbrechen Fokus-Modi,
   sofern der Nutzer das zulässt. Der Stummschalter wird aber respektiert.
-- Eigener Sound als `.caf`/`.aiff` im App-Bundle, maximal 30 Sekunden.
+- Eigener Sound als `alarm.wav` im App-Bundle (`ios/Runner/alarm.wav`), maximal 30 Sekunden.
 - Hinweis an die Teilnehmer: Handy beim BF-Tag **nicht stumm** schalten.
+
+Beide Sounddateien sind dieselbe ~10 s lange, synthetische Fassung des Alarmtons (ADR 0018,
+reproduzierbar via `tool/make_alarm.py`) -- weicht damit vom ursprünglich geplanten
+`alarm.ogg`/`alarm.caf` ab, da Android `res/raw` und iOS beide WAV/Linear PCM annehmen.
+
+Android-FCM ist ohne die vier `FCM_*` `--dart-define`s (`FCM_API_KEY`, `FCM_APP_ID`,
+`FCM_SENDER_ID`, `FCM_PROJECT_ID`) deaktiviert -- die App und CI bauen ohne sie normal, nur Push
+ist dann aus. Es gibt kein `google-services.json` und kein
+`com.google.gms.google-services`-Gradle-Plugin im Repo.
 
 ## Fallback
 

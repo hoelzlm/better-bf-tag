@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'alarm/alarm_navigation_listener.dart';
+import 'push/push_registrar.dart';
 import 'router.dart';
 import 'secure_token_store.dart';
 
@@ -39,12 +40,15 @@ class _BftagMobileAppState extends ConsumerState<BftagMobileApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(mobileGoRouterProvider);
-    return AlarmNavigationListener(
+    return PushRegistrar(
       router: router,
-      child: MaterialApp.router(
-        title: 'BF-Tag',
-        theme: ThemeData(colorSchemeSeed: Colors.red, useMaterial3: true),
-        routerConfig: router,
+      child: AlarmNavigationListener(
+        router: router,
+        child: MaterialApp.router(
+          title: 'BF-Tag',
+          theme: ThemeData(colorSchemeSeed: Colors.red, useMaterial3: true),
+          routerConfig: router,
+        ),
       ),
     );
   }

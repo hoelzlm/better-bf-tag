@@ -45,6 +45,8 @@ web:
     cd apps/web && flutter run -d web-server --web-port 8081 --dart-define=API_BASE_URL=http://localhost:8080
 
 # Run the mobile app locally against a local backend (Android emulator).
+# Push (ADR 0018) is only active when all four FCM_* dart-defines are set:
+# --dart-define=FCM_API_KEY=... --dart-define=FCM_APP_ID=... --dart-define=FCM_SENDER_ID=... --dart-define=FCM_PROJECT_ID=...
 mobile:
     cd apps/mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
 
