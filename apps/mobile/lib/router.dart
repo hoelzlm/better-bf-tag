@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'screens/alarm_screen.dart';
 import 'screens/incident_detail_screen.dart';
 import 'screens/incidents_screen.dart';
 import 'screens/my_vehicle_screen.dart';
@@ -90,6 +91,12 @@ final mobileGoRouterProvider = Provider<GoRouter>((ref) {
         path: '/einsaetze/:id',
         builder: (context, state) => _SessionGate(
           child: IncidentDetailScreen(incidentId: state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/alarm/:alarmId',
+        builder: (context, state) => _SessionGate(
+          child: AlarmScreen(alarmId: state.pathParameters['alarmId']!),
         ),
       ),
     ],
