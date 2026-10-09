@@ -11,6 +11,7 @@ import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
 import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
+import 'screens/slides_screen.dart';
 import 'screens/vehicles_screen.dart';
 
 /// Bridges a Riverpod provider's changes into a [Listenable] that go_router's
@@ -71,10 +72,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           final isMonitorsRoute =
               state.matchedLocation == '/admin/monitors';
           final isBfTageRoute = state.matchedLocation == '/admin/bf-tage';
+          final isSlidesRoute = state.matchedLocation == '/admin/slides';
           if ((isFahrzeugeRoute ||
                   isPersonsRoute ||
                   isMonitorsRoute ||
-                  isBfTageRoute) &&
+                  isBfTageRoute ||
+                  isSlidesRoute) &&
               person.permission != Permission.admin) {
             return '/admin';
           }
@@ -114,6 +117,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/bf-tage',
         builder: (context, state) =>
             const _SessionGate(child: BfDaysScreen()),
+      ),
+      GoRoute(
+        path: '/admin/slides',
+        builder: (context, state) =>
+            const _SessionGate(child: SlidesScreen()),
       ),
       GoRoute(
         path: '/monitor',
