@@ -52,6 +52,9 @@ Future<void> _pumpApp(WidgetTester tester) async {
         closeSuggestedIncidentIdsProvider.overrideWith(
           (ref) => Stream.value(const <String>{}),
         ),
+        scheduledAlarmsProvider.overrideWith(
+          (ref) => Stream.value(const <ScheduledAlarm>[]),
+        ),
       ],
       child: const BftagWebApp(),
     ),

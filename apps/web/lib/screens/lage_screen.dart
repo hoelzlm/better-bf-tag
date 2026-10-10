@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/missed_alarms_section.dart';
 import '../widgets/running_incidents_section.dart';
+import '../widgets/scheduled_alarms_section.dart';
 import '../widgets/vehicle_status_bar.dart';
 
 /// Lage-Screen for `/admin`: Startseite der Leitstelle.
@@ -111,6 +113,8 @@ class LageScreen extends ConsumerWidget {
       body: const Column(
         children: [
           VehicleStatusBar(),
+          MissedAlarmsSection(),
+          ScheduledAlarmsSection(),
           Expanded(child: RunningIncidentsSection()),
         ],
       ),

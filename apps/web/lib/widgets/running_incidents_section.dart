@@ -19,6 +19,26 @@ String formatElapsedSince(DateTime since, DateTime now) {
   return '${hours}h ${minutes}min';
 }
 
+/// German fragment naming the planned/missed Alarmierungen in
+/// [scheduledAlarmsOfIncident] that will be discarded along with the
+/// Einsatz (ADR 0022), e.g. "2 geplante und 1 verpasste Alarmierung", or
+/// `null` when there are none -- used by the Einsatz schließen/verwerfen
+/// confirmation dialogs.
+String? scheduledAlarmsWarningFragment(
+  List<ScheduledAlarm> scheduledAlarmsOfIncident,
+) {
+  final planned =
+      scheduledAlarmsOfIncident.where((sa) => sa.alarm.isPlanned).length;
+  final missed =
+      scheduledAlarmsOfIncident.where((sa) => sa.alarm.isMissed).length;
+  final parts = <String>[
+    if (planned > 0) '$planned geplante Alarmierung${planned == 1 ? '' : 'en'}',
+    if (missed > 0) '$missed verpasste Alarmierung${missed == 1 ? '' : 'en'}',
+  ];
+  if (parts.isEmpty) return null;
+  return parts.join(' und ');
+}
+
 IconData _ackIcon(AckState state) {
   switch (state) {
     case AckState.acknowledged:
@@ -73,6 +93,8 @@ class RunningIncidentsSection extends ConsumerWidget {
     final closeSuggestedIds =
         ref.watch(closeSuggestedIncidentIdsProvider).valueOrNull ??
             const <String>{};
+    final scheduledAlarms =
+        ref.watch(scheduledAlarmsProvider).valueOrNull ?? const <ScheduledAlarm>[];
     final session = ref.watch(sessionControllerProvider);
     final permission = switch (session) {
       SessionSignedIn(person: final person) => person.permission,
@@ -96,6 +118,9 @@ class RunningIncidentsSection extends ConsumerWidget {
             key: Key('running-incident-${incident.id}'),
             incident: incident,
             alarms: alarms.where((a) => a.incidentId == incident.id).toList(),
+            scheduledAlarms: scheduledAlarms
+                .where((sa) => sa.incident.id == incident.id)
+                .toList(),
             vehiclesById: vehiclesById,
             now: now,
             canDispatch: canDispatch,
@@ -111,6 +136,7 @@ class _IncidentCard extends ConsumerWidget {
     super.key,
     required this.incident,
     required this.alarms,
+    required this.scheduledAlarms,
     required this.vehiclesById,
     required this.now,
     required this.canDispatch,
@@ -119,6 +145,7 @@ class _IncidentCard extends ConsumerWidget {
 
   final Incident incident;
   final List<Alarm> alarms;
+  final List<ScheduledAlarm> scheduledAlarms;
   final Map<String, Vehicle> vehiclesById;
   final DateTime now;
   final bool canDispatch;
@@ -135,22 +162,23 @@ class _IncidentCard extends ConsumerWidget {
         incidentId: incident.id,
         title: 'Nachalarmierung für Einsatz #${incident.number}',
         alreadyAlarmedVehicleIds: alreadyAlarmed,
+        // A laufender Einsatz has always been triggered at least once
+        // (draft -> running only happens via triggerAlarm, ADR 0022).
+        hasFirstAlarm: true,
       ),
     );
   }
 
   Future<void> _closeIncident(BuildContext context, WidgetRef ref) async {
-    final plannedCount =
-        alarms.where((a) => a.state == AlarmState.planned).length;
+    final warning = scheduledAlarmsWarningFragment(scheduledAlarms);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Einsatz schließen?'),
         content: Text(
-          plannedCount > 0
+          warning != null
               ? 'Einsatz #${incident.number} "${incident.keyword}" wird '
-                  'abgeschlossen. $plannedCount geplante Alarmierung'
-                  '${plannedCount == 1 ? '' : 'en'} werden verworfen.'
+                  'abgeschlossen. $warning werden verworfen.'
               : 'Einsatz #${incident.number} "${incident.keyword}" wird '
                   'abgeschlossen.',
         ),
