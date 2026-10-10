@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/alarm_dialog.dart';
+import '../widgets/running_incidents_section.dart' show scheduledAlarmsWarningFragment;
 import 'shifts_screen.dart' show pickDefaultBfDay;
 
 String _stateChipLabel(IncidentState state) => state.label;
@@ -148,9 +149,12 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
 
   Future<void> _openAlarmDialog(Incident incident) async {
     final isNachalarmierung = incident.state == IncidentState.running;
+    final alarms = ref.read(alarmsProvider).valueOrNull ?? const <Alarm>[];
+    final scheduledAlarms =
+        ref.read(scheduledAlarmsProvider).valueOrNull ?? const <ScheduledAlarm>[];
     final alreadyAlarmed = isNachalarmierung
         ? {
-            for (final alarm in ref.read(alarmsProvider).valueOrNull ?? const <Alarm>[])
+            for (final alarm in alarms)
               if (alarm.incidentId == incident.id) ...alarm.vehicleIds,
           }
         : const <String>{};
@@ -163,6 +167,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
         incidentId: incident.id,
         title: title,
         alreadyAlarmedVehicleIds: alreadyAlarmed,
+        hasFirstAlarm: hasFirstAlarmFor(incident.id, alarms, scheduledAlarms),
       ),
     );
     if (triggered == true) {
@@ -171,12 +176,20 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
   }
 
   Future<void> _discard(Incident incident) async {
+    final scheduledAlarms = (ref.read(scheduledAlarmsProvider).valueOrNull ??
+            const <ScheduledAlarm>[])
+        .where((sa) => sa.incident.id == incident.id)
+        .toList();
+    final warning = scheduledAlarmsWarningFragment(scheduledAlarms);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Einsatz verwerfen'),
         content: Text(
-          'Einsatz #${incident.number} "${incident.keyword}" wirklich verwerfen?',
+          warning == null
+              ? 'Einsatz #${incident.number} "${incident.keyword}" wirklich verwerfen?'
+              : 'Einsatz #${incident.number} "${incident.keyword}" wirklich '
+                  'verwerfen? $warning werden ebenfalls verworfen.',
         ),
         actions: [
           TextButton(
@@ -205,6 +218,12 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(sessionControllerProvider);
+    // Keeps alarmsProvider/scheduledAlarmsProvider subscribed and fresh so
+    // the on-demand ref.read() calls in _openAlarmDialog/_discard (ADR
+    // 0022) see up-to-date data even if this screen is opened directly
+    // (not via the Lage-Screen, which already watches both).
+    ref.watch(alarmsProvider);
+    ref.watch(scheduledAlarmsProvider);
     final permission = switch (session) {
       SessionSignedIn(person: final person) => person.permission,
       _ => null,

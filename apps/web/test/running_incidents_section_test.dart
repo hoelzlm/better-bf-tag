@@ -132,6 +132,7 @@ Future<void> _pump(
   required List<Alarm> alarms,
   List<Vehicle> vehicles = const [],
   Set<String> closeSuggestedIncidentIds = const {},
+  List<ScheduledAlarm> scheduledAlarms = const [],
   SessionState session = const SessionUnknown(),
   IncidentRepository? incidentRepository,
 }) async {
@@ -143,6 +144,9 @@ Future<void> _pump(
         vehiclesProvider.overrideWith((ref) => Stream.value(vehicles)),
         closeSuggestedIncidentIdsProvider.overrideWith(
           (ref) => Stream.value(closeSuggestedIncidentIds),
+        ),
+        scheduledAlarmsProvider.overrideWith(
+          (ref) => Stream.value(scheduledAlarms),
         ),
         sessionControllerProvider.overrideWith(
           () => _FakeSessionController(session),
@@ -276,6 +280,9 @@ void main() {
           closeSuggestedIncidentIdsProvider.overrideWith(
             (ref) => Stream.value(const <String>{}),
           ),
+          scheduledAlarmsProvider.overrideWith(
+            (ref) => Stream.value(const <ScheduledAlarm>[]),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(body: RunningIncidentsSection()),
@@ -349,6 +356,9 @@ void main() {
           vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
           closeSuggestedIncidentIdsProvider
               .overrideWith((ref) => closeSuggestedController.stream),
+          scheduledAlarmsProvider.overrideWith(
+            (ref) => Stream.value(const <ScheduledAlarm>[]),
+          ),
           sessionControllerProvider.overrideWith(
             () => _FakeSessionController(
               const SessionSignedIn(_dispatchPerson, 'token'),
@@ -422,5 +432,53 @@ void main() {
     );
     expect(find.byKey(const Key('nachalarmieren-incident-i1')), findsNothing);
     expect(find.byKey(const Key('close-incident-i1')), findsNothing);
+  });
+
+  testWidgets(
+      'Einsatz schließen warns with the count of planned and missed '
+      'Alarmierungen', (tester) async {
+    final incident = _incident(id: 'i1');
+    final scheduled = [
+      ScheduledAlarm(
+        incident: incident,
+        alarm: Alarm(
+          id: 'a1',
+          incidentId: 'i1',
+          state: AlarmState.planned,
+          scheduledAt: DateTime.now().add(const Duration(minutes: 5)),
+          vehicleIds: const ['v1'],
+          recipients: const [],
+        ),
+      ),
+      ScheduledAlarm(
+        incident: incident,
+        alarm: Alarm(
+          id: 'a2',
+          incidentId: 'i1',
+          state: AlarmState.missed,
+          scheduledAt: DateTime.now().subtract(const Duration(minutes: 20)),
+          vehicleIds: const ['v2'],
+          recipients: const [],
+        ),
+      ),
+    ];
+
+    await _pump(
+      tester,
+      incidents: [incident],
+      alarms: const [],
+      scheduledAlarms: scheduled,
+      session: const SessionSignedIn(_dispatchPerson, 'token'),
+    );
+
+    await tester.tap(find.byKey(const Key('close-incident-i1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        '1 geplante Alarmierung und 1 verpasste Alarmierung werden verworfen.',
+      ),
+      findsOneWidget,
+    );
   });
 }
