@@ -4,12 +4,12 @@
 
 **Blocked by:** 09
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Onboarding-Schritte: Benachrichtigungen erlauben, Nicht stören umgehen (Android-Channel bzw. iOS Time Sensitive), Akku-Optimierung abschalten (mit Hinweis je Hersteller)
-- [ ] Testalarm-Button (Onboarding und Einstellungen): Backend schickt einen Push mit Alarmton nur an dieses Gerät, ohne Einsatz
-- [ ] Hinweis „Handy beim BF-Tag nicht stumm schalten“ (iOS)
-- [ ] Onboarding kann später in den Einstellungen erneut geöffnet werden
-- [ ] Tests (Push-Fake): Testalarm erreicht nur das eigene Gerät, erzeugt keinen Einsatz und keine Events für andere
+- [x] Onboarding-Schritte: Benachrichtigungen erlauben, Nicht stören umgehen (Android-Channel bzw. iOS Time Sensitive), Akku-Optimierung abschalten (mit Hinweis je Hersteller)
+- [x] Testalarm-Button (Onboarding und Einstellungen): Backend schickt einen Push mit Alarmton nur an dieses Gerät, ohne Einsatz
+- [x] Hinweis „Handy beim BF-Tag nicht stumm schalten“ (iOS)
+- [x] Onboarding kann später in den Einstellungen erneut geöffnet werden
+- [x] Tests (Push-Fake): Testalarm erreicht nur das eigene Gerät, erzeugt keinen Einsatz und keine Events für andere
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`
