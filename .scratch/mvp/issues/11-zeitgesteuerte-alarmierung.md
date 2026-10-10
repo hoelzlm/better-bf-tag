@@ -4,14 +4,14 @@
 
 **Blocked by:** 10
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Alarmierung mit Zeitpunkt planen; Nachalarmierung relativ zum Erstalarm planen (z. B. +8 min)
-- [ ] Persistente Job-Queue in PostgreSQL; Singleton pro Alarmierung; Zeit oder Fahrzeuge ändern ersetzt den Job
-- [ ] Geplante Alarmierung verwerfen; beim Schließen/Verwerfen des Einsatzes werden geplante Alarmierungen verworfen (mit Warnung im UI)
-- [ ] Nach Neustart: überfällige Jobs laufen nach; > 10 min überfällig → Zustand verpasst, Event `alarm.missed`
-- [ ] Lage zeigt nächste geplante und verpasste Alarmierungen; verpasste manuell auslösen oder verwerfen
-- [ ] Events `alarm.planned`, `alarm.discarded`
-- [ ] Tests (steuerbare Uhr): Auslösen zum Zeitpunkt, relative Nachalarmierung, Neustart mit 5 und mit 15 min Verspätung, Verwerfen beim Schließen, Abschlussvorschlag erst ohne geplante Alarmierung
+- [x] Alarmierung mit Zeitpunkt planen; Nachalarmierung relativ zum Erstalarm planen (z. B. +8 min)
+- [x] Persistente Job-Queue in PostgreSQL; Singleton pro Alarmierung; Zeit oder Fahrzeuge ändern ersetzt den Job
+- [x] Geplante Alarmierung verwerfen; beim Schließen/Verwerfen des Einsatzes werden geplante Alarmierungen verworfen (mit Warnung im UI)
+- [x] Nach Neustart: überfällige Jobs laufen nach; > 10 min überfällig → Zustand verpasst, Event `alarm.missed`
+- [x] Lage zeigt nächste geplante und verpasste Alarmierungen; verpasste manuell auslösen oder verwerfen
+- [x] Events `alarm.planned`, `alarm.discarded`
+- [x] Tests (steuerbare Uhr): Auslösen zum Zeitpunkt, relative Nachalarmierung, Neustart mit 5 und mit 15 min Verspätung, Verwerfen beim Schließen, Abschlussvorschlag erst ohne geplante Alarmierung
 
 Spec: `.scratch/mvp/spec.md` · Glossar: `CONTEXT.md`
