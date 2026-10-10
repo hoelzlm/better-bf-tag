@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'onboarding/onboarding_screen.dart';
+import 'onboarding/onboarding_store.dart';
 import 'screens/alarm_screen.dart';
 import 'screens/incident_detail_screen.dart';
 import 'screens/incidents_screen.dart';
@@ -10,17 +12,36 @@ import 'screens/my_vehicle_screen.dart';
 import 'screens/pairing_screen.dart';
 import 'screens/settings_screen.dart';
 
-/// Bridges [PairedSessionController] changes into a [Listenable] that
-/// go_router's `refreshListenable` can subscribe to, so route redirects
-/// re-evaluate whenever [PairedSessionState] changes.
+/// Bridges [PairedSessionController] and [onboardingCompletedProvider]
+/// changes into a [Listenable] that go_router's `refreshListenable` can
+/// subscribe to, so route redirects re-evaluate whenever either changes.
+/// Also kicks off [OnboardingCompletedNotifier.load] once the session is
+/// [Paired] (on construction, or on the first such transition), so the
+/// redirect has a loaded value as soon as possible -- while it's still
+/// `null`, the redirect must not act on it (ADR 0021).
 class _RouterRefreshListenable extends ChangeNotifier {
   _RouterRefreshListenable(Ref ref) {
     ref.listen<PairedSessionState>(pairedSessionControllerProvider, (
       previous,
       next,
     ) {
+      if (next is Paired) {
+        _ensureOnboardingLoaded(ref);
+      }
       notifyListeners();
     });
+    ref.listen<bool?>(onboardingCompletedProvider, (previous, next) {
+      notifyListeners();
+    });
+    if (ref.read(pairedSessionControllerProvider) is Paired) {
+      _ensureOnboardingLoaded(ref);
+    }
+  }
+
+  void _ensureOnboardingLoaded(Ref ref) {
+    if (ref.read(onboardingCompletedProvider) == null) {
+      ref.read(onboardingCompletedProvider.notifier).load();
+    }
   }
 }
 
@@ -51,11 +72,21 @@ final mobileGoRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(pairedSessionControllerProvider);
       final isPairRoute = state.matchedLocation == '/pair';
+      final isHomeRoute = state.matchedLocation == '/';
 
       switch (session) {
         case PairedUnknown():
           return null;
         case Paired():
+          final onboardingCompleted = ref.read(onboardingCompletedProvider);
+          // ADR 0021: redirect to /onboarding only once the flag is
+          // loaded (not null) and explicitly false, and only from '/'
+          // or '/pair' -- never from /alarm/:id, /einsaetze*, /settings
+          // or /onboarding itself. While still loading (null), fall
+          // through to the existing "/pair" -> "/" redirect below.
+          if (onboardingCompleted == false && (isPairRoute || isHomeRoute)) {
+            return '/onboarding';
+          }
           return isPairRoute ? '/' : null;
         case PairedUnpaired():
         case PairedOffline():
@@ -81,6 +112,11 @@ final mobileGoRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (context, state) =>
             const _SessionGate(child: SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) =>
+            const _SessionGate(child: OnboardingScreen()),
       ),
       GoRoute(
         path: '/einsaetze',

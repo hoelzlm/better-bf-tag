@@ -2,6 +2,7 @@ import 'package:bftag_api_client/bftag_api_client.dart'
     show PairRequestPlatformEnum;
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_mobile/main.dart';
+import 'package:bftag_mobile/onboarding/onboarding_store.dart';
 import 'package:bftag_mobile/pairing_code_scanner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,6 +84,12 @@ List<Override> _overrides(
   return [
     pairedSessionControllerProvider.overrideWith(
       () => _FakePairedSessionController(session),
+    ),
+    // These tests exercise pairing/logout navigation, not the Onboarding
+    // (ADR 0021) flow itself -- mark it as already completed so a
+    // freshly paired session lands directly on "Mein Fahrzeug".
+    onboardingStoreProvider.overrideWithValue(
+      InMemoryOnboardingStore(completed: true),
     ),
     qrScannerBuilderProvider.overrideWithValue(scanner.build),
     // StartScreen watches this to kick off the realtime connection; these
