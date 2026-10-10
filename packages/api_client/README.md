@@ -66,7 +66,10 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 [*AlarmsApi*](doc/AlarmsApi.md) | [**acknowledgeAlarm**](doc/AlarmsApi.md#acknowledgealarm) | **POST** /api/v1/alarms/{id}/acknowledge | 
-[*AlarmsApi*](doc/AlarmsApi.md) | [**triggerAlarm**](doc/AlarmsApi.md#triggeralarm) | **POST** /api/v1/incidents/{id}/alarms | 
+[*AlarmsApi*](doc/AlarmsApi.md) | [**createAlarm**](doc/AlarmsApi.md#createalarm) | **POST** /api/v1/incidents/{id}/alarms | 
+[*AlarmsApi*](doc/AlarmsApi.md) | [**discardAlarm**](doc/AlarmsApi.md#discardalarm) | **POST** /api/v1/alarms/{id}/discard | 
+[*AlarmsApi*](doc/AlarmsApi.md) | [**triggerAlarm**](doc/AlarmsApi.md#triggeralarm) | **POST** /api/v1/alarms/{id}/trigger | 
+[*AlarmsApi*](doc/AlarmsApi.md) | [**updateAlarm**](doc/AlarmsApi.md#updatealarm) | **PATCH** /api/v1/alarms/{id} | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceLogout**](doc/AuthApi.md#devicelogout) | **POST** /api/v1/auth/device/logout | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceRefresh**](doc/AuthApi.md#devicerefresh) | **POST** /api/v1/auth/device/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /api/v1/me | 
@@ -77,6 +80,7 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**monitorRefresh**](doc/AuthApi.md#monitorrefresh) | **POST** /api/v1/auth/monitor/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**pair**](doc/AuthApi.md#pair) | **POST** /api/v1/auth/pair | 
 [*AuthApi*](doc/AuthApi.md) | [**refresh**](doc/AuthApi.md#refresh) | **POST** /api/v1/auth/refresh | 
+[*AuthApi*](doc/AuthApi.md) | [**triggerTestAlarm**](doc/AuthApi.md#triggertestalarm) | **POST** /api/v1/me/device/test-alarm | 
 [*AuthApi*](doc/AuthApi.md) | [**updatePushToken**](doc/AuthApi.md#updatepushtoken) | **PUT** /api/v1/me/device/push-token | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**anonymizeBfDay**](doc/BfDaysApi.md#anonymizebfday) | **POST** /api/v1/bf-days/{id}/anonymize | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**createBfDay**](doc/BfDaysApi.md#createbfday) | **POST** /api/v1/bf-days | 
@@ -137,6 +141,9 @@ Class | Method | HTTP request | Description
  - [AcknowledgeAlarm200Response](doc/AcknowledgeAlarm200Response.md)
  - [AnonymizeBfDay200Response](doc/AnonymizeBfDay200Response.md)
  - [CloseIncident200Response](doc/CloseIncident200Response.md)
+ - [CreateAlarm200Response](doc/CreateAlarm200Response.md)
+ - [CreateAlarm200ResponseDoubleCrewedInner](doc/CreateAlarm200ResponseDoubleCrewedInner.md)
+ - [CreateAlarmRequest](doc/CreateAlarmRequest.md)
  - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateIncidentRequest](doc/CreateIncidentRequest.md)
  - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)
@@ -159,6 +166,7 @@ Class | Method | HTTP request | Description
  - [GetSnapshot200ResponseAlarmsInnerRecipientsInner](doc/GetSnapshot200ResponseAlarmsInnerRecipientsInner.md)
  - [GetSnapshot200ResponseBfDay](doc/GetSnapshot200ResponseBfDay.md)
  - [GetSnapshot200ResponseIncidentsInner](doc/GetSnapshot200ResponseIncidentsInner.md)
+ - [GetSnapshot200ResponseScheduledAlarmsInner](doc/GetSnapshot200ResponseScheduledAlarmsInner.md)
  - [GetSnapshot200ResponseShiftsInner](doc/GetSnapshot200ResponseShiftsInner.md)
  - [GetSnapshot200ResponseShiftsInnerCrewInner](doc/GetSnapshot200ResponseShiftsInnerCrewInner.md)
  - [GetSnapshot200ResponseSlidesInner](doc/GetSnapshot200ResponseSlidesInner.md)
@@ -187,9 +195,11 @@ Class | Method | HTTP request | Description
  - [SetShiftCrewRequestAssignmentsInner](doc/SetShiftCrewRequestAssignmentsInner.md)
  - [SetVehicleStatusRequest](doc/SetVehicleStatusRequest.md)
  - [SetWebAccessRequest](doc/SetWebAccessRequest.md)
- - [TriggerAlarm200Response](doc/TriggerAlarm200Response.md)
- - [TriggerAlarm200ResponseDoubleCrewedInner](doc/TriggerAlarm200ResponseDoubleCrewedInner.md)
- - [TriggerAlarmRequest](doc/TriggerAlarmRequest.md)
+ - [TriggerTestAlarm200Response](doc/TriggerTestAlarm200Response.md)
+ - [TriggerTestAlarm202Response](doc/TriggerTestAlarm202Response.md)
+ - [TriggerTestAlarmRequest](doc/TriggerTestAlarmRequest.md)
+ - [UpdateAlarm200Response](doc/UpdateAlarm200Response.md)
+ - [UpdateAlarmRequest](doc/UpdateAlarmRequest.md)
  - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
  - [UpdateIncidentRequest](doc/UpdateIncidentRequest.md)
  - [UpdatePersonRequest](doc/UpdatePersonRequest.md)

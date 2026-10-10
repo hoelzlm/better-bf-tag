@@ -7,16 +7,16 @@ import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'trigger_alarm200_response_double_crewed_inner.g.dart';
+part 'create_alarm200_response_double_crewed_inner.g.dart';
 
-/// TriggerAlarm200ResponseDoubleCrewedInner
+/// CreateAlarm200ResponseDoubleCrewedInner
 ///
 /// Properties:
 /// * [personId] 
 /// * [displayName] 
 /// * [vehicleIds] 
 @BuiltValue()
-abstract class TriggerAlarm200ResponseDoubleCrewedInner implements Built<TriggerAlarm200ResponseDoubleCrewedInner, TriggerAlarm200ResponseDoubleCrewedInnerBuilder> {
+abstract class CreateAlarm200ResponseDoubleCrewedInner implements Built<CreateAlarm200ResponseDoubleCrewedInner, CreateAlarm200ResponseDoubleCrewedInnerBuilder> {
   @BuiltValueField(wireName: r'person_id')
   String get personId;
 
@@ -26,27 +26,27 @@ abstract class TriggerAlarm200ResponseDoubleCrewedInner implements Built<Trigger
   @BuiltValueField(wireName: r'vehicle_ids')
   BuiltList<String> get vehicleIds;
 
-  TriggerAlarm200ResponseDoubleCrewedInner._();
+  CreateAlarm200ResponseDoubleCrewedInner._();
 
-  factory TriggerAlarm200ResponseDoubleCrewedInner([void updates(TriggerAlarm200ResponseDoubleCrewedInnerBuilder b)]) = _$TriggerAlarm200ResponseDoubleCrewedInner;
+  factory CreateAlarm200ResponseDoubleCrewedInner([void updates(CreateAlarm200ResponseDoubleCrewedInnerBuilder b)]) = _$CreateAlarm200ResponseDoubleCrewedInner;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(TriggerAlarm200ResponseDoubleCrewedInnerBuilder b) => b;
+  static void _defaults(CreateAlarm200ResponseDoubleCrewedInnerBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<TriggerAlarm200ResponseDoubleCrewedInner> get serializer => _$TriggerAlarm200ResponseDoubleCrewedInnerSerializer();
+  static Serializer<CreateAlarm200ResponseDoubleCrewedInner> get serializer => _$CreateAlarm200ResponseDoubleCrewedInnerSerializer();
 }
 
-class _$TriggerAlarm200ResponseDoubleCrewedInnerSerializer implements PrimitiveSerializer<TriggerAlarm200ResponseDoubleCrewedInner> {
+class _$CreateAlarm200ResponseDoubleCrewedInnerSerializer implements PrimitiveSerializer<CreateAlarm200ResponseDoubleCrewedInner> {
   @override
-  final Iterable<Type> types = const [TriggerAlarm200ResponseDoubleCrewedInner, _$TriggerAlarm200ResponseDoubleCrewedInner];
+  final Iterable<Type> types = const [CreateAlarm200ResponseDoubleCrewedInner, _$CreateAlarm200ResponseDoubleCrewedInner];
 
   @override
-  final String wireName = r'TriggerAlarm200ResponseDoubleCrewedInner';
+  final String wireName = r'CreateAlarm200ResponseDoubleCrewedInner';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    TriggerAlarm200ResponseDoubleCrewedInner object, {
+    CreateAlarm200ResponseDoubleCrewedInner object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
     yield r'person_id';
@@ -69,7 +69,7 @@ class _$TriggerAlarm200ResponseDoubleCrewedInnerSerializer implements PrimitiveS
   @override
   Object serialize(
     Serializers serializers,
-    TriggerAlarm200ResponseDoubleCrewedInner object, {
+    CreateAlarm200ResponseDoubleCrewedInner object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -80,7 +80,7 @@ class _$TriggerAlarm200ResponseDoubleCrewedInnerSerializer implements PrimitiveS
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required TriggerAlarm200ResponseDoubleCrewedInnerBuilder result,
+    required CreateAlarm200ResponseDoubleCrewedInnerBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
@@ -117,12 +117,12 @@ class _$TriggerAlarm200ResponseDoubleCrewedInnerSerializer implements PrimitiveS
   }
 
   @override
-  TriggerAlarm200ResponseDoubleCrewedInner deserialize(
+  CreateAlarm200ResponseDoubleCrewedInner deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = TriggerAlarm200ResponseDoubleCrewedInnerBuilder();
+    final result = CreateAlarm200ResponseDoubleCrewedInnerBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

@@ -1,15 +1,21 @@
 export type PushPlatform = 'android' | 'ios';
 
+/** Discriminated union (ADR 0021): a real Alarmierung or a Testalarm (no incident/alarm). */
+export type PushData =
+  | {
+      type: 'alarm.triggered';
+      incident_id: string;
+      alarm_id: string;
+      keyword: string;
+      address: string;
+    }
+  | { type: 'test_alarm' };
+
 export interface PushMessage {
   deviceId: string;
   platform: PushPlatform;
   token: string;
-  data: {
-    incident_id: string;
-    alarm_id: string;
-    keyword: string;
-    address: string;
-  };
+  data: PushData;
 }
 
 export interface PushResult {

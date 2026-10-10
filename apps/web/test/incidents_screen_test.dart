@@ -1,5 +1,6 @@
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_web/screens/incidents_screen.dart';
+import 'package:bftag_web/widgets/alarm_dialog.dart' show AlarmDialogMode;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -216,8 +217,17 @@ class _FakeIncidentRepository implements IncidentRepository {
 
 class _FakeAlarmRepository implements AlarmRepository {
   final List<(String, List<String>, String)> triggerCalls = [];
+  final List<
+      ({
+        String incidentId,
+        List<String> vehicleIds,
+        String? id,
+        DateTime? scheduledAt,
+        int? offsetMinutes,
+      })> planCalls = [];
   TriggerAlarmResult Function()? resultBuilder;
   Object? triggerError;
+  Object? planError;
 
   @override
   Future<TriggerAlarmResult> trigger(
@@ -245,6 +255,50 @@ class _FakeAlarmRepository implements AlarmRepository {
 
   @override
   Future<void> acknowledge(String alarmId) => throw UnimplementedError();
+
+  @override
+  Future<Alarm> plan(
+    String incidentId,
+    List<String> vehicleIds, {
+    String? id,
+    DateTime? scheduledAt,
+    int? offsetMinutes,
+  }) async {
+    planCalls.add((
+      incidentId: incidentId,
+      vehicleIds: vehicleIds,
+      id: id,
+      scheduledAt: scheduledAt,
+      offsetMinutes: offsetMinutes,
+    ));
+    final error = planError;
+    if (error != null) throw error;
+    return Alarm(
+      id: 'planned-a1',
+      incidentId: incidentId,
+      state: AlarmState.planned,
+      scheduledAt: scheduledAt,
+      offsetMinutes: offsetMinutes,
+      vehicleIds: vehicleIds,
+      recipients: const [],
+    );
+  }
+
+  @override
+  Future<Alarm> update(
+    String alarmId, {
+    DateTime? scheduledAt,
+    int? offsetMinutes,
+    List<String>? vehicleIds,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Alarm> discard(String alarmId) => throw UnimplementedError();
+
+  @override
+  Future<TriggerAlarmResult> triggerNow(String alarmId) =>
+      throw UnimplementedError();
 }
 
 Future<_FakeIncidentRepository> _pump(
@@ -254,6 +308,8 @@ Future<_FakeIncidentRepository> _pump(
   Permission permission = Permission.admin,
   List<Vehicle>? vehicles,
   List<Shift>? shifts,
+  List<Alarm>? alarms,
+  List<ScheduledAlarm>? scheduledAlarms,
   _FakeAlarmRepository? alarmRepository,
 }) async {
   final bfDayRepository = _FakeBfDayAdminRepository(days: days);
@@ -278,6 +334,12 @@ Future<_FakeIncidentRepository> _pump(
         ),
         shiftsProvider.overrideWith(
           (ref) => Stream.value(shifts ?? const <Shift>[]),
+        ),
+        alarmsProvider.overrideWith(
+          (ref) => Stream.value(alarms ?? const <Alarm>[]),
+        ),
+        scheduledAlarmsProvider.overrideWith(
+          (ref) => Stream.value(scheduledAlarms ?? const <ScheduledAlarm>[]),
         ),
         if (alarmRepository != null)
           alarmRepositoryProvider.overrideWithValue(alarmRepository),
@@ -561,5 +623,146 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Einsatz wurde bereits alarmiert.'), findsOneWidget);
+  });
+
+  testWidgets(
+      '"Relativ zum Erstalarm" is disabled without an Erstalarm, enabled '
+      'once one exists', (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      incidents: {
+        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+      },
+      permission: Permission.dispatch,
+      vehicles: [_vehicle(id: 'v1')],
+    );
+
+    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+    await tester.pumpAndSettle();
+
+    final relativeTileBefore = tester.widget<RadioListTile<AlarmDialogMode>>(
+      find.byKey(const Key('alarm-mode-relative')),
+    );
+    // ignore: deprecated_member_use
+    expect(relativeTileBefore.onChanged, isNull);
+  });
+
+  testWidgets(
+      '"Relativ zum Erstalarm" is enabled when the incident already has a '
+      'triggered Erstalarm, and plans with offset_minutes', (tester) async {
+    final alarmRepository = _FakeAlarmRepository();
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      incidents: {
+        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.running)],
+      },
+      permission: Permission.dispatch,
+      vehicles: [_vehicle(id: 'v1'), _vehicle(id: 'v2', shortName: 'LF 2')],
+      alarms: [
+        Alarm(
+          id: 'a1',
+          incidentId: 'i1',
+          state: AlarmState.triggered,
+          triggeredAt: DateTime.now().subtract(const Duration(minutes: 10)),
+          vehicleIds: const ['v1'],
+          recipients: const [],
+        ),
+      ],
+      alarmRepository: alarmRepository,
+    );
+
+    await tester.tap(find.text('laufend'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nachalarmieren-incident-i1')));
+    await tester.pumpAndSettle();
+
+    final relativeTile = tester.widget<RadioListTile<AlarmDialogMode>>(
+      find.byKey(const Key('alarm-mode-relative')),
+    );
+    // ignore: deprecated_member_use
+    expect(relativeTile.onChanged, isNotNull);
+
+    await tester.tap(find.byKey(const Key('alarm-vehicle-v2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('alarm-mode-relative')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('alarm-offset-minutes')),
+      '15',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('alarm-dialog-submit')));
+    await tester.pumpAndSettle();
+
+    expect(alarmRepository.planCalls, hasLength(1));
+    final call = alarmRepository.planCalls.single;
+    expect(call.incidentId, 'i1');
+    expect(call.vehicleIds, ['v2']);
+    expect(call.offsetMinutes, 15);
+    expect(call.scheduledAt, isNull);
+  });
+
+  testWidgets(
+      '"Zeitpunkt" mode plans with the picked scheduledAt converted to UTC',
+      (tester) async {
+    final alarmRepository = _FakeAlarmRepository();
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      incidents: {
+        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+      },
+      permission: Permission.dispatch,
+      vehicles: [_vehicle(id: 'v1')],
+      alarmRepository: alarmRepository,
+    );
+
+    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('alarm-mode-scheduled')));
+    await tester.pump();
+
+    final submitButtonDisabled = tester.widget<FilledButton>(
+      find.byKey(const Key('alarm-dialog-submit')),
+    );
+    expect(submitButtonDisabled.onPressed, isNull,
+        reason: 'no date/time picked yet');
+  });
+
+  testWidgets(
+      'Einsatz verwerfen warns with the count of planned Alarmierungen for '
+      'a draft incident', (tester) async {
+    final incident = _incident(id: 'i1', number: 1, state: IncidentState.draft);
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      incidents: {'d1': [incident]},
+      permission: Permission.dispatch,
+      scheduledAlarms: [
+        ScheduledAlarm(
+          incident: incident,
+          alarm: Alarm(
+            id: 'sa1',
+            incidentId: 'i1',
+            state: AlarmState.planned,
+            scheduledAt: DateTime.now().add(const Duration(minutes: 5)),
+            vehicleIds: const ['v1'],
+            recipients: const [],
+          ),
+        ),
+      ],
+    );
+
+    await tester.tap(find.byKey(const Key('discard-incident-i1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('1 geplante Alarmierung werden ebenfalls verworfen.'),
+      findsOneWidget,
+    );
   });
 }

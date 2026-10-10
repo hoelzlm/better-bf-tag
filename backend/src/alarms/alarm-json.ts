@@ -14,6 +14,8 @@ export interface AlarmRow {
   createdAt: Date;
   pushDelivered: number;
   pushRejected: number;
+  relativeToAlarmId: string | null;
+  offsetMinutes: number | null;
 }
 
 export interface AlarmRecipientInput {
@@ -44,6 +46,8 @@ export interface AlarmJson {
   recipients: AlarmRecipientJson[];
   push_delivered: number;
   push_rejected: number;
+  relative_to_alarm_id: string | null;
+  offset_minutes: number | null;
 }
 
 /**
@@ -75,6 +79,8 @@ export function toAlarmJson(
     })),
     push_delivered: row.pushDelivered,
     push_rejected: row.pushRejected,
+    relative_to_alarm_id: row.relativeToAlarmId,
+    offset_minutes: row.offsetMinutes,
   };
 }
 

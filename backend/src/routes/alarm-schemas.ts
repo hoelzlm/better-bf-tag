@@ -35,6 +35,8 @@ export const alarmJsonSchema: z.ZodType<AlarmJson> = z.object({
   recipients: z.array(alarmRecipientJsonSchema),
   push_delivered: z.number().int(),
   push_rejected: z.number().int(),
+  relative_to_alarm_id: z.string().nullable(),
+  offset_minutes: z.number().int().nullable(),
 });
 
 export const doubleCrewedJsonSchema = z.object({
@@ -43,7 +45,13 @@ export const doubleCrewedJsonSchema = z.object({
   vehicle_ids: z.array(z.string()),
 });
 
-export const triggerAlarmBodySchema = z
+/**
+ * Body for `POST /incidents/{id}/alarms` (ADR 0022): with neither
+ * `scheduled_at` nor `offset_minutes` this creates an immediate alarm (as
+ * before); with exactly one of them it creates a `planned` alarm instead.
+ * Both at once -> 400 `validation_error`.
+ */
+export const createAlarmBodySchema = z
   .object({
     id: z.string().uuid().optional(),
     vehicle_ids: z
@@ -53,8 +61,50 @@ export const triggerAlarmBodySchema = z
       .refine(ids => new Set(ids).size === ids.length, {
         message: 'vehicle_ids darf keine Duplikate enthalten.',
       }),
+    scheduled_at: z.string().datetime().optional(),
+    offset_minutes: z.number().int().min(1).max(1440).optional(),
   })
-  .strict();
+  .strict()
+  .refine(body => body.scheduled_at === undefined || body.offset_minutes === undefined, {
+    message: 'scheduled_at und offset_minutes schließen sich aus.',
+  });
+
+export const createAlarmResponseSchema = z.object({
+  alarm: alarmJsonSchema,
+  double_crewed: z.array(doubleCrewedJsonSchema),
+});
+
+/** `PATCH /alarms/{id}` (ADR 0022): only one of the two time fields may be set. */
+export const updateAlarmBodySchema = z
+  .object({
+    scheduled_at: z.string().datetime().optional(),
+    offset_minutes: z.number().int().min(1).max(1440).optional(),
+    vehicle_ids: z
+      .array(z.string().uuid())
+      .min(1)
+      .max(50)
+      .refine(ids => new Set(ids).size === ids.length, {
+        message: 'vehicle_ids darf keine Duplikate enthalten.',
+      })
+      .optional(),
+  })
+  .strict()
+  .refine(body => body.scheduled_at === undefined || body.offset_minutes === undefined, {
+    message: 'scheduled_at und offset_minutes schließen sich aus.',
+  })
+  .refine(
+    body =>
+      body.scheduled_at !== undefined ||
+      body.offset_minutes !== undefined ||
+      body.vehicle_ids !== undefined,
+    {
+      message: 'mindestens ein Feld ist erforderlich.',
+    }
+  );
+
+export const updateAlarmResponseSchema = z.object({ alarm: alarmJsonSchema });
+
+export const discardAlarmResponseSchema = z.object({ alarm: alarmJsonSchema });
 
 export const triggerAlarmResponseSchema = z.object({
   alarm: alarmJsonSchema,

@@ -57,6 +57,28 @@ String describeAlarmTriggerError(Object error) {
   return describeApiError(error, 'Alarmierung konnte nicht ausgelöst werden.');
 }
 
+/// German message for `POST /incidents/{id}/alarms` with `scheduled_at`/
+/// `offset_minutes` and `PATCH /alarms/{id}` (ADR 0022): maps the specific
+/// 409/400 error codes a plan/update can return to German messages, falling
+/// back to [describeApiError] for anything else.
+String describeAlarmPlanError(Object error) {
+  switch (_apiErrorCode(error)) {
+    case 'vehicle_already_alarmed':
+      return 'Mindestens ein Fahrzeug ist für diesen Einsatz bereits '
+          'alarmiert oder eingeplant.';
+    case 'no_first_alarm':
+      return 'Es gibt noch keinen Erstalarm, auf den sich die Alarmierung '
+          'beziehen könnte.';
+    case 'scheduled_at_in_past':
+      return 'Der Zeitpunkt muss in der Zukunft liegen.';
+    case 'bf_day_not_running':
+      return 'Der BF-Tag ist weder geplant noch läuft er gerade.';
+    case 'incident_not_alarmable':
+      return 'Dieser Einsatz kann nicht (mehr) alarmiert werden.';
+  }
+  return describeApiError(error, 'Alarmierung konnte nicht geplant werden.');
+}
+
 /// German message for `POST /bf-days/{id}/anonymize` and `GET
 /// /bf-days/{id}/anonymization-preview` (ADR 0020): a 409
 /// `bf_day_not_ended` means the BF-Tag hasn't ended yet, a 409

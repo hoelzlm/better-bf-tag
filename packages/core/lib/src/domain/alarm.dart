@@ -1,3 +1,4 @@
+import 'incident.dart';
 import 'shift.dart';
 
 /// Zustand einer Alarmierung (ADR 0017): `planned` -> `triggered` ->
@@ -147,6 +148,8 @@ class Alarm {
     required this.recipients,
     this.pushDelivered = 0,
     this.pushRejected = 0,
+    this.relativeToAlarmId,
+    this.offsetMinutes,
   });
 
   final String id;
@@ -162,6 +165,22 @@ class Alarm {
 
   /// Anzahl der abgelehnten/ungültigen Push-Benachrichtigungen (ADR 0018).
   final int pushRejected;
+
+  /// Die Alarmierung, relativ zu der diese geplant ist (ADR 0022), oder
+  /// `null` bei einer absoluten oder nicht (mehr) geplanten Alarmierung.
+  final String? relativeToAlarmId;
+
+  /// Der Versatz in Minuten zur Basis-Alarmierung ([relativeToAlarmId]),
+  /// oder `null` bei einer absoluten oder nicht (mehr) geplanten
+  /// Alarmierung (ADR 0022).
+  final int? offsetMinutes;
+
+  /// `true` solange die Alarmierung geplant ist und noch nicht ausgelöst
+  /// oder verpasst wurde (ADR 0022).
+  bool get isPlanned => state == AlarmState.planned;
+
+  /// `true`, wenn die Alarmierung verpasst wurde (ADR 0022).
+  bool get isMissed => state == AlarmState.missed;
 
   /// Zähler über [recipients] nach [AlarmRecipient.ackState].
   AckSummary get summary {
@@ -186,8 +205,10 @@ class Alarm {
   }
 
   /// Parses `{id,incident_id,state,scheduled_at,triggered_at,vehicle_ids,
-  /// recipients,push_delivered,push_rejected}` (ADR 0018: the last two
-  /// default to 0 if absent).
+  /// recipients,push_delivered,push_rejected,relative_to_alarm_id,
+  /// offset_minutes}` (ADR 0018: push counters default to 0 if absent;
+  /// ADR 0022: `relative_to_alarm_id`/`offset_minutes` default to `null`
+  /// if absent, so older servers/tests don't break).
   factory Alarm.fromJson(Map<String, dynamic> json) {
     final scheduledAtRaw = json['scheduled_at'] as String?;
     final triggeredAtRaw = json['triggered_at'] as String?;
@@ -207,6 +228,8 @@ class Alarm {
           .toList(),
       pushDelivered: (json['push_delivered'] as int?) ?? 0,
       pushRejected: (json['push_rejected'] as int?) ?? 0,
+      relativeToAlarmId: json['relative_to_alarm_id'] as String?,
+      offsetMinutes: json['offset_minutes'] as int?,
     );
   }
 
@@ -241,7 +264,9 @@ class Alarm {
       _listEquals(other.vehicleIds, vehicleIds) &&
       _listEquals(other.recipients, recipients) &&
       other.pushDelivered == pushDelivered &&
-      other.pushRejected == pushRejected;
+      other.pushRejected == pushRejected &&
+      other.relativeToAlarmId == relativeToAlarmId &&
+      other.offsetMinutes == offsetMinutes;
 
   static bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
@@ -262,6 +287,8 @@ class Alarm {
         Object.hashAll(recipients),
         pushDelivered,
         pushRejected,
+        relativeToAlarmId,
+        offsetMinutes,
       );
 
   @override
@@ -376,4 +403,55 @@ List<DoubleCrewed> doubleCrewedIn(Shift? shift, Iterable<String> vehicleIds) {
     );
   }
   return result;
+}
+
+/// Eine geplante oder verpasste Alarmierung zusammen mit ihrem Einsatz
+/// (ADR 0022), wie sie `GET /snapshot` unter `scheduled_alarms` liefert --
+/// nur für `preparation`/`dispatch`/`admin` (Mannschaft/Monitor erfahren
+/// nichts davon, Überraschungseffekt).
+class ScheduledAlarm {
+  const ScheduledAlarm({required this.incident, required this.alarm});
+
+  final Incident incident;
+  final Alarm alarm;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ScheduledAlarm &&
+      other.incident == incident &&
+      other.alarm == alarm;
+
+  @override
+  int get hashCode => Object.hash(incident, alarm);
+
+  @override
+  String toString() => 'ScheduledAlarm(${alarm.id}, incident: ${incident.id})';
+}
+
+/// Verbleibende Zeit bis [alarm] auslösen soll (ADR 0022), oder `null` ohne
+/// `scheduledAt` (nicht (mehr) geplant). Kann negativ sein, wenn der
+/// Zeitpunkt bereits verstrichen ist (z. B. kurz vor dem nächsten
+/// Scheduler-Tick oder bei einer verpassten Alarmierung). Pure Funktion,
+/// damit sie ohne Timer im Widget-Tree berechnet werden kann.
+Duration? countdown(Alarm alarm, DateTime now) {
+  final scheduledAt = alarm.scheduledAt;
+  if (scheduledAt == null) return null;
+  return scheduledAt.difference(now);
+}
+
+String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+/// German display label for when [alarm] is scheduled to go off (ADR
+/// 0022): "+8 min nach Erstalarm" for a relative Alarmierung
+/// ([Alarm.offsetMinutes] set), the absolute `HH:MM` time otherwise.
+/// Returns an empty string without `scheduledAt` (not (mehr) geplant).
+String scheduledAlarmTimeLabel(Alarm alarm) {
+  final offsetMinutes = alarm.offsetMinutes;
+  if (offsetMinutes != null) {
+    return '+$offsetMinutes min nach Erstalarm';
+  }
+  final scheduledAt = alarm.scheduledAt;
+  if (scheduledAt == null) return '';
+  final local = scheduledAt.toLocal();
+  return '${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
 }

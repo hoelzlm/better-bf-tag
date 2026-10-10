@@ -109,6 +109,10 @@ class _$GetSnapshot200ResponseAlarmsInner
   final int pushDelivered;
   @override
   final int pushRejected;
+  @override
+  final String? relativeToAlarmId;
+  @override
+  final int? offsetMinutes;
 
   factory _$GetSnapshot200ResponseAlarmsInner([
     void Function(GetSnapshot200ResponseAlarmsInnerBuilder)? updates,
@@ -124,6 +128,8 @@ class _$GetSnapshot200ResponseAlarmsInner
     required this.recipients,
     required this.pushDelivered,
     required this.pushRejected,
+    this.relativeToAlarmId,
+    this.offsetMinutes,
   }) : super._();
   @override
   GetSnapshot200ResponseAlarmsInner rebuild(
@@ -146,7 +152,9 @@ class _$GetSnapshot200ResponseAlarmsInner
         vehicleIds == other.vehicleIds &&
         recipients == other.recipients &&
         pushDelivered == other.pushDelivered &&
-        pushRejected == other.pushRejected;
+        pushRejected == other.pushRejected &&
+        relativeToAlarmId == other.relativeToAlarmId &&
+        offsetMinutes == other.offsetMinutes;
   }
 
   @override
@@ -161,6 +169,8 @@ class _$GetSnapshot200ResponseAlarmsInner
     _$hash = $jc(_$hash, recipients.hashCode);
     _$hash = $jc(_$hash, pushDelivered.hashCode);
     _$hash = $jc(_$hash, pushRejected.hashCode);
+    _$hash = $jc(_$hash, relativeToAlarmId.hashCode);
+    _$hash = $jc(_$hash, offsetMinutes.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -176,7 +186,9 @@ class _$GetSnapshot200ResponseAlarmsInner
           ..add('vehicleIds', vehicleIds)
           ..add('recipients', recipients)
           ..add('pushDelivered', pushDelivered)
-          ..add('pushRejected', pushRejected))
+          ..add('pushRejected', pushRejected)
+          ..add('relativeToAlarmId', relativeToAlarmId)
+          ..add('offsetMinutes', offsetMinutes))
         .toString();
   }
 }
@@ -233,6 +245,16 @@ class GetSnapshot200ResponseAlarmsInnerBuilder
   int? get pushRejected => _$this._pushRejected;
   set pushRejected(int? pushRejected) => _$this._pushRejected = pushRejected;
 
+  String? _relativeToAlarmId;
+  String? get relativeToAlarmId => _$this._relativeToAlarmId;
+  set relativeToAlarmId(String? relativeToAlarmId) =>
+      _$this._relativeToAlarmId = relativeToAlarmId;
+
+  int? _offsetMinutes;
+  int? get offsetMinutes => _$this._offsetMinutes;
+  set offsetMinutes(int? offsetMinutes) =>
+      _$this._offsetMinutes = offsetMinutes;
+
   GetSnapshot200ResponseAlarmsInnerBuilder() {
     GetSnapshot200ResponseAlarmsInner._defaults(this);
   }
@@ -249,6 +271,8 @@ class GetSnapshot200ResponseAlarmsInnerBuilder
       _recipients = $v.recipients.toBuilder();
       _pushDelivered = $v.pushDelivered;
       _pushRejected = $v.pushRejected;
+      _relativeToAlarmId = $v.relativeToAlarmId;
+      _offsetMinutes = $v.offsetMinutes;
       _$v = null;
     }
     return this;
@@ -304,6 +328,8 @@ class GetSnapshot200ResponseAlarmsInnerBuilder
               r'GetSnapshot200ResponseAlarmsInner',
               'pushRejected',
             ),
+            relativeToAlarmId: relativeToAlarmId,
+            offsetMinutes: offsetMinutes,
           );
     } catch (_) {
       late String _$failedField;

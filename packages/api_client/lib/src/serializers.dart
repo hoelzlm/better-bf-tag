@@ -17,6 +17,9 @@ import 'package:bftag_api_client/src/model/date.dart';
 import 'package:bftag_api_client/src/model/acknowledge_alarm200_response.dart';
 import 'package:bftag_api_client/src/model/anonymize_bf_day200_response.dart';
 import 'package:bftag_api_client/src/model/close_incident200_response.dart';
+import 'package:bftag_api_client/src/model/create_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/create_alarm200_response_double_crewed_inner.dart';
+import 'package:bftag_api_client/src/model/create_alarm_request.dart';
 import 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/create_incident_request.dart';
 import 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
@@ -39,6 +42,7 @@ import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner
 import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner_recipients_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_scheduled_alarms_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
@@ -67,9 +71,11 @@ import 'package:bftag_api_client/src/model/set_shift_crew_request.dart';
 import 'package:bftag_api_client/src/model/set_shift_crew_request_assignments_inner.dart';
 import 'package:bftag_api_client/src/model/set_vehicle_status_request.dart';
 import 'package:bftag_api_client/src/model/set_web_access_request.dart';
-import 'package:bftag_api_client/src/model/trigger_alarm200_response.dart';
-import 'package:bftag_api_client/src/model/trigger_alarm200_response_double_crewed_inner.dart';
-import 'package:bftag_api_client/src/model/trigger_alarm_request.dart';
+import 'package:bftag_api_client/src/model/trigger_test_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/trigger_test_alarm202_response.dart';
+import 'package:bftag_api_client/src/model/trigger_test_alarm_request.dart';
+import 'package:bftag_api_client/src/model/update_alarm200_response.dart';
+import 'package:bftag_api_client/src/model/update_alarm_request.dart';
 import 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/update_incident_request.dart';
 import 'package:bftag_api_client/src/model/update_person_request.dart';
@@ -83,6 +89,9 @@ part 'serializers.g.dart';
   AcknowledgeAlarm200Response,
   AnonymizeBfDay200Response,
   CloseIncident200Response,
+  CreateAlarm200Response,
+  CreateAlarm200ResponseDoubleCrewedInner,
+  CreateAlarmRequest,
   CreateBfDayRequest,
   CreateIncidentRequest,
   CreateMonitorPairingCode201Response,
@@ -105,6 +114,7 @@ part 'serializers.g.dart';
   GetSnapshot200ResponseAlarmsInnerRecipientsInner,
   GetSnapshot200ResponseBfDay,
   GetSnapshot200ResponseIncidentsInner,
+  GetSnapshot200ResponseScheduledAlarmsInner,
   GetSnapshot200ResponseShiftsInner,
   GetSnapshot200ResponseShiftsInnerCrewInner,
   GetSnapshot200ResponseSlidesInner,
@@ -133,9 +143,11 @@ part 'serializers.g.dart';
   SetShiftCrewRequestAssignmentsInner,
   SetVehicleStatusRequest,
   SetWebAccessRequest,
-  TriggerAlarm200Response,
-  TriggerAlarm200ResponseDoubleCrewedInner,
-  TriggerAlarmRequest,
+  TriggerTestAlarm200Response,
+  TriggerTestAlarm202Response,
+  TriggerTestAlarmRequest,
+  UpdateAlarm200Response,
+  UpdateAlarmRequest,
   UpdateBfDayRequest,
   UpdateIncidentRequest,
   UpdatePersonRequest,

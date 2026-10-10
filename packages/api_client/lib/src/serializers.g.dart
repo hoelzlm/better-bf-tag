@@ -11,6 +11,9 @@ Serializers _$serializers =
           ..add(AcknowledgeAlarm200Response.serializer)
           ..add(AnonymizeBfDay200Response.serializer)
           ..add(CloseIncident200Response.serializer)
+          ..add(CreateAlarm200Response.serializer)
+          ..add(CreateAlarm200ResponseDoubleCrewedInner.serializer)
+          ..add(CreateAlarmRequest.serializer)
           ..add(CreateBfDayRequest.serializer)
           ..add(CreateIncidentRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
@@ -43,6 +46,7 @@ Serializers _$serializers =
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
           ..add(GetSnapshot200ResponseIncidentsInner.serializer)
           ..add(GetSnapshot200ResponseIncidentsInnerStateEnum.serializer)
+          ..add(GetSnapshot200ResponseScheduledAlarmsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInnerCrewInner.serializer)
           ..add(GetSnapshot200ResponseSlidesInner.serializer)
@@ -81,9 +85,12 @@ Serializers _$serializers =
           ..add(SetShiftCrewRequestAssignmentsInner.serializer)
           ..add(SetVehicleStatusRequest.serializer)
           ..add(SetWebAccessRequest.serializer)
-          ..add(TriggerAlarm200Response.serializer)
-          ..add(TriggerAlarm200ResponseDoubleCrewedInner.serializer)
-          ..add(TriggerAlarmRequest.serializer)
+          ..add(TriggerTestAlarm200Response.serializer)
+          ..add(TriggerTestAlarm200ResponseOutcomeEnum.serializer)
+          ..add(TriggerTestAlarm202Response.serializer)
+          ..add(TriggerTestAlarmRequest.serializer)
+          ..add(UpdateAlarm200Response.serializer)
+          ..add(UpdateAlarmRequest.serializer)
           ..add(UpdateBfDayRequest.serializer)
           ..add(UpdateIncidentRequest.serializer)
           ..add(UpdatePersonRequest.serializer)
@@ -92,6 +99,12 @@ Serializers _$serializers =
           ..add(UpdatePushTokenRequest.serializer)
           ..add(UpdateSlideRequest.serializer)
           ..add(UpdateVehicleRequest.serializer)
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(CreateAlarm200ResponseDoubleCrewedInner),
+            ]),
+            () => ListBuilder<CreateAlarm200ResponseDoubleCrewedInner>(),
+          )
           ..addBuilderFactory(
             const FullType(BuiltList, const [
               const FullType(CreatePairingCode201Response),
@@ -152,9 +165,19 @@ Serializers _$serializers =
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseScheduledAlarmsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseScheduledAlarmsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
               const FullType(SetShiftCrewRequestAssignmentsInner),
             ]),
             () => ListBuilder<SetShiftCrewRequestAssignmentsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [const FullType(String)]),
@@ -194,12 +217,6 @@ Serializers _$serializers =
             ]),
             () =>
                 ListBuilder<GetSnapshot200ResponseAlarmsInnerRecipientsInner>(),
-          )
-          ..addBuilderFactory(
-            const FullType(BuiltList, const [
-              const FullType(TriggerAlarm200ResponseDoubleCrewedInner),
-            ]),
-            () => ListBuilder<TriggerAlarm200ResponseDoubleCrewedInner>(),
           ))
         .build();
 

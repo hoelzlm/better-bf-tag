@@ -24,6 +24,7 @@ const snapshotResponseSchema = z.object({
   incidents: z.array(incidentJsonSchema),
   alarms: z.array(alarmJsonSchema),
   close_suggested_incident_ids: z.array(z.string()),
+  scheduled_alarms: z.array(z.object({ incident: incidentJsonSchema, alarm: alarmJsonSchema })),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -82,6 +83,10 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
           let incidentsJson: ReturnType<typeof toIncidentJson>[] = [];
           let alarmsJson: Awaited<ReturnType<typeof loadAlarms>> = [];
           let closeSuggestedIncidentIds: string[] = [];
+          let scheduledAlarmsJson: Array<{
+            incident: ReturnType<typeof toIncidentJson>;
+            alarm: Awaited<ReturnType<typeof loadAlarms>>[number];
+          }> = [];
 
           if (runningBfDay) {
             const shiftRows = await tx
@@ -137,6 +142,42 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
               );
               closeSuggestedIncidentIds = [...suggested];
             }
+
+            // Geplante/verpasste Alarmierungen (ADR 0022): nur fürs
+            // Drehbuch (preparation/dispatch/admin), sonst `[]`.
+            const canSeeScheduledAlarms = includeScript;
+            if (canSeeScheduledAlarms) {
+              const draftIncidentRows = (await tx
+                .select()
+                .from(incident)
+                .where(
+                  and(eq(incident.bfDayId, runningBfDay.id), eq(incident.state, 'draft'))
+                )) as IncidentRow[];
+              const scheduledIncidentRows = [...incidentRows, ...draftIncidentRows];
+              const incidentJsonById = new Map(
+                scheduledIncidentRows.map(row => [
+                  row.id,
+                  toIncidentJson(row, { includeScript: true }),
+                ])
+              );
+              if (scheduledIncidentRows.length > 0) {
+                const loadedScheduled = await loadAlarms(tx, {
+                  incidentIds: scheduledIncidentRows.map(row => row.id),
+                });
+                scheduledAlarmsJson = loadedScheduled
+                  .filter(a => a.state === 'planned' || a.state === 'missed')
+                  .sort((a, b) => {
+                    const at = a.scheduled_at ?? '';
+                    const bt = b.scheduled_at ?? '';
+                    if (at !== bt) return at.localeCompare(bt);
+                    return a.id.localeCompare(b.id);
+                  })
+                  .map(a => ({
+                    incident: incidentJsonById.get(a.incident_id)!,
+                    alarm: a,
+                  }));
+              }
+            }
           }
 
           return {
@@ -149,6 +190,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             incidents: incidentsJson,
             alarms: alarmsJson,
             close_suggested_incident_ids: closeSuggestedIncidentIds,
+            scheduled_alarms: scheduledAlarmsJson,
           };
         },
         { isolationLevel: 'repeatable read' }

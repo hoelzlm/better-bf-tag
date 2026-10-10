@@ -22,6 +22,20 @@ const updatePushTokenBodySchema = z.object({
   token: z.string().min(1).max(4096),
 });
 
+const testAlarmBodySchema = z
+  .object({
+    delay_seconds: z.number().int().min(0).max(30).optional(),
+  })
+  .strict();
+
+const testAlarmResultSchema = z.object({
+  outcome: z.enum(['delivered', 'rejected', 'invalid_token']),
+});
+
+const testAlarmScheduledSchema = z.object({
+  scheduled: z.literal(true),
+});
+
 export const meRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/me',
@@ -105,6 +119,53 @@ export const meRoutes: FastifyPluginAsyncZod = async fastify => {
       });
 
       return reply.status(204).send();
+    }
+  );
+
+  fastify.post(
+    '/me/device/test-alarm',
+    {
+      preHandler: requireAuth(),
+      schema: {
+        operationId: 'triggerTestAlarm',
+        tags: ['auth'],
+        body: testAlarmBodySchema,
+        response: {
+          200: testAlarmResultSchema,
+          202: testAlarmScheduledSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = request.auth;
+      if (!auth || auth.kind !== 'person' || auth.deviceId === undefined) {
+        throw new ApiError(403, 'forbidden', 'Keine Berechtigung.');
+      }
+
+      const deviceId = auth.deviceId;
+      const delaySeconds = request.body.delay_seconds ?? 0;
+
+      const [deviceRow] = await fastify.db
+        .select({ pushToken: device.pushToken })
+        .from(device)
+        .where(eq(device.id, deviceId))
+        .limit(1);
+
+      if (!deviceRow || deviceRow.pushToken === null) {
+        throw new ApiError(409, 'no_push_token', 'Push ist auf diesem Gerät nicht eingerichtet.');
+      }
+
+      if (fastify.testAlarmScheduler.isBlocked(deviceId)) {
+        throw new ApiError(429, 'test_alarm_cooldown', 'Bitte kurz warten und erneut versuchen.');
+      }
+
+      if (delaySeconds === 0) {
+        const outcome = await fastify.testAlarmScheduler.sendNow(deviceId);
+        return reply.status(200).send({ outcome });
+      }
+
+      fastify.testAlarmScheduler.schedule(deviceId, delaySeconds);
+      return reply.status(202).send({ scheduled: true });
     }
   );
 };

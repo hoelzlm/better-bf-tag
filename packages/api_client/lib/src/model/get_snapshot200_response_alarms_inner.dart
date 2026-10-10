@@ -22,6 +22,8 @@ part 'get_snapshot200_response_alarms_inner.g.dart';
 /// * [recipients] 
 /// * [pushDelivered] 
 /// * [pushRejected] 
+/// * [relativeToAlarmId] 
+/// * [offsetMinutes] 
 @BuiltValue()
 abstract class GetSnapshot200ResponseAlarmsInner implements Built<GetSnapshot200ResponseAlarmsInner, GetSnapshot200ResponseAlarmsInnerBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -51,6 +53,12 @@ abstract class GetSnapshot200ResponseAlarmsInner implements Built<GetSnapshot200
 
   @BuiltValueField(wireName: r'push_rejected')
   int get pushRejected;
+
+  @BuiltValueField(wireName: r'relative_to_alarm_id')
+  String? get relativeToAlarmId;
+
+  @BuiltValueField(wireName: r'offset_minutes')
+  int? get offsetMinutes;
 
   GetSnapshot200ResponseAlarmsInner._();
 
@@ -119,6 +127,16 @@ class _$GetSnapshot200ResponseAlarmsInnerSerializer implements PrimitiveSerializ
     yield serializers.serialize(
       object.pushRejected,
       specifiedType: const FullType(int),
+    );
+    yield r'relative_to_alarm_id';
+    yield object.relativeToAlarmId == null ? null : serializers.serialize(
+      object.relativeToAlarmId,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'offset_minutes';
+    yield object.offsetMinutes == null ? null : serializers.serialize(
+      object.offsetMinutes,
+      specifiedType: const FullType.nullable(int),
     );
   }
 
@@ -207,6 +225,22 @@ class _$GetSnapshot200ResponseAlarmsInnerSerializer implements PrimitiveSerializ
             specifiedType: const FullType(int),
           ) as int;
           result.pushRejected = valueDes;
+          break;
+        case r'relative_to_alarm_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.relativeToAlarmId = valueDes;
+          break;
+        case r'offset_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.offsetMinutes = valueDes;
           break;
         default:
           unhandled.add(key);

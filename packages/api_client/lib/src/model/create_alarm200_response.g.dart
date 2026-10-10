@@ -1,36 +1,36 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'trigger_alarm200_response.dart';
+part of 'create_alarm200_response.dart';
 
 // **************************************************************************
 // BuiltValueGenerator
 // **************************************************************************
 
-class _$TriggerAlarm200Response extends TriggerAlarm200Response {
+class _$CreateAlarm200Response extends CreateAlarm200Response {
   @override
   final GetSnapshot200ResponseAlarmsInner alarm;
   @override
-  final BuiltList<TriggerAlarm200ResponseDoubleCrewedInner> doubleCrewed;
+  final BuiltList<CreateAlarm200ResponseDoubleCrewedInner> doubleCrewed;
 
-  factory _$TriggerAlarm200Response([
-    void Function(TriggerAlarm200ResponseBuilder)? updates,
-  ]) => (TriggerAlarm200ResponseBuilder()..update(updates))._build();
+  factory _$CreateAlarm200Response([
+    void Function(CreateAlarm200ResponseBuilder)? updates,
+  ]) => (CreateAlarm200ResponseBuilder()..update(updates))._build();
 
-  _$TriggerAlarm200Response._({required this.alarm, required this.doubleCrewed})
+  _$CreateAlarm200Response._({required this.alarm, required this.doubleCrewed})
     : super._();
   @override
-  TriggerAlarm200Response rebuild(
-    void Function(TriggerAlarm200ResponseBuilder) updates,
+  CreateAlarm200Response rebuild(
+    void Function(CreateAlarm200ResponseBuilder) updates,
   ) => (toBuilder()..update(updates)).build();
 
   @override
-  TriggerAlarm200ResponseBuilder toBuilder() =>
-      TriggerAlarm200ResponseBuilder()..replace(this);
+  CreateAlarm200ResponseBuilder toBuilder() =>
+      CreateAlarm200ResponseBuilder()..replace(this);
 
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is TriggerAlarm200Response &&
+    return other is CreateAlarm200Response &&
         alarm == other.alarm &&
         doubleCrewed == other.doubleCrewed;
   }
@@ -46,17 +46,16 @@ class _$TriggerAlarm200Response extends TriggerAlarm200Response {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'TriggerAlarm200Response')
+    return (newBuiltValueToStringHelper(r'CreateAlarm200Response')
           ..add('alarm', alarm)
           ..add('doubleCrewed', doubleCrewed))
         .toString();
   }
 }
 
-class TriggerAlarm200ResponseBuilder
-    implements
-        Builder<TriggerAlarm200Response, TriggerAlarm200ResponseBuilder> {
-  _$TriggerAlarm200Response? _$v;
+class CreateAlarm200ResponseBuilder
+    implements Builder<CreateAlarm200Response, CreateAlarm200ResponseBuilder> {
+  _$CreateAlarm200Response? _$v;
 
   GetSnapshot200ResponseAlarmsInnerBuilder? _alarm;
   GetSnapshot200ResponseAlarmsInnerBuilder get alarm =>
@@ -64,19 +63,19 @@ class TriggerAlarm200ResponseBuilder
   set alarm(GetSnapshot200ResponseAlarmsInnerBuilder? alarm) =>
       _$this._alarm = alarm;
 
-  ListBuilder<TriggerAlarm200ResponseDoubleCrewedInner>? _doubleCrewed;
-  ListBuilder<TriggerAlarm200ResponseDoubleCrewedInner> get doubleCrewed =>
+  ListBuilder<CreateAlarm200ResponseDoubleCrewedInner>? _doubleCrewed;
+  ListBuilder<CreateAlarm200ResponseDoubleCrewedInner> get doubleCrewed =>
       _$this._doubleCrewed ??=
-          ListBuilder<TriggerAlarm200ResponseDoubleCrewedInner>();
+          ListBuilder<CreateAlarm200ResponseDoubleCrewedInner>();
   set doubleCrewed(
-    ListBuilder<TriggerAlarm200ResponseDoubleCrewedInner>? doubleCrewed,
+    ListBuilder<CreateAlarm200ResponseDoubleCrewedInner>? doubleCrewed,
   ) => _$this._doubleCrewed = doubleCrewed;
 
-  TriggerAlarm200ResponseBuilder() {
-    TriggerAlarm200Response._defaults(this);
+  CreateAlarm200ResponseBuilder() {
+    CreateAlarm200Response._defaults(this);
   }
 
-  TriggerAlarm200ResponseBuilder get _$this {
+  CreateAlarm200ResponseBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
       _alarm = $v.alarm.toBuilder();
@@ -87,24 +86,24 @@ class TriggerAlarm200ResponseBuilder
   }
 
   @override
-  void replace(TriggerAlarm200Response other) {
-    _$v = other as _$TriggerAlarm200Response;
+  void replace(CreateAlarm200Response other) {
+    _$v = other as _$CreateAlarm200Response;
   }
 
   @override
-  void update(void Function(TriggerAlarm200ResponseBuilder)? updates) {
+  void update(void Function(CreateAlarm200ResponseBuilder)? updates) {
     if (updates != null) updates(this);
   }
 
   @override
-  TriggerAlarm200Response build() => _build();
+  CreateAlarm200Response build() => _build();
 
-  _$TriggerAlarm200Response _build() {
-    _$TriggerAlarm200Response _$result;
+  _$CreateAlarm200Response _build() {
+    _$CreateAlarm200Response _$result;
     try {
       _$result =
           _$v ??
-          _$TriggerAlarm200Response._(
+          _$CreateAlarm200Response._(
             alarm: alarm.build(),
             doubleCrewed: doubleCrewed.build(),
           );
@@ -117,7 +116,7 @@ class TriggerAlarm200ResponseBuilder
         doubleCrewed.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-          r'TriggerAlarm200Response',
+          r'CreateAlarm200Response',
           _$failedField,
           e.toString(),
         );

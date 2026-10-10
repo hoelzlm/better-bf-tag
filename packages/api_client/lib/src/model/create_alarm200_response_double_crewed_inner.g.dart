@@ -1,13 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'trigger_alarm200_response_double_crewed_inner.dart';
+part of 'create_alarm200_response_double_crewed_inner.dart';
 
 // **************************************************************************
 // BuiltValueGenerator
 // **************************************************************************
 
-class _$TriggerAlarm200ResponseDoubleCrewedInner
-    extends TriggerAlarm200ResponseDoubleCrewedInner {
+class _$CreateAlarm200ResponseDoubleCrewedInner
+    extends CreateAlarm200ResponseDoubleCrewedInner {
   @override
   final String personId;
   @override
@@ -15,29 +15,29 @@ class _$TriggerAlarm200ResponseDoubleCrewedInner
   @override
   final BuiltList<String> vehicleIds;
 
-  factory _$TriggerAlarm200ResponseDoubleCrewedInner([
-    void Function(TriggerAlarm200ResponseDoubleCrewedInnerBuilder)? updates,
-  ]) => (TriggerAlarm200ResponseDoubleCrewedInnerBuilder()..update(updates))
+  factory _$CreateAlarm200ResponseDoubleCrewedInner([
+    void Function(CreateAlarm200ResponseDoubleCrewedInnerBuilder)? updates,
+  ]) => (CreateAlarm200ResponseDoubleCrewedInnerBuilder()..update(updates))
       ._build();
 
-  _$TriggerAlarm200ResponseDoubleCrewedInner._({
+  _$CreateAlarm200ResponseDoubleCrewedInner._({
     required this.personId,
     required this.displayName,
     required this.vehicleIds,
   }) : super._();
   @override
-  TriggerAlarm200ResponseDoubleCrewedInner rebuild(
-    void Function(TriggerAlarm200ResponseDoubleCrewedInnerBuilder) updates,
+  CreateAlarm200ResponseDoubleCrewedInner rebuild(
+    void Function(CreateAlarm200ResponseDoubleCrewedInnerBuilder) updates,
   ) => (toBuilder()..update(updates)).build();
 
   @override
-  TriggerAlarm200ResponseDoubleCrewedInnerBuilder toBuilder() =>
-      TriggerAlarm200ResponseDoubleCrewedInnerBuilder()..replace(this);
+  CreateAlarm200ResponseDoubleCrewedInnerBuilder toBuilder() =>
+      CreateAlarm200ResponseDoubleCrewedInnerBuilder()..replace(this);
 
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is TriggerAlarm200ResponseDoubleCrewedInner &&
+    return other is CreateAlarm200ResponseDoubleCrewedInner &&
         personId == other.personId &&
         displayName == other.displayName &&
         vehicleIds == other.vehicleIds;
@@ -56,7 +56,7 @@ class _$TriggerAlarm200ResponseDoubleCrewedInner
   @override
   String toString() {
     return (newBuiltValueToStringHelper(
-            r'TriggerAlarm200ResponseDoubleCrewedInner',
+            r'CreateAlarm200ResponseDoubleCrewedInner',
           )
           ..add('personId', personId)
           ..add('displayName', displayName)
@@ -65,13 +65,13 @@ class _$TriggerAlarm200ResponseDoubleCrewedInner
   }
 }
 
-class TriggerAlarm200ResponseDoubleCrewedInnerBuilder
+class CreateAlarm200ResponseDoubleCrewedInnerBuilder
     implements
         Builder<
-          TriggerAlarm200ResponseDoubleCrewedInner,
-          TriggerAlarm200ResponseDoubleCrewedInnerBuilder
+          CreateAlarm200ResponseDoubleCrewedInner,
+          CreateAlarm200ResponseDoubleCrewedInnerBuilder
         > {
-  _$TriggerAlarm200ResponseDoubleCrewedInner? _$v;
+  _$CreateAlarm200ResponseDoubleCrewedInner? _$v;
 
   String? _personId;
   String? get personId => _$this._personId;
@@ -87,11 +87,11 @@ class TriggerAlarm200ResponseDoubleCrewedInnerBuilder
   set vehicleIds(ListBuilder<String>? vehicleIds) =>
       _$this._vehicleIds = vehicleIds;
 
-  TriggerAlarm200ResponseDoubleCrewedInnerBuilder() {
-    TriggerAlarm200ResponseDoubleCrewedInner._defaults(this);
+  CreateAlarm200ResponseDoubleCrewedInnerBuilder() {
+    CreateAlarm200ResponseDoubleCrewedInner._defaults(this);
   }
 
-  TriggerAlarm200ResponseDoubleCrewedInnerBuilder get _$this {
+  CreateAlarm200ResponseDoubleCrewedInnerBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
       _personId = $v.personId;
@@ -103,34 +103,34 @@ class TriggerAlarm200ResponseDoubleCrewedInnerBuilder
   }
 
   @override
-  void replace(TriggerAlarm200ResponseDoubleCrewedInner other) {
-    _$v = other as _$TriggerAlarm200ResponseDoubleCrewedInner;
+  void replace(CreateAlarm200ResponseDoubleCrewedInner other) {
+    _$v = other as _$CreateAlarm200ResponseDoubleCrewedInner;
   }
 
   @override
   void update(
-    void Function(TriggerAlarm200ResponseDoubleCrewedInnerBuilder)? updates,
+    void Function(CreateAlarm200ResponseDoubleCrewedInnerBuilder)? updates,
   ) {
     if (updates != null) updates(this);
   }
 
   @override
-  TriggerAlarm200ResponseDoubleCrewedInner build() => _build();
+  CreateAlarm200ResponseDoubleCrewedInner build() => _build();
 
-  _$TriggerAlarm200ResponseDoubleCrewedInner _build() {
-    _$TriggerAlarm200ResponseDoubleCrewedInner _$result;
+  _$CreateAlarm200ResponseDoubleCrewedInner _build() {
+    _$CreateAlarm200ResponseDoubleCrewedInner _$result;
     try {
       _$result =
           _$v ??
-          _$TriggerAlarm200ResponseDoubleCrewedInner._(
+          _$CreateAlarm200ResponseDoubleCrewedInner._(
             personId: BuiltValueNullFieldError.checkNotNull(
               personId,
-              r'TriggerAlarm200ResponseDoubleCrewedInner',
+              r'CreateAlarm200ResponseDoubleCrewedInner',
               'personId',
             ),
             displayName: BuiltValueNullFieldError.checkNotNull(
               displayName,
-              r'TriggerAlarm200ResponseDoubleCrewedInner',
+              r'CreateAlarm200ResponseDoubleCrewedInner',
               'displayName',
             ),
             vehicleIds: vehicleIds.build(),
@@ -142,7 +142,7 @@ class TriggerAlarm200ResponseDoubleCrewedInnerBuilder
         vehicleIds.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-          r'TriggerAlarm200ResponseDoubleCrewedInner',
+          r'CreateAlarm200ResponseDoubleCrewedInner',
           _$failedField,
           e.toString(),
         );
