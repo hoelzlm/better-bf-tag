@@ -14,6 +14,8 @@ Incident _incident({
   String report = 'Rauch aus dem Dach',
   String? script,
   IncidentState state = IncidentState.running,
+  double? latitude,
+  double? longitude,
 }) {
   final now = DateTime.parse('2026-06-01T08:00:00Z');
   return Incident(
@@ -27,6 +29,8 @@ Incident _incident({
     state: state,
     createdAt: now,
     updatedAt: now,
+    latitude: latitude,
+    longitude: longitude,
   );
 }
 
@@ -230,6 +234,40 @@ void main() {
         find.text('Übung: Simulierter Dachstuhlbrand.'),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'detail with coordinates shows the map and "Navigation starten"',
+    (tester) async {
+      final repository = _FakeIncidentRepository(
+        listResult: [
+          _incident(id: 'i1', latitude: 48.1, longitude: 11.5),
+        ],
+      );
+      await _pumpIncidentsScreen(tester, repository: repository);
+
+      await tester.tap(find.byKey(const Key('incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(IncidentMap), findsOneWidget);
+      expect(find.byKey(const Key('start-navigation')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'detail without coordinates shows no map and no navigation button',
+    (tester) async {
+      final repository = _FakeIncidentRepository(
+        listResult: [_incident(id: 'i1')],
+      );
+      await _pumpIncidentsScreen(tester, repository: repository);
+
+      await tester.tap(find.byKey(const Key('incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(IncidentMap), findsNothing);
+      expect(find.byKey(const Key('start-navigation')), findsNothing);
     },
   );
 }

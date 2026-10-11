@@ -4,10 +4,13 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_mobile/alarm/alarm_sound.dart';
 import 'package:bftag_mobile/alarm/pending_alarm.dart';
 import 'package:bftag_mobile/main.dart';
+import 'package:bftag_mobile/map/navigation.dart';
+import 'package:bftag_mobile/map/station_provider.dart';
 import 'package:bftag_mobile/onboarding/onboarding_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 
 const _me = Person(
   id: 'p1',
@@ -24,6 +27,8 @@ Incident _incident({
   String report = 'Rauch aus dem Dach',
   String? script,
   IncidentState state = IncidentState.running,
+  double? latitude,
+  double? longitude,
 }) {
   final now = DateTime.parse('2026-06-01T08:00:00Z');
   return Incident(
@@ -37,6 +42,8 @@ Incident _incident({
     state: state,
     createdAt: now,
     updatedAt: now,
+    latitude: latitude,
+    longitude: longitude,
   );
 }
 
@@ -390,6 +397,164 @@ void main() {
 
       expect(find.text('ALARM'), findsNothing);
       expect(sound.playCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'an incident with coordinates shows the map and "Navigation starten"',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [_incident(latitude: 48.1, longitude: 11.5)],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      expect(find.byType(IncidentMap), findsOneWidget);
+      expect(find.byKey(const Key('start-navigation')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'an incident without coordinates shows no map and no navigation button',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [_incident()],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      expect(find.byType(IncidentMap), findsNothing);
+      expect(find.byKey(const Key('start-navigation')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'tapping "Navigation starten" calls the fake launcher with the '
+    'expected Uri',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+      Uri? launched;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pairedSessionControllerProvider.overrideWith(
+              () => _FakePairedSessionController(
+                const Paired(_me, 'fake-access-token', 'dev1'),
+              ),
+            ),
+            onboardingStoreProvider.overrideWithValue(
+              InMemoryOnboardingStore(completed: true),
+            ),
+            pairedRealtimeClientProvider.overrideWith((ref) => null),
+            pairedAlarmsProvider.overrideWith((ref) => Stream.value([alarm])),
+            pairedLiveAlarmTriggeredProvider.overrideWith(
+              (ref) => Stream.value(alarm),
+            ),
+            pairedIncidentsProvider.overrideWith(
+              (ref) => Stream.value([_incident(latitude: 48.1, longitude: 11.5)]),
+            ),
+            pairedVehiclesProvider.overrideWith(
+              (ref) => Stream.value([_vehicle()]),
+            ),
+            myCrewAssignmentsProvider.overrideWithValue(const []),
+            alarmSoundProvider.overrideWithValue(sound),
+            alarmRepositoryProvider.overrideWithValue(repository),
+            uriLauncherProvider.overrideWithValue((uri) async {
+              launched = uri;
+              return true;
+            }),
+          ],
+          child: const BftagMobileApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('start-navigation')));
+      await tester.pumpAndSettle();
+
+      expect(launched.toString(), 'geo:48.1,11.5?q=48.1,11.5');
+    },
+  );
+
+  testWidgets(
+    'wires the paired station into the map as the Wache pin',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+      // A single shared source (like the one `RealtimeState` event that
+      // carries both `incidents` and `station` together) so both
+      // providers resolve from the exact same completion -- two
+      // independent `Stream.value(...)` overrides, or a single-listener
+      // stream turned broadcast (only the first subscriber gets the
+      // value), can resolve inconsistently and leave `station` null.
+      final shared = Future<void>.value();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pairedSessionControllerProvider.overrideWith(
+              () => _FakePairedSessionController(
+                const Paired(_me, 'fake-access-token', 'dev1'),
+              ),
+            ),
+            onboardingStoreProvider.overrideWithValue(
+              InMemoryOnboardingStore(completed: true),
+            ),
+            pairedRealtimeClientProvider.overrideWith((ref) => null),
+            pairedAlarmsProvider.overrideWith((ref) => Stream.value([alarm])),
+            pairedLiveAlarmTriggeredProvider.overrideWith(
+              (ref) => Stream.value(alarm),
+            ),
+            pairedIncidentsProvider.overrideWith(
+              (ref) => shared.asStream().map(
+                (_) => [_incident(latitude: 48.1, longitude: 11.5)],
+              ),
+            ),
+            pairedVehiclesProvider.overrideWith(
+              (ref) => Stream.value([_vehicle()]),
+            ),
+            pairedStationProvider.overrideWith(
+              (ref) => shared.asStream().map((_) => const LatLng(48.2, 11.6)),
+            ),
+            myCrewAssignmentsProvider.overrideWithValue(const []),
+            alarmSoundProvider.overrideWithValue(sound),
+            alarmRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const BftagMobileApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final map = tester.widget<IncidentMap>(find.byType(IncidentMap));
+      expect(map.station, const LatLng(48.2, 11.6));
     },
   );
 }

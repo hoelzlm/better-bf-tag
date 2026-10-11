@@ -20,6 +20,9 @@ dependencies:
   audioplayers: ^6.1.0
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
+  url_launcher: ^6.3.1
+  flutter_map: ^8.3.2
+  latlong2: ^0.9.1
   bftag_core:
     path: ../../packages/core
   bftag_api_client:
