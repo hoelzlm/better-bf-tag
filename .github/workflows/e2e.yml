@@ -1,0 +1,52 @@
+name: E2E
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Build web (apps/web)
+        working-directory: apps/web
+        run: flutter build web --release --base-href /
+
+      - uses: extractions/setup-just@v2
+
+      - name: Run e2e suite
+        env:
+          SKIP_WEB_BUILD: "1"
+          CHROME_BIN: google-chrome
+        run: just e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-artifacts
+          path: e2e/artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
