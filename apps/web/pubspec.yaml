@@ -20,6 +20,8 @@ dependencies:
   bftag_api_client:
     path: ../../packages/api_client
   dio: ^5.7.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.9.1
   qr_flutter: ^4.1.0
   pdf: ^3.11.1
   printing: ^5.13.4

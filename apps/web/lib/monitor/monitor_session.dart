@@ -191,7 +191,9 @@ class MonitorSessionController extends Notifier<MonitorSessionState> {
 
   Future<void> _applyResult(MonitorPair200Response data) async {
     _refreshToken = data.refreshToken;
-    await ref.read(tokenStoreProvider).write(
+    await ref
+        .read(tokenStoreProvider)
+        .write(
           StoredDeviceSession(
             refreshToken: data.refreshToken,
             deviceId: data.monitor.id,
@@ -207,8 +209,8 @@ class MonitorSessionController extends Notifier<MonitorSessionState> {
 
 final monitorSessionControllerProvider =
     NotifierProvider<MonitorSessionController, MonitorSessionState>(
-  MonitorSessionController.new,
-);
+      MonitorSessionController.new,
+    );
 
 class _MonitorSessionAuthBinding implements AuthSessionBinding {
   _MonitorSessionAuthBinding(this._ref);
@@ -244,8 +246,9 @@ Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
     shortName: v.shortName,
     type: v.type,
     status: FmsStatus.fromCode(v.status),
-    statusChangedAt:
-        statusChangedAtRaw == null ? null : DateTime.parse(statusChangedAtRaw),
+    statusChangedAt: statusChangedAtRaw == null
+        ? null
+        : DateTime.parse(statusChangedAtRaw),
     sortOrder: v.sortOrder,
     active: v.active,
   );
@@ -312,6 +315,10 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'state': i.state.name,
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
+    // ADR 0026: the Monitor-Einsatzansicht shows a map when the Einsatz
+    // has coordinates, so mirror the admin's `_incidentFromApi` here too.
+    'latitude': i.latitude,
+    'longitude': i.longitude,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -325,8 +332,9 @@ AlarmRecipient _alarmRecipientFromApi(
     vehicleId: r.vehicleId,
     function: r.function_,
     hasDevice: r.hasDevice,
-    acknowledgedAt:
-        r.acknowledgedAt == null ? null : DateTime.parse(r.acknowledgedAt!),
+    acknowledgedAt: r.acknowledgedAt == null
+        ? null
+        : DateTime.parse(r.acknowledgedAt!),
   );
 }
 
@@ -346,9 +354,7 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
 /// the monitor's own snapshot loader to the same wire shape as the admin
 /// one, so the monitor's "Letzte Durchsage" panel and banner get
 /// `snapshot.announcements` too.
-Announcement _announcementFromApi(
-  GetSnapshot200ResponseAnnouncementsInner a,
-) {
+Announcement _announcementFromApi(GetSnapshot200ResponseAnnouncementsInner a) {
   return Announcement(
     id: a.id,
     bfDayId: a.bfDayId,
@@ -363,9 +369,7 @@ Announcement _announcementFromApi(
 /// 0025): wires the monitor's own snapshot loader to the same wire shape
 /// as the admin one, so the monitor's "Jetzt"/"Danach"-Block gets
 /// `snapshot.program_items` too.
-ProgramItem _programItemFromApi(
-  GetSnapshot200ResponseProgramItemsInner p,
-) {
+ProgramItem _programItemFromApi(GetSnapshot200ResponseProgramItemsInner p) {
   return ProgramItem(
     id: p.id,
     bfDayId: p.bfDayId,
@@ -562,9 +566,7 @@ List<Override> monitorProviderOverrides({
     // provider resolves against the *root* container regardless of where
     // it is read from, which would make its own `ref.read(tokenStoreProvider)`
     // miss the override above entirely.
-    monitorSessionControllerProvider.overrideWith(
-      MonitorSessionController.new,
-    ),
+    monitorSessionControllerProvider.overrideWith(MonitorSessionController.new),
     realtimeClientProvider.overrideWith(_buildMonitorRealtimeClient),
     vehiclesProvider.overrideWith(_buildMonitorVehicles),
     slidesProvider.overrideWith(_buildMonitorSlides),
