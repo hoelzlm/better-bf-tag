@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../alarm/alarm_sound.dart';
 import '../alarm/pending_alarm.dart';
+import '../map/incident_location_card.dart';
+import '../map/station_provider.dart';
 
 Incident? _findIncident(List<Incident> incidents, String id) {
   for (final incident in incidents) {
@@ -199,6 +201,13 @@ class _AlarmContent extends ConsumerWidget {
                     if (incident.report.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(incident.report, style: textStyle.copyWith(fontSize: 18)),
+                    ],
+                    if (incident.location != null) ...[
+                      const SizedBox(height: 16),
+                      IncidentLocationCard(
+                        incident: incident.location!,
+                        station: ref.watch(pairedStationProvider).valueOrNull,
+                      ),
                     ],
                   ],
                   const SizedBox(height: 24),

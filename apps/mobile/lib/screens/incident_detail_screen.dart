@@ -4,6 +4,9 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../map/incident_location_card.dart';
+import '../map/station_provider.dart';
+
 /// Einsatzdetail screen for `/einsaetze/:id`: Meldebild (Stichwort,
 /// Adresse, Lagebeschreibung) and, only when the server included the
 /// `script` field (ADR 0016 -- Einsatzvorbereitung/Leitstelle/
@@ -84,6 +87,13 @@ class _IncidentDetailScreenState extends ConsumerState<IncidentDetailScreen> {
               if (incident.report.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(incident.report),
+              ],
+              if (incident.location != null) ...[
+                const SizedBox(height: 16),
+                IncidentLocationCard(
+                  incident: incident.location!,
+                  station: ref.watch(pairedStationProvider).valueOrNull,
+                ),
               ],
               if (incident.script != null) ...[
                 const SizedBox(height: 24),

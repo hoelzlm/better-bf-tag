@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:latlong2/latlong.dart';
+
 import '../domain/alarm.dart';
 import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
@@ -40,6 +42,7 @@ class RealtimeState {
     this.scheduledAlarms = const <ScheduledAlarm>[],
     this.announcements = const <Announcement>[],
     this.programItems = const <ProgramItem>[],
+    this.station,
   });
 
   final int seq;
@@ -50,6 +53,10 @@ class RealtimeState {
   final List<Shift> shifts;
   final List<Incident> incidents;
   final List<Alarm> alarms;
+
+  /// Die Wache-Koordinaten aus dem Snapshot (ADR 0026), `null` wenn keine
+  /// konfiguriert ist. Ändert sich nur per Neustart (kein Event).
+  final LatLng? station;
 
   /// Ids of `running` Einsätze that are abschlussreif (ADR 0019), computed
   /// for `dispatch`/`admin` only -- always empty for other Berechtigungen.
@@ -153,6 +160,7 @@ class RealtimeClient {
   final Map<String, Vehicle> _vehiclesById = <String, Vehicle>{};
   List<Slide> _slides = <Slide>[];
   BfDay? _bfDay;
+  LatLng? _station;
   final Map<String, Shift> _shiftsById = <String, Shift>{};
   final Map<String, Incident> _incidentsById = <String, Incident>{};
   final Map<String, Alarm> _alarmsById = <String, Alarm>{};
@@ -249,6 +257,7 @@ class RealtimeClient {
         ..addEntries(snapshot.vehicles.map((v) => MapEntry(v.id, v)));
       _slides = List.of(snapshot.slides);
       _bfDay = snapshot.bfDay;
+      _station = snapshot.station;
       _shiftsById
         ..clear()
         ..addEntries(snapshot.shifts.map((s) => MapEntry(s.id, s)));
@@ -594,6 +603,7 @@ class RealtimeClient {
         scheduledAlarms: _sortedScheduledAlarms,
         announcements: List.of(_announcements),
         programItems: List.of(_programItems),
+        station: _station,
       ),
     );
   }
