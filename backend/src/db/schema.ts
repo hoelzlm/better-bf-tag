@@ -15,7 +15,7 @@ import {
   customType,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { sql, desc } from 'drizzle-orm';
 
 /** Raw binary data (ADR 0014): Folienbilder liegen als `bytea` in Postgres. */
 const bytea = customType<{ data: Buffer }>({
@@ -364,3 +364,22 @@ export const slideImage = pgTable('slide_image', {
   sizeBytes: integer('size_bytes').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 });
+
+export const announcement = pgTable(
+  'announcement',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    // `on delete cascade` statt `set null` (ADR 0024): eine an eine Schicht
+    // gerichtete Durchsage darf nie nachträglich für alle sichtbar werden.
+    shiftId: uuid('shift_id').references(() => shift.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => person.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  table => [index('announcement_bf_day_created_at_idx').on(table.bfDayId, desc(table.createdAt))]
+);

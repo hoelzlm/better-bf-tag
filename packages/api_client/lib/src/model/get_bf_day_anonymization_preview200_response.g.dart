@@ -18,6 +18,8 @@ class _$GetBfDayAnonymizationPreview200Response
   final int statusEvents;
   @override
   final int personsDeleted;
+  @override
+  final int announcements;
 
   factory _$GetBfDayAnonymizationPreview200Response([
     void Function(GetBfDayAnonymizationPreview200ResponseBuilder)? updates,
@@ -30,6 +32,7 @@ class _$GetBfDayAnonymizationPreview200Response
     required this.alarmRecipients,
     required this.statusEvents,
     required this.personsDeleted,
+    required this.announcements,
   }) : super._();
   @override
   GetBfDayAnonymizationPreview200Response rebuild(
@@ -48,7 +51,8 @@ class _$GetBfDayAnonymizationPreview200Response
         crewAssignments == other.crewAssignments &&
         alarmRecipients == other.alarmRecipients &&
         statusEvents == other.statusEvents &&
-        personsDeleted == other.personsDeleted;
+        personsDeleted == other.personsDeleted &&
+        announcements == other.announcements;
   }
 
   @override
@@ -59,6 +63,7 @@ class _$GetBfDayAnonymizationPreview200Response
     _$hash = $jc(_$hash, alarmRecipients.hashCode);
     _$hash = $jc(_$hash, statusEvents.hashCode);
     _$hash = $jc(_$hash, personsDeleted.hashCode);
+    _$hash = $jc(_$hash, announcements.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -72,7 +77,8 @@ class _$GetBfDayAnonymizationPreview200Response
           ..add('crewAssignments', crewAssignments)
           ..add('alarmRecipients', alarmRecipients)
           ..add('statusEvents', statusEvents)
-          ..add('personsDeleted', personsDeleted))
+          ..add('personsDeleted', personsDeleted)
+          ..add('announcements', announcements))
         .toString();
   }
 }
@@ -109,6 +115,11 @@ class GetBfDayAnonymizationPreview200ResponseBuilder
   set personsDeleted(int? personsDeleted) =>
       _$this._personsDeleted = personsDeleted;
 
+  int? _announcements;
+  int? get announcements => _$this._announcements;
+  set announcements(int? announcements) =>
+      _$this._announcements = announcements;
+
   GetBfDayAnonymizationPreview200ResponseBuilder() {
     GetBfDayAnonymizationPreview200Response._defaults(this);
   }
@@ -121,6 +132,7 @@ class GetBfDayAnonymizationPreview200ResponseBuilder
       _alarmRecipients = $v.alarmRecipients;
       _statusEvents = $v.statusEvents;
       _personsDeleted = $v.personsDeleted;
+      _announcements = $v.announcements;
       _$v = null;
     }
     return this;
@@ -169,6 +181,11 @@ class GetBfDayAnonymizationPreview200ResponseBuilder
             personsDeleted,
             r'GetBfDayAnonymizationPreview200Response',
             'personsDeleted',
+          ),
+          announcements: BuiltValueNullFieldError.checkNotNull(
+            announcements,
+            r'GetBfDayAnonymizationPreview200Response',
+            'announcements',
           ),
         );
     replace(_$result);

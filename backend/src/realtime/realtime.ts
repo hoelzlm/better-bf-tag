@@ -6,34 +6,44 @@ import type { Permission } from '../access/types.js';
 /** The transaction type passed into a `mutate()` callback. */
 export type Tx = Parameters<Db['transaction']>[0] extends (tx: infer T) => unknown ? T : never;
 
+/**
+ * The realtime filter's view of a `/ws` connection (ADR 0024): a Person
+ * (with their `personId` so `audience`/`project` can filter on
+ * person-specific state such as Besatzung) or a Monitor, which has no
+ * `personId` but is treated as `crew` for permission-based audiences.
+ */
+export type Viewer =
+  | { kind: 'person'; personId: string; permission: Permission }
+  | { kind: 'monitor'; permission: 'crew' };
+
 export interface RealtimeEvent {
   seq: number;
   type: string;
   at: string;
   data: unknown;
   /**
-   * Restricts delivery to connections whose permission passes; default is
+   * Restricts delivery to connections whose viewer passes; default is
    * everyone (ADR 0009). Connections outside the audience get a `skip`
    * message instead, so `seq` stays gap-free per connection without leaking
    * the event's data.
    */
-  audience?: (permission: Permission) => boolean;
+  audience?: (viewer: Viewer) => boolean;
   /**
    * Per-connection projection (ADR 0016): when set, `ws.ts` sends
-   * `project(permission)` instead of `data` to connections that pass the
+   * `project(viewer)` instead of `data` to connections that pass the
    * audience check, so one event with one `seq` can carry a privileged
    * view (e.g. with Drehbuch) and a restricted view at once. Absent means
    * every connection in the audience gets the same `data`.
    */
-  project?: (permission: Permission) => unknown;
+  project?: (viewer: Viewer) => unknown;
 }
 
 export type Emit = (
   type: string,
   data: unknown,
   opts?: {
-    audience?: (permission: Permission) => boolean;
-    project?: (permission: Permission) => unknown;
+    audience?: (viewer: Viewer) => boolean;
+    project?: (viewer: Viewer) => unknown;
   }
 ) => Promise<void>;
 

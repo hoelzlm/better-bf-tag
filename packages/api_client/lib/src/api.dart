@@ -10,6 +10,7 @@ import 'package:bftag_api_client/src/auth/basic_auth.dart';
 import 'package:bftag_api_client/src/auth/bearer_auth.dart';
 import 'package:bftag_api_client/src/auth/oauth.dart';
 import 'package:bftag_api_client/src/api/alarms_api.dart';
+import 'package:bftag_api_client/src/api/announcements_api.dart';
 import 'package:bftag_api_client/src/api/auth_api.dart';
 import 'package:bftag_api_client/src/api/bf_days_api.dart';
 import 'package:bftag_api_client/src/api/devices_api.dart';
@@ -80,6 +81,12 @@ class BftagApiClient {
   /// by doing that all interceptors will not be executed
   AlarmsApi getAlarmsApi() {
     return AlarmsApi(dio, serializers);
+  }
+
+  /// Get AnnouncementsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AnnouncementsApi getAnnouncementsApi() {
+    return AnnouncementsApi(dio, serializers);
   }
 
   /// Get AuthApi instance, base route and serializer can be overridden by a given but be careful,

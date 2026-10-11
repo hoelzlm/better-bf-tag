@@ -42,6 +42,7 @@ Das JWT enthält `sub` (Person- oder Monitor-ID); bei Personen zusätzlich `perm
 | Schichten/Besatzungen pflegen | | | ✓ | ✓ |
 | Einsatzbericht prüfen (später) | | | ✓ | ✓ |
 | Anonymisierung auslösen | | | ✓ | ✓ |
+| Durchsagen anlegen/löschen ([ADR 0024](adr/0024-durchsage.md)) | | | ✓ | ✓ |
 | Personen, Fahrzeuge, Feuerwehren, Monitore, BF-Tage, Folien verwalten | | | | ✓ |
 
 Die Spalten sind getrennte Rechte und keine Hierarchie, nur der Administrator darf alles.
@@ -78,6 +79,24 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | GET | `/bf-days/{day}/shifts` | alle |
 | POST/PATCH/DELETE | `/bf-days/{day}/shifts[/{id}]` | Leitstelle |
 | PUT | `/shifts/{id}/crew` | Leitstelle; Body: Liste aus `{vehicle_id, person_id, function}` |
+
+#### Durchsagen ([ADR 0024](adr/0024-durchsage.md))
+
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET | `/bf-days/{day}/announcements` | alle (gefiltert, s. u.) |
+| POST | `/bf-days/{day}/announcements` | Leitstelle, Admin |
+| DELETE | `/announcements/{id}` | Leitstelle, Admin |
+
+`POST` Body `{ text: string (1–500), shift_id?: uuid }`; `shift_id` fehlt oder `null` = an alle
+Schichten (Broadcast), sonst nur an die Besatzung dieser Schicht. `shift_id` muss zum selben
+BF-Tag gehören, sonst 400 `validation_error`. Beide Routen nur während der BF-Tag `running` ist,
+sonst 409 `bf_day_not_running`. `GET` liefert die Durchsagen des BF-Tags neueste zuerst, gefiltert
+auf das, was der Aufrufer sehen darf (Broadcast: alle; Schicht-Durchsage: nur die Besatzung dieser
+Schicht zum jetzigen Zeitpunkt, sowie Einsatzvorbereitung/Leitstelle/Admin/Monitor). `DELETE` löst
+`announcement.deleted` mit demselben Publikum wie die ursprüngliche `announcement.created` aus,
+bevor die Zeile gelöscht wird. Löschen einer Schicht löscht ihre Durchsagen mit (`on delete
+cascade`) und löst für jede zuvor `announcement.deleted` aus.
 
 ### Fahrzeugstatus
 
@@ -255,7 +274,6 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | GET/PUT | `/incidents/{id}/reports/{vehicle_id}` | Einsatzbericht (GF der Besatzung) |
 | POST | `/incidents/{id}/reports/{vehicle_id}/approve` bzw. `/return` | Prüfung |
 | POST | `/vehicles/{id}/talk-request` | Sprechaufforderung |
-| POST | `/bf-days/{day}/announcements` | Durchsage `{ text, shift_id? }` |
 | GET/POST/PATCH/DELETE | `/bf-days/{day}/program-items[/{id}]` | Tagesablauf |
 
 ### Eigenes Gerät und Snapshot
@@ -265,7 +283,7 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren ([ADR 0018](adr/0018-push-alarm-zustellung.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ token: string (1–4096) }` → 204. Setzt `device.push_token` des eigenen Geräts; trägt ein anderes Gerät dasselbe Token, wird es dort auf `null` gesetzt |
 | POST | `/me/device/test-alarm` | Testalarm auslösen ([ADR 0021](adr/0021-onboarding-testalarm.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ delay_seconds?: integer 0–30 }`. Ohne Push-Token → 409 `no_push_token`. Läuft bereits ein Timer oder war der letzte Versand vor < 10 s → 429 `test_alarm_cooldown`. `delay_seconds` 0 (Default): sendet sofort, 200 `{ outcome: "delivered" \| "rejected" \| "invalid_token" }`. `delay_seconds` > 0: 202 `{ scheduled: true }`, Versand erfolgt verzögert auf demselben Gerät; weder Einsatz/Alarm/Event noch `seq`-Änderung |
-| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `announcements` (die letzten 20 für den Aufrufer sichtbaren Durchsagen des laufenden BF-Tags, neueste zuerst, [ADR 0024](adr/0024-durchsage.md); `[]` ohne laufenden BF-Tag), `seq` |
 
 ## WebSocket `/ws`
 
@@ -303,7 +321,8 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | `shift.deleted` | `{ id, bf_day_id }` | alle |
 | `slides.changed` | `{ slides }` = alle aktiven Folien (ADR 0014) | alle |
 | `session.revoked` | – | betroffenes Gerät (kein `seq`, Verbindung wird danach mit Close-Code **4403** geschlossen) |
-| später: `announcement.created`, `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
+| `announcement.created` / `announcement.deleted` ([ADR 0024](adr/0024-durchsage.md)) | `Announcement` bzw. `{ id }` | Broadcast (`shift_id = null`): alle; Schicht-Durchsage: Besatzung dieser Schicht zum jetzigen Zeitpunkt, sowie Einsatzvorbereitung, Leitstelle, Admin, Monitor |
+| später: `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 
 ## Fehlerformat
 
@@ -317,6 +336,8 @@ Zusätzliche Codes aus ADR 0017: 409 `vehicle_inactive`, 409 `bf_day_not_running
 `not_recipient`, 409 `alarm_not_active`. Aus [ADR 0019](adr/0019-nachalarmierung-abschluss.md):
 409 `incident_not_alarmable` (Alarm auf `closed`/`discarded` Einsatz), 409
 `vehicle_already_alarmed` (Fahrzeug schon in einer `triggered` Alarmierung des Einsatzes).
+Durchsagen ([ADR 0024](adr/0024-durchsage.md)): 409 `bf_day_not_running`, 400 `validation_error`
+(Text leer/zu lang, `shift_id` gehört zu einem anderen BF-Tag).
 
 ## Client-Generierung
 

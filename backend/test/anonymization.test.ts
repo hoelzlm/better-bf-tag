@@ -22,6 +22,7 @@ interface AnonymizationSummaryJson {
   alarm_recipients: number;
   status_events: number;
   persons_deleted: number;
+  announcements: number;
 }
 
 interface AnonymizeResponseJson {
@@ -284,10 +285,28 @@ describe('anonymization', () => {
     // Status event while this BF-Tag is running: bf_day_id gets stamped.
     await setVehicleStatus(vehicle.id, 3, dispatchToken);
 
+    const announcementRes = await app.client().post(
+      `/api/v1/bf-days/${day.id}/announcements`,
+      { text: 'Hinweis' },
+      {
+        token: dispatchToken,
+      }
+    );
+    expect(announcementRes.status).toBe(201);
+
     await endBfDay(day.id);
 
     // Status event with no BF-Tag running: bf_day_id stays null, person_id kept.
     await setVehicleStatus(vehicle.id, 4, dispatchToken);
+
+    const announcementAfterEndRes = await app.client().post(
+      `/api/v1/bf-days/${day.id}/announcements`,
+      { text: 'Zu spät' },
+      {
+        token: dispatchToken,
+      }
+    );
+    expect(announcementAfterEndRes.status).toBe(409); // day already ended above
 
     const otherDay = await createBfDay(`${label}-Other`);
     await setParticipants(otherDay.id, [otherAlsoOtherDay]);
@@ -320,6 +339,7 @@ describe('anonymization', () => {
       alarm_recipients: 2,
       status_events: 1,
       persons_deleted: 1,
+      announcements: 1,
     });
 
     const anonRes = await app
@@ -347,6 +367,12 @@ describe('anonymization', () => {
       [f.day.id]
     );
     expect(recipientRows.rowCount).toBe(0);
+
+    // The day's Durchsage (ADR 0024) is gone.
+    const announcementRows = await pool.query('select 1 from announcement where bf_day_id = $1', [
+      f.day.id,
+    ]);
+    expect(announcementRows.rowCount).toBe(0);
 
     // The other BF-Tag's participation is untouched.
     const otherDayParticipation = await pool.query(

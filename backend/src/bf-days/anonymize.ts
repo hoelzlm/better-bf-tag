@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull, ne, notInArray, sql } from 'drizzle-orm';
 import {
   alarm,
   alarmRecipient,
+  announcement,
   bfDay,
   crewAssignment,
   fireDepartment,
@@ -21,6 +22,7 @@ export interface AnonymizationSummary {
   alarmRecipients: number;
   statusEvents: number;
   personsDeleted: number;
+  announcements: number;
 }
 
 interface Scope {
@@ -89,6 +91,11 @@ export async function computeAnonymization(
     .from(vehicleStatusEvent)
     .where(and(eq(vehicleStatusEvent.bfDayId, bfDayId), isNotNull(vehicleStatusEvent.personId)));
 
+  const [announcementCount] = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(announcement)
+    .where(eq(announcement.bfDayId, bfDayId));
+
   // Candidates (ADR 0020): persons with a Teilnahme at this day whose
   // Feuerwehr is not the own one, excluding the auslösende Person.
   const candidateRows = await tx
@@ -146,6 +153,7 @@ export async function computeAnonymization(
       alarmRecipients: Number(alarmRecipientCount?.count ?? 0),
       statusEvents: Number(statusEventCount?.count ?? 0),
       personsDeleted: personIdsToDelete.length,
+      announcements: Number(announcementCount?.count ?? 0),
     },
     personIdsToDelete,
   };
@@ -175,6 +183,10 @@ export async function anonymizeBfDay(
     await tx.delete(crewAssignment).where(inArray(crewAssignment.shiftId, shiftIds));
   }
   await tx.delete(participation).where(eq(participation.bfDayId, bfDayId));
+
+  // Durchsagen dieses BF-Tags vor dem Löschen fremder Personen (ADR 0024):
+  // `created_by` referenziert `person` mit `restrict`.
+  await tx.delete(announcement).where(eq(announcement.bfDayId, bfDayId));
 
   await tx
     .update(vehicleStatusEvent)

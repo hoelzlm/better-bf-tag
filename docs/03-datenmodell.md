@@ -20,7 +20,7 @@ englisch, die Zuordnung zeigt die folgende Tabelle.
 | Einsatzbericht | `incident_report` | später |
 | Vorwarnung, Bereitmeldung | `incident.prewarning_minutes`, `incident.ready_at` | später |
 | Sprechaufforderung | `vehicle_status_event` (Typ `talk_request`) | später |
-| Durchsage | `announcement` | später |
+| Durchsage | `announcement` | [ADR 0024](adr/0024-durchsage.md) |
 | Tagesablauf, Programmpunkt | `program_item` | später |
 | Anonymisierung | `bf_day.anonymized_at` + Job | MVP (manuell), automatisch später |
 
@@ -228,6 +228,19 @@ ersten Fahrzeug nach `sort_order`, s. ADR 0017).
 | acknowledged_at | timestamptz null | Quittierung |
 | PK | (alarm_id, person_id) | **nicht** `vehicle_id` – sonst wäre eine Person pro Alarmierung mehrfach Empfänger (ADR 0017) |
 
+### `announcement` – Durchsage ([ADR 0024](adr/0024-durchsage.md))
+
+| Spalte | Typ | Hinweis |
+|--------|-----|---------|
+| id | uuid PK | |
+| bf_day_id | uuid FK | cascade |
+| shift_id | uuid FK null | null = an alle; `on delete cascade` – löscht die Schicht, verschwindet die Durchsage mit ihr |
+| text | text | max. 500 Zeichen |
+| created_by | uuid FK → `person` | restrict |
+| created_at | timestamptz | |
+
+Index auf `(bf_day_id, created_at desc)` für die Liste und den Snapshot (neueste zuerst).
+
 ## Später
 
 ### `incident_report` – Einsatzbericht
@@ -243,10 +256,6 @@ ersten Fahrzeug nach `sort_order`, s. ADR 0017).
 | reviewed_by, reviewed_at | | Prüfung durch Leitstelle/Administrator |
 
 Die Zeiten (Alarm, Status 3/4/1) werden aus `alarm` und `vehicle_status_event` berechnet.
-
-### `announcement` – Durchsage
-
-`bf_day_id`, `shift_id null` (null = an alle), `text`, `created_by`, `created_at`.
 
 ### `program_item` – Programmpunkt
 

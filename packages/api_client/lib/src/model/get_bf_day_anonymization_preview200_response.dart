@@ -16,6 +16,7 @@ part 'get_bf_day_anonymization_preview200_response.g.dart';
 /// * [alarmRecipients] 
 /// * [statusEvents] 
 /// * [personsDeleted] 
+/// * [announcements] 
 @BuiltValue()
 abstract class GetBfDayAnonymizationPreview200Response implements Built<GetBfDayAnonymizationPreview200Response, GetBfDayAnonymizationPreview200ResponseBuilder> {
   @BuiltValueField(wireName: r'participations')
@@ -32,6 +33,9 @@ abstract class GetBfDayAnonymizationPreview200Response implements Built<GetBfDay
 
   @BuiltValueField(wireName: r'persons_deleted')
   int get personsDeleted;
+
+  @BuiltValueField(wireName: r'announcements')
+  int get announcements;
 
   GetBfDayAnonymizationPreview200Response._();
 
@@ -79,6 +83,11 @@ class _$GetBfDayAnonymizationPreview200ResponseSerializer implements PrimitiveSe
     yield r'persons_deleted';
     yield serializers.serialize(
       object.personsDeleted,
+      specifiedType: const FullType(int),
+    );
+    yield r'announcements';
+    yield serializers.serialize(
+      object.announcements,
       specifiedType: const FullType(int),
     );
   }
@@ -138,6 +147,13 @@ class _$GetBfDayAnonymizationPreview200ResponseSerializer implements PrimitiveSe
             specifiedType: const FullType(int),
           ) as int;
           result.personsDeleted = valueDes;
+          break;
+        case r'announcements':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.announcements = valueDes;
           break;
         default:
           unhandled.add(key);

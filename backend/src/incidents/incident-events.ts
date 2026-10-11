@@ -1,4 +1,4 @@
-import type { Permission } from '../access/types.js';
+import type { Viewer } from '../realtime/realtime.js';
 import { scriptAudience } from './visibility.js';
 import { toIncidentJson, type IncidentRow } from './incident-json.js';
 
@@ -10,12 +10,12 @@ import { toIncidentJson, type IncidentRow } from './incident-json.js';
  * the two never drift (ADR 0017).
  */
 export function incidentUpdatedEventOpts(incidentRow: IncidentRow): {
-  audience: (p: Permission) => boolean;
-  project: (p: Permission) => unknown;
+  audience: (v: Viewer) => boolean;
+  project: (v: Viewer) => unknown;
 } {
   return {
-    audience: p =>
-      scriptAudience(p) || incidentRow.state === 'running' || incidentRow.state === 'closed',
-    project: p => toIncidentJson(incidentRow, { includeScript: scriptAudience(p) }),
+    audience: v =>
+      scriptAudience(v) || incidentRow.state === 'running' || incidentRow.state === 'closed',
+    project: v => toIncidentJson(incidentRow, { includeScript: scriptAudience(v) }),
   };
 }
