@@ -56,7 +56,6 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 | Methode | Pfad |
 |---------|------|
-| GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` |
 | GET/POST/PATCH | `/persons[/{id}]` |
 | PUT/DELETE | `/persons/{id}/web-access` |
 | POST | `/persons/{id}/pairing-code` |
@@ -249,7 +248,8 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 ### Später
 
 | Methode | Pfad | Beschreibung |
-|---------|------|--------------|
+|---------|------|---------------|
+| GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` | (später) weitere Feuerwehren im UI; im Datenmodell schon vorhanden, Route existiert noch nicht (404) |
 | PATCH | `/alarms/{id}` | geplante Zeit oder Fahrzeuge ändern (Ticket 11) |
 | POST | `/alarms/{id}/discard` | geplante Alarmierung verwerfen (Ticket 11) |
 | GET/PUT | `/incidents/{id}/reports/{vehicle_id}` | Einsatzbericht (GF der Besatzung) |

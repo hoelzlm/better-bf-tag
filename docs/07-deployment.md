@@ -118,6 +118,32 @@ und sind additiv/abwärtskompatibel gehalten; ein Rollback des Images allein rei
 - `just infra-backup-test` — automatisierter lokaler Rundlauf von Backup/Restore
   (`infra/test/backup-restore.sh`, restic als Docker-Image, lokales Repository).
 
+### E2E-Suite (`just e2e`)
+
+Entscheidung: [ADR 0023](adr/0023-e2e-suite.md). `just e2e` baut die Produktions-Images (wie
+`just infra-smoke`), startet den echten `infra/`-Compose-Stack unter einem eigenen
+Compose-Projekt mit zufälligen Secrets und prüft API und Web-UI gegen Caddy/HTTPS/WebSocket
+end-to-end: Stammdaten, Berechtigungen, BF-Tag, Schicht/Besatzung, Geräte- und
+Monitor-Kopplung, Alarmierung (sofort, geplant, zeitgesteuert), Quittierung,
+Fahrzeugstatus, WebSocket-Events sowie den Web-UI-Login und alle Admin-Seiten im
+Browser (Chrome headless). Räumt per `trap … EXIT` immer mit `down -v --remove-orphans` ab.
+
+Umgebungsvariablen:
+
+| Variable | Zweck |
+|---|---|
+| `SKIP_WEB_BUILD` | überspringt den Flutter-Web-Build beim Image-Bau (schnellere lokale Läufe) |
+| `CHROME_BIN` | Pfad zum Chrome/Chromium-Binary für den UI-Test (Default `google-chrome`) |
+| `E2E_ARTIFACT_DIR` | Zielverzeichnis für Screenshots und Logs bei Fehlschlag (Default `e2e/artifacts/`) |
+| `E2E_FORCE_FAIL` | erzwingt einen absichtlich falschen Check im API-Szenario (Selbsttest: belegt, dass ein roter Check `just e2e` scheitern lässt) |
+
+`just ci` enthält den E2E-Lauf **nicht** (braucht Docker und Chrome); er läuft als eigener
+CI-Workflow (`.github/workflows/e2e.yml`) nur für Pull Requests nach `main` und manuell
+per `workflow_dispatch`.
+
+**Nicht abgedeckt:** Mobile-App auf Gerät/Emulator und echte Push-Zustellung (braucht
+FCM/APNs, siehe GitHub #21/#22/#26).
+
 ## Backups
 
 Jede Nacht um 03:15 Uhr (systemd-Timer `bftag-backup.timer`, mit zufälliger Verzögerung
