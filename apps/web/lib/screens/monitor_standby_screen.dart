@@ -109,6 +109,7 @@ class _MonitorStandbyScreenState extends ConsumerState<MonitorStandbyScreen> {
         const SizedBox(height: 32),
         const VehicleStatusBar(),
         const _CrewPanel(),
+        const _ProgramStandbyPanel(),
         if (widget.liveBanner == null) const _LastAnnouncementPanel(),
       ],
     );
@@ -261,6 +262,82 @@ class _CrewVehicleCard extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70, fontSize: 18),
               ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Jetzt" / "Danach" (ADR 0025, "Clients"): the aktuelle und nächste
+/// Programmpunkte of the running BF-Tag from [programItemsProvider],
+/// recomputed from [monitorClockProvider] -- the block is absent when
+/// there are no Programmpunkte at all, and a missing current/next line is
+/// simply omitted (not replaced by a placeholder).
+class _ProgramStandbyPanel extends ConsumerWidget {
+  const _ProgramStandbyPanel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items =
+        ref.watch(programItemsProvider).valueOrNull ?? const <ProgramItem>[];
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final now = ref.watch(monitorClockProvider).valueOrNull ?? DateTime.now();
+    final result = currentAndNext(items, now);
+    if (result.current == null && result.next == null) {
+      return const SizedBox.shrink();
+    }
+
+    String lineFor(ProgramItem item) {
+      final start = item.startsAt.toLocal();
+      final end = item.endsAt.toLocal();
+      return '${_twoDigits(start.hour)}:${_twoDigits(start.minute)}–'
+          '${_twoDigits(end.hour)}:${_twoDigits(end.minute)}  '
+          '${item.title}';
+    }
+
+    final current = result.current;
+    final next = result.next;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Container(
+        key: const Key('program-standby-panel'),
+        constraints: const BoxConstraints(maxWidth: 480),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (current != null) ...[
+              const Text(
+                'Jetzt',
+                style: TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+              Text(
+                lineFor(current),
+                key: const Key('monitor-program-current'),
+                style: const TextStyle(color: Colors.white, fontSize: 22),
+              ),
+            ],
+            if (current != null && next != null) const SizedBox(height: 12),
+            if (next != null) ...[
+              const Text(
+                'Danach',
+                style: TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+              Text(
+                lineFor(next),
+                key: const Key('monitor-program-next'),
+                style: const TextStyle(color: Colors.white70, fontSize: 18),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

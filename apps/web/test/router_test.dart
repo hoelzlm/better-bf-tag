@@ -133,6 +133,13 @@ Future<void> _pumpAppAt(
   WidgetTester tester, {
   required SessionState session,
 }) async {
+  // The AppBar's nav-entry row doesn't scroll/wrap on overflow (see
+  // lage_screen.dart); the admin permission now has enough entries that
+  // the default 800px test window overflows, so widen it like the
+  // monitor tests already do.
+  tester.view.physicalSize = const Size(1600, 900);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -514,6 +521,77 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Durchsagen'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'crew permission navigating to /admin/tagesablauf is redirected to /admin',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.crew,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-tagesablauf')), findsNothing);
+
+      final context = tester.element(find.text('Keine laufenden Einsätze'));
+      context.go('/admin/tagesablauf');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'dispatch permission can navigate to /admin/tagesablauf via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.dispatch,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-tagesablauf')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-tagesablauf')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tagesablauf'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'admin can navigate to /admin/tagesablauf via the nav entry',
+    (tester) async {
+      const person = Person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.supervisor,
+        permission: Permission.admin,
+      );
+      await _pumpAppAt(
+        tester,
+        session: const SessionSignedIn(person, 'access-token'),
+      );
+
+      expect(find.byKey(const Key('nav-tagesablauf')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-tagesablauf')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tagesablauf'), findsOneWidget);
     },
   );
 }

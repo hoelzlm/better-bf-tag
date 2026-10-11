@@ -106,3 +106,22 @@ String describeAnonymizationError(Object error) {
   }
   return describeApiError(error, 'BF-Tag konnte nicht anonymisiert werden.');
 }
+
+/// German message for `POST /bf-days/{day}/program-items`, `PATCH
+/// /program-items/{id}` and `DELETE /program-items/{id}` (ADR 0025): a 400
+/// `validation_error` means the title/zeitraum is invalid (e.g. outside
+/// the BF-Tag-Zeitraum, or `ends_at <= starts_at`), a 409 `bf_day_ended`
+/// means the BF-Tag has already ended. Falls back to [describeApiError]
+/// for anything else.
+String describeProgramItemError(Object error) {
+  switch (_apiErrorCode(error)) {
+    case 'validation_error':
+      return 'Titel oder Zeitraum sind ungültig.';
+    case 'bf_day_ended':
+      return 'BF-Tag ist bereits beendet.';
+  }
+  return describeApiError(
+    error,
+    'Programmpunkt konnte nicht gespeichert werden.',
+  );
+}
