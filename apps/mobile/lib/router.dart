@@ -11,6 +11,7 @@ import 'screens/incident_detail_screen.dart';
 import 'screens/incidents_screen.dart';
 import 'screens/my_vehicle_screen.dart';
 import 'screens/pairing_screen.dart';
+import 'screens/program_screen.dart';
 import 'screens/settings_screen.dart';
 
 /// Bridges [PairedSessionController] and [onboardingCompletedProvider]
@@ -134,6 +135,11 @@ final mobileGoRouterProvider = Provider<GoRouter>((ref) {
         path: '/durchsagen',
         builder: (context, state) =>
             const _SessionGate(child: AnnouncementsScreen()),
+      ),
+      GoRoute(
+        path: '/tagesablauf',
+        builder: (context, state) =>
+            const _SessionGate(child: ProgramScreen()),
       ),
       GoRoute(
         path: '/alarm/:alarmId',

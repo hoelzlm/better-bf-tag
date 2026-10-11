@@ -77,7 +77,7 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
 | Einsatzbericht | für die Funktion GF nach Status 1/2: Lage, Maßnahmen, Vorkommnisse; Zeiten automatisch | später |
 | Vorwarnung / Bereitmeldung | für Einsatzvorbereitung | später |
 | Durchsagen (`/durchsagen`) | Liste aus `snapshot.announcements`, neueste zuerst; dritter Eintrag der Navigationsleiste | MVP |
-| Tagesablauf | | später |
+| Tagesablauf (`/tagesablauf`) | Liste aus `snapshot.program_items` (laufender BF-Tag), aktuelle Punkte hervorgehoben, vergangene ausgegraut; vierter Eintrag der Navigationsleiste | MVP |
 | Einstellungen | Gerät abmelden, Testalarm, Hinweise zu Akku und Ton | MVP |
 
 ### Technik
@@ -100,6 +100,19 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
   `getInitialMessage`). Auf iOS ist dieser Stream vorerst ein No-op (TODO, natives APNs-Channel-
   Wiring fehlt noch). Alarm- und Durchsage-Pushes schließen sich gegenseitig aus:
   `PushService.onAlarmOpened` ignoriert `type: 'announcement.created'`.
+
+### Tagesablauf (ADR 0025)
+
+- `ProgramScreen` (`/tagesablauf`, vierter Eintrag der Navigationsleiste "Ablauf") listet die
+  sortierten Programmpunkte des laufenden BF-Tags aus `pairedProgramItemsProvider` -- kein eigener
+  Fetch, nur der Realtime-Snapshot-State. Jede Zeile zeigt `HH:mm–HH:mm` (lokale Zeit), ein
+  Typ-Icon (Essen, Ausbildung, Fahrzeugpflege, Ruhe, Sonstiges) und den Titel.
+- Aktuelle Punkte (`isCurrentProgramItem`) werden als Card in `primaryContainer`-Farbe mit einem
+  "Jetzt"-Chip hervorgehoben, vergangene (`isPastProgramItem`) ausgegraut (reduzierte Opazität).
+  Ohne Programmpunkte zeigt der Screen "Kein Tagesablauf vorhanden."
+- `programNowProvider` tickt alle 30 s (startet mit `DateTime.now()`) und treibt die
+  Hervorhebung, unabhängig von Realtime-Events; Tests überschreiben ihn für einen deterministischen
+  Ablauf.
 
 ## Gemeinsamer Code (`packages/core`)
 

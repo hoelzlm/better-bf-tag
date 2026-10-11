@@ -496,6 +496,18 @@ final pairedAnnouncementCreatedProvider = StreamProvider<Announcement>((ref) {
   return client.liveAnnouncementCreated;
 });
 
+/// Die sortierten Programmpunkte des laufenden BF-Tags von
+/// [pairedRealtimeClientProvider] (ADR 0025) -- empty while unpaired,
+/// before the first snapshot has loaded, or when no BF-Tag is running.
+/// Mirrors [programItemsProvider].
+final pairedProgramItemsProvider = StreamProvider<List<ProgramItem>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ProgramItem>[]);
+  }
+  return client.states.map((state) => state.programItems);
+});
+
 /// The running Einsätze of the currently running BF-Tag from
 /// [pairedRealtimeClientProvider] -- empty while unpaired, before the
 /// first snapshot has loaded, or when none are running. Mirrors
