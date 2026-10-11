@@ -131,6 +131,59 @@ Header: `apns-push-type: alert`, `apns-priority: 10`, `apns-expiration: now+300`
 - Die App sendet bei jedem Start und bei `onTokenRefresh` ihr aktuelles Token per
   `PUT /me/device/push-token`.
 
+## Durchsage-Push
+
+Entscheidung: [ADR 0024](adr/0024-durchsage.md), Abschnitt „Push“.
+
+Eine Durchsage (`POST /bf-days/{day}/announcements`) löst nach dem Commit einen eigenen, von der
+Alarmierung unabhängigen Push aus — fire-and-forget (`void dispatchAnnouncementPushes(...).catch(log.warn)`
+in `backend/src/push/announcement-push.ts`): die Antwort der Route wartet nicht auf den Push und
+schlägt nie wegen eines Push-Fehlers fehl, selbst wenn der `PushSender` wirft oder einen Timeout
+auslöst (10 s, wie bei der Alarmierung).
+
+Empfänger: aktive Personen mit Teilnahme am BF-Tag, die die Durchsage sehen dürfen
+(`shift_id = null` → alle; sonst nur die Besatzung dieser Schicht sowie Personen mit Berechtigung
+`preparation`/`dispatch`/`admin`), mit nicht widerrufenem Gerät und gesetztem Push-Token, **ohne**
+den Absender selbst.
+
+Im Unterschied zur Alarmierung ist eine Durchsage **nicht zeitkritisch**: kein eigener Alarmton,
+kein Vollbild, auf iOS ausdrücklich **ohne** Time Sensitive (`interruption-level`). Android nutzt
+einen eigenen Channel `announcement` mit Standard-Ton statt `alarm`.
+
+**Android (FCM):**
+
+```json
+{
+  "message": {
+    "token": "<fcm-token>",
+    "android": {
+      "priority": "normal",
+      "ttl": "3600s",
+      "notification": { "channel_id": "announcement", "tag": "announcement-<id>" }
+    },
+    "notification": { "title": "Durchsage", "body": "<text>" },
+    "data": { "type": "announcement.created", "announcement_id": "<id>", "bf_day_id": "<id>" }
+  }
+}
+```
+
+**iOS (APNs):**
+
+```json
+{
+  "aps": { "alert": { "title": "Durchsage", "body": "<text>" }, "sound": "default" },
+  "type": "announcement.created",
+  "announcement_id": "<id>",
+  "bf_day_id": "<id>"
+}
+```
+
+Header: `apns-push-type: alert`, `apns-priority: 5` (im Gegensatz zur `10` der Alarmierung).
+
+Ungültige Tokens werden wie bei der Alarmierung behandelt (`device.push_token = null`); es gibt
+kein `announcement.push_reported`-Gegenstück zu `alarm.push_reported` — der Push ist reine
+Zustellung ohne Zähler in der API.
+
 ## Alarmton und Plattform-Einschränkungen
 
 ### Android

@@ -4,7 +4,9 @@ Eigene Alarm- und Planungssoftware für den **Berufsfeuerwehrtag (BF-Tag)** unse
 Inspiriert von [bf-tag.de](https://bf-tag.de), aber mit kleinerem Funktionsumfang, eigenem Backend
 und einer Android-App im Play Store.
 
-> **Status:** Konzeptphase – es gibt noch keinen Code, nur Dokumentation und die Monorepo-Struktur.
+> **Status:** MVP implementiert – Backend, Web (Admin/Leitstelle/Monitor) und Mobile-App sind
+> funktionsfähig; siehe [docs/10-roadmap.md](docs/10-roadmap.md) für den Stand der einzelnen
+> Punkte.
 
 ## Bestandteile
 
@@ -46,6 +48,10 @@ Voraussetzungen: Docker, Node.js ≥ 24, Dart 3.9+/Flutter, [`just`](https://git
 | `just test` | Backend-Tests ausführen |
 | `just gen-api` | `backend/openapi.json` neu erzeugen und den Dart-Client in `packages/api_client` neu generieren |
 | `just analyze` | Statische Analyse der Dart-Pakete |
+| `just ci` | Alles ausführen, was CI ausführt (Backend + Flutter) |
+| `just infra-smoke` | Produktions-Images bauen und den vollen `infra/`-Compose-Stack lokal smoke-testen |
+| `just infra-backup-test` | Automatisierter lokaler Rundlauf von Backup/Restore |
+| `just e2e` | E2E-Suite gegen den Produktions-Stack (Caddy, HTTPS, WebSocket); braucht Docker und Chrome, siehe [docs/07-deployment.md](docs/07-deployment.md) |
 
 `just gen-api` setzt einen laufenden Docker-Daemon voraus (Generator läuft als Container, kein
 lokales Java nötig). Siehe [ADR 0008](docs/adr/0008-grundgeruest-konventionen.md).

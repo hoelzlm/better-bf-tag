@@ -10,7 +10,7 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [04 – API](04-api.md) | REST-Endpunkte, WebSocket-Events, Authentifizierung |
 | [05 – Alarmierung und Push](05-alarmierung-push.md) | Alarmablauf, FCM/APNs, Alarmton, Plattform-Einschränkungen |
 | [06 – Clients](06-clients.md) | Admin, Monitor, Mobile-App: Screens und Funktionen |
-| [07 – Deployment](07-deployment.md) | Hetzner-VPS, Docker Compose, TLS, Backups, Härtung |
+| [07 – Deployment](07-deployment.md) | Hetzner-VPS, Docker Compose, TLS, Backups, Härtung, E2E-Suite |
 | [08 – Store-Veröffentlichung](08-store-release.md) | Google Play und Apple App Store / TestFlight |
 | [09 – Datenschutz](09-datenschutz.md) | DSGVO, Minderjährige, Datensparsamkeit |
 | [10 – Roadmap](10-roadmap.md) | 2-Wochen-Plan bis zur ersten nutzbaren Version |
@@ -27,6 +27,9 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [0006](adr/0006-quittierung-statt-rueckmeldung.md) | Quittierung statt „komme / komme nicht“ | Angenommen |
 | [0007](adr/0007-personen-dauerhaft-anonymisierung.md) | Personen dauerhaft, Anonymisierung nach 8 Wochen | Angenommen |
 | [0008](adr/0008-grundgeruest-konventionen.md) | Konventionen für das Grundgerüst (Backend, Tests, Web-Login, Codegen) | Angenommen |
+| [0023](adr/0023-e2e-suite.md) | E2E-Suite gegen den Produktions-Stack (`just e2e`) | Angenommen |
+| [0024](adr/0024-durchsage.md) | Durchsage: Sichtbarkeit, Echtzeit, Push, Monitor-Banner | Angenommen |
+| [0025](adr/0025-tagesablauf.md) | Tagesablauf: Programmpunkte, Echtzeit, Monitor-Standby, App | Angenommen |
 
 Neue ADRs nach dem Muster `adr/NNNN-titel.md` anlegen (Kontext → Entscheidung → Konsequenzen).
 

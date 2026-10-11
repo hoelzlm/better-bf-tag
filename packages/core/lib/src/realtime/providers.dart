@@ -2,16 +2,19 @@ import 'dart:async';
 
 import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../api/api_config.dart';
 import '../api/dio_provider.dart';
 import '../auth/paired_session.dart';
 import '../auth/session.dart';
 import '../domain/alarm.dart';
+import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
 import '../domain/my_crew.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -98,6 +101,8 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
     if (i.closedAt != null) 'closed_at': i.closedAt,
+    'latitude': i.latitude,
+    'longitude': i.longitude,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -141,7 +146,34 @@ ScheduledAlarm _scheduledAlarmFromApi(
   );
 }
 
+Announcement _announcementFromApi(
+  GetSnapshot200ResponseAnnouncementsInner a,
+) {
+  return Announcement(
+    id: a.id,
+    bfDayId: a.bfDayId,
+    shiftId: a.shiftId,
+    text: a.text,
+    createdBy: a.createdBy,
+    createdAt: DateTime.parse(a.createdAt),
+  );
+}
+
+ProgramItem _programItemFromApi(
+  GetSnapshot200ResponseProgramItemsInner p,
+) {
+  return ProgramItem(
+    id: p.id,
+    bfDayId: p.bfDayId,
+    title: p.title,
+    type: ProgramItemType.fromWire(p.type.name),
+    startsAt: DateTime.parse(p.startsAt),
+    endsAt: DateTime.parse(p.endsAt),
+  );
+}
+
 Snapshot _snapshotFromApi(GetSnapshot200Response data) {
+  final station = data.station;
   return Snapshot(
     seq: data.seq,
     vehicles: data.vehicles.map(_vehicleFromApi).toList(),
@@ -153,6 +185,11 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     alarms: data.alarms.map(_alarmFromApi).toList(),
     closeSuggestedIncidentIds: data.closeSuggestedIncidentIds.toSet(),
     scheduledAlarms: data.scheduledAlarms.map(_scheduledAlarmFromApi).toList(),
+    announcements: data.announcements.map(_announcementFromApi).toList(),
+    programItems: data.programItems.map(_programItemFromApi).toList(),
+    station: station == null
+        ? null
+        : LatLng(station.latitude.toDouble(), station.longitude.toDouble()),
   );
 }
 
@@ -332,6 +369,40 @@ final missedAlarmsProvider = Provider<List<ScheduledAlarm>>((ref) {
   return scheduled.where((sa) => sa.alarm.isMissed).toList();
 });
 
+/// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst --
+/// empty while signed out, before the first snapshot has loaded, or when
+/// there are none.
+final announcementsProvider = StreamProvider<List<Announcement>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Announcement>[]);
+  }
+  return client.states.map((state) => state.announcements);
+});
+
+/// Emits an [Announcement] only for `announcement.created` events
+/// received live over the WebSocket (ADR 0024) -- never for Durchsagen
+/// loaded via the snapshot. Drives the monitor banner and the app
+/// SnackBar. Backed by [RealtimeClient.liveAnnouncementCreated].
+final announcementCreatedProvider = StreamProvider<Announcement>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return const Stream<Announcement>.empty();
+  }
+  return client.liveAnnouncementCreated;
+});
+
+/// Die sortierten Programmpunkte des laufenden BF-Tags (ADR 0025) -- empty
+/// while signed out, before the first snapshot has loaded, or when no
+/// BF-Tag is running.
+final programItemsProvider = StreamProvider<List<ProgramItem>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ProgramItem>[]);
+  }
+  return client.states.map((state) => state.programItems);
+});
+
 /// The [RealtimeClient] for the current paired device session (mobile app,
 /// or the web monitor via Ticket 03), or `null` when unpaired. Mirrors
 /// [realtimeClientProvider] but is bound to [pairedSessionControllerProvider]
@@ -407,6 +478,41 @@ final pairedShiftsProvider = StreamProvider<List<Shift>>((ref) {
     return Stream.value(const <Shift>[]);
   }
   return client.states.map((state) => state.shifts);
+});
+
+/// Die letzten 20 sichtbaren Durchsagen von [pairedRealtimeClientProvider]
+/// (ADR 0024), neueste zuerst -- empty while unpaired, before the first
+/// snapshot has loaded, or when there are none. Mirrors
+/// [announcementsProvider].
+final pairedAnnouncementsProvider = StreamProvider<List<Announcement>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Announcement>[]);
+  }
+  return client.states.map((state) => state.announcements);
+});
+
+/// Emits an [Announcement] only for `announcement.created` events
+/// received live over [pairedRealtimeClientProvider] -- drives the app
+/// SnackBar (ADR 0024). Mirrors [announcementCreatedProvider].
+final pairedAnnouncementCreatedProvider = StreamProvider<Announcement>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return const Stream<Announcement>.empty();
+  }
+  return client.liveAnnouncementCreated;
+});
+
+/// Die sortierten Programmpunkte des laufenden BF-Tags von
+/// [pairedRealtimeClientProvider] (ADR 0025) -- empty while unpaired,
+/// before the first snapshot has loaded, or when no BF-Tag is running.
+/// Mirrors [programItemsProvider].
+final pairedProgramItemsProvider = StreamProvider<List<ProgramItem>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ProgramItem>[]);
+  }
+  return client.states.map((state) => state.programItems);
 });
 
 /// The running Einsätze of the currently running BF-Tag from

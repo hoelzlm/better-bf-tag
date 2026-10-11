@@ -85,6 +85,22 @@ Das ruft `infra/deploy.sh` auf: kopiert `docker-compose.yml`, `backup.sh` und `r
 Ein bestimmtes Tag deployen: `just deploy sha-abc1234` oder `just deploy latest`.
 `./infra/deploy.sh --dry-run [tag]` zeigt die geplanten Kommandos an, ohne sie auszuführen.
 
+## Karte: Geocoding, Wache ([ADR 0026](adr/0026-karte.md))
+
+Umgebungsvariablen des Backends (`infra/.env.example`, `infra/docker-compose.yml`):
+
+| Variable | Default | Zweck |
+|---|---|---|
+| `GEOCODING_ENABLED` | `true` | Schaltet die Adresssuche (`GET /geocode`) ganz ab; liefert dann immer `{results: []}` ohne Upstream-Aufruf. In der E2E-Suite immer `false` (kein Netz zu Nominatim im Test). |
+| `GEOCODING_URL` | `https://nominatim.openstreetmap.org` | Ziel der Geocoding-Anfragen; kann auf eine eigene Nominatim-Instanz zeigen. |
+| `GEOCODING_CONTACT` | – (optional) | E-Mail-Adresse, wird als `email`-Parameter und im `User-Agent` mitgeschickt, gemäß [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/) empfohlen. |
+| `GEOCODING_COUNTRY_CODES` | `de` | Eingrenzung der Adresssuche auf Länder (`countrycodes`-Parameter). |
+| `STATION_LATITUDE` / `STATION_LONGITUDE` | – (optional) | Koordinaten der eigenen Wache für die Kartenanzeige (Snapshot-Feld `station`); nur gemeinsam gesetzt, sonst Config-Fehler beim Start. Ohne sie zeigt die Karte nur den Einsatz-Pin. |
+
+Clients laden die Kartenkacheln direkt von `tile.openstreetmap.org` (nicht über das Backend) —
+dafür ist keine eigene Konfiguration nötig, siehe [06 – Clients](06-clients.md) und
+[09 – Datenschutz](09-datenschutz.md).
+
 ## Rollback
 
 Ein älteres, bekanntes gutes Image-Tag erneut deployen:
@@ -117,6 +133,38 @@ und sind additiv/abwärtskompatibel gehalten; ein Rollback des Images allein rei
   veröffentlicht und dass beide Container als Nicht-Root laufen.
 - `just infra-backup-test` — automatisierter lokaler Rundlauf von Backup/Restore
   (`infra/test/backup-restore.sh`, restic als Docker-Image, lokales Repository).
+
+### E2E-Suite (`just e2e`)
+
+Entscheidung: [ADR 0023](adr/0023-e2e-suite.md). `just e2e` baut die Produktions-Images (wie
+`just infra-smoke`), startet den echten `infra/`-Compose-Stack unter einem eigenen
+Compose-Projekt mit zufälligen Secrets und prüft API und Web-UI gegen Caddy/HTTPS/WebSocket
+end-to-end: Stammdaten, Berechtigungen, BF-Tag, Schicht/Besatzung, Geräte- und
+Monitor-Kopplung, Alarmierung (sofort, geplant, zeitgesteuert), Quittierung,
+Fahrzeugstatus, Durchsagen (Erstellen/Löschen inkl. WebSocket-Events
+`announcement.created`/`announcement.deleted` und 409 `bf_day_not_running` auf
+einem nicht laufenden BF-Tag), Tagesablauf (Programmpunkt anlegen/auflisten/
+ändern/löschen, 400 `validation_error` bei `ends_at <= starts_at`, 403 für
+nicht-dispatch/admin-Personen, im Snapshot des laufenden BF-Tags enthalten),
+WebSocket-Events sowie den Web-UI-Login und alle Admin-Seiten im Browser
+(Chrome headless). Räumt per `trap … EXIT` immer mit `down -v --remove-orphans`
+ab.
+
+Umgebungsvariablen:
+
+| Variable | Zweck |
+|---|---|
+| `SKIP_WEB_BUILD` | überspringt den Flutter-Web-Build beim Image-Bau (schnellere lokale Läufe) |
+| `CHROME_BIN` | Pfad zum Chrome/Chromium-Binary für den UI-Test (Default `google-chrome`) |
+| `E2E_ARTIFACT_DIR` | Zielverzeichnis für Screenshots und Logs bei Fehlschlag (Default `e2e/artifacts/`) |
+| `E2E_FORCE_FAIL` | erzwingt einen absichtlich falschen Check im API-Szenario (Selbsttest: belegt, dass ein roter Check `just e2e` scheitern lässt) |
+
+`just ci` enthält den E2E-Lauf **nicht** (braucht Docker und Chrome); er läuft als eigener
+CI-Workflow (`.github/workflows/e2e.yml`) nur für Pull Requests nach `main` und manuell
+per `workflow_dispatch`.
+
+**Nicht abgedeckt:** Mobile-App auf Gerät/Emulator und echte Push-Zustellung (braucht
+FCM/APNs, siehe GitHub #21/#22/#26).
 
 ## Backups
 

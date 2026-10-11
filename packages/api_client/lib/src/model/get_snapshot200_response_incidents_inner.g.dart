@@ -107,6 +107,10 @@ class _$GetSnapshot200ResponseIncidentsInner
   @override
   final GetSnapshot200ResponseIncidentsInnerStateEnum state;
   @override
+  final num? latitude;
+  @override
+  final num? longitude;
+  @override
   final String createdAt;
   @override
   final String updatedAt;
@@ -128,6 +132,8 @@ class _$GetSnapshot200ResponseIncidentsInner
     required this.address,
     required this.report,
     required this.state,
+    this.latitude,
+    this.longitude,
     required this.createdAt,
     required this.updatedAt,
     this.closedAt,
@@ -153,6 +159,8 @@ class _$GetSnapshot200ResponseIncidentsInner
         address == other.address &&
         report == other.report &&
         state == other.state &&
+        latitude == other.latitude &&
+        longitude == other.longitude &&
         createdAt == other.createdAt &&
         updatedAt == other.updatedAt &&
         closedAt == other.closedAt &&
@@ -169,6 +177,8 @@ class _$GetSnapshot200ResponseIncidentsInner
     _$hash = $jc(_$hash, address.hashCode);
     _$hash = $jc(_$hash, report.hashCode);
     _$hash = $jc(_$hash, state.hashCode);
+    _$hash = $jc(_$hash, latitude.hashCode);
+    _$hash = $jc(_$hash, longitude.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jc(_$hash, updatedAt.hashCode);
     _$hash = $jc(_$hash, closedAt.hashCode);
@@ -187,6 +197,8 @@ class _$GetSnapshot200ResponseIncidentsInner
           ..add('address', address)
           ..add('report', report)
           ..add('state', state)
+          ..add('latitude', latitude)
+          ..add('longitude', longitude)
           ..add('createdAt', createdAt)
           ..add('updatedAt', updatedAt)
           ..add('closedAt', closedAt)
@@ -232,6 +244,14 @@ class GetSnapshot200ResponseIncidentsInnerBuilder
   set state(GetSnapshot200ResponseIncidentsInnerStateEnum? state) =>
       _$this._state = state;
 
+  num? _latitude;
+  num? get latitude => _$this._latitude;
+  set latitude(num? latitude) => _$this._latitude = latitude;
+
+  num? _longitude;
+  num? get longitude => _$this._longitude;
+  set longitude(num? longitude) => _$this._longitude = longitude;
+
   String? _createdAt;
   String? get createdAt => _$this._createdAt;
   set createdAt(String? createdAt) => _$this._createdAt = createdAt;
@@ -262,6 +282,8 @@ class GetSnapshot200ResponseIncidentsInnerBuilder
       _address = $v.address;
       _report = $v.report;
       _state = $v.state;
+      _latitude = $v.latitude;
+      _longitude = $v.longitude;
       _createdAt = $v.createdAt;
       _updatedAt = $v.updatedAt;
       _closedAt = $v.closedAt;
@@ -325,6 +347,8 @@ class GetSnapshot200ResponseIncidentsInnerBuilder
             r'GetSnapshot200ResponseIncidentsInner',
             'state',
           ),
+          latitude: latitude,
+          longitude: longitude,
           createdAt: BuiltValueNullFieldError.checkNotNull(
             createdAt,
             r'GetSnapshot200ResponseIncidentsInner',

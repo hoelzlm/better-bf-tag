@@ -20,8 +20,8 @@ englisch, die Zuordnung zeigt die folgende Tabelle.
 | Einsatzbericht | `incident_report` | später |
 | Vorwarnung, Bereitmeldung | `incident.prewarning_minutes`, `incident.ready_at` | später |
 | Sprechaufforderung | `vehicle_status_event` (Typ `talk_request`) | später |
-| Durchsage | `announcement` | später |
-| Tagesablauf, Programmpunkt | `program_item` | später |
+| Durchsage | `announcement` | [ADR 0024](adr/0024-durchsage.md) |
+| Tagesablauf, Programmpunkt | `program_item` | [ADR 0025](adr/0025-tagesablauf.md) |
 | Anonymisierung | `bf_day.anonymized_at` + Job | MVP (manuell), automatisch später |
 
 ## ER-Diagramm (MVP)
@@ -179,6 +179,8 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | address | text | Meldebild: Adresse |
 | report | text | Meldebild: Lagebeschreibung |
 | script | text | **Drehbuch**, nie an die Berechtigung Mannschaft ausliefern |
+| latitude | double precision null | Einsatzort ([ADR 0026](adr/0026-karte.md)), nur gemeinsam mit `longitude` gesetzt, -90..90 |
+| longitude | double precision null | Einsatzort ([ADR 0026](adr/0026-karte.md)), nur gemeinsam mit `latitude` gesetzt, -180..180 |
 | state | enum `draft`, `running`, `closed`, `discarded` | Entwurf / laufend / abgeschlossen / verworfen |
 | copied_from_id | uuid null | Einsatz aus früherem BF-Tag kopiert (später) |
 | prewarning_minutes | int null | Vorwarnung (später) |
@@ -228,6 +230,31 @@ ersten Fahrzeug nach `sort_order`, s. ADR 0017).
 | acknowledged_at | timestamptz null | Quittierung |
 | PK | (alarm_id, person_id) | **nicht** `vehicle_id` – sonst wäre eine Person pro Alarmierung mehrfach Empfänger (ADR 0017) |
 
+### `announcement` – Durchsage ([ADR 0024](adr/0024-durchsage.md))
+
+| Spalte | Typ | Hinweis |
+|--------|-----|---------|
+| id | uuid PK | |
+| bf_day_id | uuid FK | cascade |
+| shift_id | uuid FK null | null = an alle; `on delete cascade` – löscht die Schicht, verschwindet die Durchsage mit ihr |
+| text | text | max. 500 Zeichen |
+| created_by | uuid FK → `person` | restrict |
+| created_at | timestamptz | |
+
+Index auf `(bf_day_id, created_at desc)` für die Liste und den Snapshot (neueste zuerst).
+
+### `program_item` – Programmpunkt ([ADR 0025](adr/0025-tagesablauf.md))
+
+| Spalte | Typ | Hinweis |
+|--------|-----|---------|
+| id | uuid PK | |
+| bf_day_id | uuid FK | cascade |
+| title | varchar(80) | |
+| type | enum `meal`, `training`, `maintenance`, `rest`, `other` | |
+| starts_at, ends_at | timestamptz | `ends_at > starts_at` (Check-Constraint); beide müssen innerhalb `[bf_day.starts_at, bf_day.ends_at]` liegen |
+
+Index auf `(bf_day_id, starts_at)` für die sortierte Liste und den Snapshot.
+
 ## Später
 
 ### `incident_report` – Einsatzbericht
@@ -243,14 +270,6 @@ ersten Fahrzeug nach `sort_order`, s. ADR 0017).
 | reviewed_by, reviewed_at | | Prüfung durch Leitstelle/Administrator |
 
 Die Zeiten (Alarm, Status 3/4/1) werden aus `alarm` und `vehicle_status_event` berechnet.
-
-### `announcement` – Durchsage
-
-`bf_day_id`, `shift_id null` (null = an alle), `text`, `created_by`, `created_at`.
-
-### `program_item` – Programmpunkt
-
-`bf_day_id`, `title`, `type` (z. B. `meal`, `training`, `maintenance`, `rest`), `starts_at`, `ends_at`.
 
 ## Fahrzeugstatus (FMS)
 

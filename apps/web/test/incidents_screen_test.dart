@@ -1,10 +1,36 @@
 import 'package:bftag_core/bftag_core.dart';
+import 'package:bftag_web/map_tile_provider.dart';
 import 'package:bftag_web/screens/incidents_screen.dart';
+import 'package:bftag_web/station_provider.dart';
 import 'package:bftag_web/widgets/alarm_dialog.dart' show AlarmDialogMode;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
+
+/// Offline [TileProvider] (no network calls in widget tests), mirrors
+/// packages/core/test/incident_map_test.dart.
+class _FakeTileProvider extends TileProvider {
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
+      MemoryImage(TileProvider.transparentImage);
+}
+
+class _FakeGeocodeRepository implements GeocodeRepository {
+  _FakeGeocodeRepository({List<GeocodeSuggestion>? results})
+    : results = results ?? const [];
+
+  List<GeocodeSuggestion> results;
+  final List<String> queries = [];
+
+  @override
+  Future<List<GeocodeSuggestion>> search(String q) async {
+    queries.add(q);
+    return results;
+  }
+}
 
 BfDay _bfDay({
   String id = 'd1',
@@ -57,8 +83,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     required String name,
     required DateTime startsAt,
     required DateTime endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> update(
@@ -66,8 +91,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     String? name,
     DateTime? startsAt,
     DateTime? endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> start(String id) => throw UnimplementedError();
@@ -92,17 +116,25 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
 
 class _FakeIncidentRepository implements IncidentRepository {
   _FakeIncidentRepository({Map<String, List<Incident>>? incidentsByDay})
-      : incidentsByDay = incidentsByDay ?? {};
+    : incidentsByDay = incidentsByDay ?? {};
 
   Map<String, List<Incident>> incidentsByDay;
   final List<
-      ({
-        String day,
-        String keyword,
-        String address,
-        String report,
-        String? script,
-      })> createCalls = [];
+    ({
+      String day,
+      String keyword,
+      String address,
+      String report,
+      String? script,
+      double? latitude,
+      double? longitude,
+    })
+  >
+  createCalls = [];
+  final List<
+    ({String id, double? latitude, double? longitude, bool clearLocation})
+  >
+  updateCalls = [];
   final List<String> discardCalls = [];
   final List<String> closeCalls = [];
   Object? createError;
@@ -131,6 +163,8 @@ class _FakeIncidentRepository implements IncidentRepository {
     required String address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
   }) async {
     createCalls.add((
       day: day,
@@ -138,6 +172,8 @@ class _FakeIncidentRepository implements IncidentRepository {
       address: address,
       report: report ?? '',
       script: script,
+      latitude: latitude,
+      longitude: longitude,
     ));
     final error = createError;
     if (error != null) throw error;
@@ -162,7 +198,16 @@ class _FakeIncidentRepository implements IncidentRepository {
     String? address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
   }) async {
+    updateCalls.add((
+      id: id,
+      latitude: latitude,
+      longitude: longitude,
+      clearLocation: clearLocation,
+    ));
     for (final entry in incidentsByDay.entries) {
       final idx = entry.value.indexWhere((i) => i.id == id);
       if (idx != -1) {
@@ -171,9 +216,12 @@ class _FakeIncidentRepository implements IncidentRepository {
           address: address,
           report: report,
           script: script,
+          latitude: latitude,
+          longitude: longitude,
         );
         incidentsByDay[entry.key] = [
-          for (final i in entry.value) if (i.id == id) updated else i,
+          for (final i in entry.value)
+            if (i.id == id) updated else i,
         ];
         return updated;
       }
@@ -187,10 +235,12 @@ class _FakeIncidentRepository implements IncidentRepository {
     for (final entry in incidentsByDay.entries) {
       final idx = entry.value.indexWhere((i) => i.id == id);
       if (idx != -1) {
-        final updated =
-            entry.value[idx].copyWith(state: IncidentState.discarded);
+        final updated = entry.value[idx].copyWith(
+          state: IncidentState.discarded,
+        );
         incidentsByDay[entry.key] = [
-          for (final i in entry.value) if (i.id == id) updated else i,
+          for (final i in entry.value)
+            if (i.id == id) updated else i,
         ];
         return updated;
       }
@@ -206,9 +256,13 @@ class _FakeIncidentRepository implements IncidentRepository {
       if (idx != -1) {
         final updated = entry.value[idx].copyWith(state: IncidentState.closed);
         incidentsByDay[entry.key] = [
-          for (final i in entry.value) if (i.id == id) updated else i,
+          for (final i in entry.value)
+            if (i.id == id) updated else i,
         ];
-        return CloseIncidentResult(incident: updated, discardedAlarmIds: const []);
+        return CloseIncidentResult(
+          incident: updated,
+          discardedAlarmIds: const [],
+        );
       }
     }
     throw StateError('incident not found: $id');
@@ -218,13 +272,15 @@ class _FakeIncidentRepository implements IncidentRepository {
 class _FakeAlarmRepository implements AlarmRepository {
   final List<(String, List<String>, String)> triggerCalls = [];
   final List<
-      ({
-        String incidentId,
-        List<String> vehicleIds,
-        String? id,
-        DateTime? scheduledAt,
-        int? offsetMinutes,
-      })> planCalls = [];
+    ({
+      String incidentId,
+      List<String> vehicleIds,
+      String? id,
+      DateTime? scheduledAt,
+      int? offsetMinutes,
+    })
+  >
+  planCalls = [];
   TriggerAlarmResult Function()? resultBuilder;
   Object? triggerError;
   Object? planError;
@@ -290,8 +346,7 @@ class _FakeAlarmRepository implements AlarmRepository {
     DateTime? scheduledAt,
     int? offsetMinutes,
     List<String>? vehicleIds,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Alarm> discard(String alarmId) => throw UnimplementedError();
@@ -311,10 +366,13 @@ Future<_FakeIncidentRepository> _pump(
   List<Alarm>? alarms,
   List<ScheduledAlarm>? scheduledAlarms,
   _FakeAlarmRepository? alarmRepository,
+  GeocodeRepository? geocodeRepository,
+  LatLng? station,
 }) async {
   final bfDayRepository = _FakeBfDayAdminRepository(days: days);
-  final incidentRepository =
-      _FakeIncidentRepository(incidentsByDay: incidents ?? {});
+  final incidentRepository = _FakeIncidentRepository(
+    incidentsByDay: incidents ?? {},
+  );
   final person = Person(
     id: 'p1',
     displayName: 'Max Mustermann',
@@ -338,6 +396,11 @@ Future<_FakeIncidentRepository> _pump(
         alarmsProvider.overrideWith(
           (ref) => Stream.value(alarms ?? const <Alarm>[]),
         ),
+        geocodeRepositoryProvider.overrideWithValue(
+          geocodeRepository ?? _FakeGeocodeRepository(),
+        ),
+        stationProvider.overrideWith((ref) async => station),
+        mapTileProviderProvider.overrideWithValue(_FakeTileProvider()),
         scheduledAlarmsProvider.overrideWith(
           (ref) => Stream.value(scheduledAlarms ?? const <ScheduledAlarm>[]),
         ),
@@ -400,8 +463,9 @@ void main() {
     expect(find.text('#2 Verkehrsunfall – Hauptstraße 1'), findsOneWidget);
   });
 
-  testWidgets('editor shows script-section with the GEHEIM header',
-      (tester) async {
+  testWidgets('editor shows script-section with the GEHEIM header', (
+    tester,
+  ) async {
     await _pump(tester, days: [_bfDay()]);
 
     await tester.tap(find.byKey(const Key('create-incident')));
@@ -414,15 +478,12 @@ void main() {
     );
   });
 
-  testWidgets('discard button only shown for draft incidents',
-      (tester) async {
+  testWidgets('discard button only shown for draft incidents', (tester) async {
     await _pump(
       tester,
       days: [_bfDay()],
       incidents: {
-        'd1': [
-          _incident(id: 'i1', number: 1, state: IncidentState.draft),
-        ],
+        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
       },
     );
 
@@ -467,8 +528,7 @@ void main() {
     expect(call.script, 'Darsteller: 1 Person, leicht verletzt');
   });
 
-  testWidgets('preparation does not see the Alarmieren button',
-      (tester) async {
+  testWidgets('preparation does not see the Alarmieren button', (tester) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -481,8 +541,9 @@ void main() {
     expect(find.byKey(const Key('alarm-incident-i1')), findsNothing);
   });
 
-  testWidgets('dispatch sees the Alarmieren button for a draft incident',
-      (tester) async {
+  testWidgets('dispatch sees the Alarmieren button for a draft incident', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -495,8 +556,7 @@ void main() {
     expect(find.byKey(const Key('alarm-incident-i1')), findsOneWidget);
   });
 
-  testWidgets(
-      'Alarmieren dialog shows the double-crew warning and calls the '
+  testWidgets('Alarmieren dialog shows the double-crew warning and calls the '
       'repository once even on a double tap', (tester) async {
     final shift = Shift(
       id: 's1',
@@ -566,8 +626,9 @@ void main() {
     expect(call.$2.toSet(), {'v1', 'v2'});
   });
 
-  testWidgets('Jetzt alarmieren is disabled with 0 vehicles selected',
-      (tester) async {
+  testWidgets('Jetzt alarmieren is disabled with 0 vehicles selected', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -588,181 +649,327 @@ void main() {
   });
 
   testWidgets(
-      '409 invalid_state_transition on trigger is shown as a plain notice',
-      (tester) async {
-    final alarmRepository = _FakeAlarmRepository()
-      ..triggerError = DioException(
-        requestOptions: RequestOptions(path: '/incidents/i1/alarms'),
-        response: Response(
+    '409 invalid_state_transition on trigger is shown as a plain notice',
+    (tester) async {
+      final alarmRepository = _FakeAlarmRepository()
+        ..triggerError = DioException(
           requestOptions: RequestOptions(path: '/incidents/i1/alarms'),
-          statusCode: 409,
-          data: {
-            'error': {
-              'code': 'invalid_state_transition',
-              'message': 'Einsatz ist nicht mehr im Entwurf.',
+          response: Response(
+            requestOptions: RequestOptions(path: '/incidents/i1/alarms'),
+            statusCode: 409,
+            data: {
+              'error': {
+                'code': 'invalid_state_transition',
+                'message': 'Einsatz ist nicht mehr im Entwurf.',
+              },
             },
-          },
-        ),
+          ),
+        );
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [_vehicle(id: 'v1')],
+        alarmRepository: alarmRepository,
       );
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      incidents: {
-        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
-      },
-      permission: Permission.dispatch,
-      vehicles: [_vehicle(id: 'v1')],
-      alarmRepository: alarmRepository,
-    );
 
-    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('alarm-dialog-submit')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('alarm-dialog-submit')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Einsatz wurde bereits alarmiert.'), findsOneWidget);
-  });
+      expect(find.text('Einsatz wurde bereits alarmiert.'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      '"Relativ zum Erstalarm" is disabled without an Erstalarm, enabled '
-      'once one exists', (tester) async {
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      incidents: {
-        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
-      },
-      permission: Permission.dispatch,
-      vehicles: [_vehicle(id: 'v1')],
-    );
+    '"Relativ zum Erstalarm" is disabled without an Erstalarm, enabled '
+    'once one exists',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [_vehicle(id: 'v1')],
+      );
 
-    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+      await tester.pumpAndSettle();
 
-    final relativeTileBefore = tester.widget<RadioListTile<AlarmDialogMode>>(
-      find.byKey(const Key('alarm-mode-relative')),
-    );
-    // ignore: deprecated_member_use
-    expect(relativeTileBefore.onChanged, isNull);
-  });
-
-  testWidgets(
-      '"Relativ zum Erstalarm" is enabled when the incident already has a '
-      'triggered Erstalarm, and plans with offset_minutes', (tester) async {
-    final alarmRepository = _FakeAlarmRepository();
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      incidents: {
-        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.running)],
-      },
-      permission: Permission.dispatch,
-      vehicles: [_vehicle(id: 'v1'), _vehicle(id: 'v2', shortName: 'LF 2')],
-      alarms: [
-        Alarm(
-          id: 'a1',
-          incidentId: 'i1',
-          state: AlarmState.triggered,
-          triggeredAt: DateTime.now().subtract(const Duration(minutes: 10)),
-          vehicleIds: const ['v1'],
-          recipients: const [],
-        ),
-      ],
-      alarmRepository: alarmRepository,
-    );
-
-    await tester.tap(find.text('laufend'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('nachalarmieren-incident-i1')));
-    await tester.pumpAndSettle();
-
-    final relativeTile = tester.widget<RadioListTile<AlarmDialogMode>>(
-      find.byKey(const Key('alarm-mode-relative')),
-    );
-    // ignore: deprecated_member_use
-    expect(relativeTile.onChanged, isNotNull);
-
-    await tester.tap(find.byKey(const Key('alarm-vehicle-v2')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('alarm-mode-relative')));
-    await tester.pump();
-    await tester.enterText(
-      find.byKey(const Key('alarm-offset-minutes')),
-      '15',
-    );
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('alarm-dialog-submit')));
-    await tester.pumpAndSettle();
-
-    expect(alarmRepository.planCalls, hasLength(1));
-    final call = alarmRepository.planCalls.single;
-    expect(call.incidentId, 'i1');
-    expect(call.vehicleIds, ['v2']);
-    expect(call.offsetMinutes, 15);
-    expect(call.scheduledAt, isNull);
-  });
+      final relativeTileBefore = tester.widget<RadioListTile<AlarmDialogMode>>(
+        find.byKey(const Key('alarm-mode-relative')),
+      );
+      // ignore: deprecated_member_use
+      expect(relativeTileBefore.onChanged, isNull);
+    },
+  );
 
   testWidgets(
-      '"Zeitpunkt" mode plans with the picked scheduledAt converted to UTC',
-      (tester) async {
-    final alarmRepository = _FakeAlarmRepository();
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      incidents: {
-        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
-      },
-      permission: Permission.dispatch,
-      vehicles: [_vehicle(id: 'v1')],
-      alarmRepository: alarmRepository,
-    );
-
-    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('alarm-mode-scheduled')));
-    await tester.pump();
-
-    final submitButtonDisabled = tester.widget<FilledButton>(
-      find.byKey(const Key('alarm-dialog-submit')),
-    );
-    expect(submitButtonDisabled.onPressed, isNull,
-        reason: 'no date/time picked yet');
-  });
-
-  testWidgets(
-      'Einsatz verwerfen warns with the count of planned Alarmierungen for '
-      'a draft incident', (tester) async {
-    final incident = _incident(id: 'i1', number: 1, state: IncidentState.draft);
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      incidents: {'d1': [incident]},
-      permission: Permission.dispatch,
-      scheduledAlarms: [
-        ScheduledAlarm(
-          incident: incident,
-          alarm: Alarm(
-            id: 'sa1',
+    '"Relativ zum Erstalarm" is enabled when the incident already has a '
+    'triggered Erstalarm, and plans with offset_minutes',
+    (tester) async {
+      final alarmRepository = _FakeAlarmRepository();
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.running)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [
+          _vehicle(id: 'v1'),
+          _vehicle(id: 'v2', shortName: 'LF 2'),
+        ],
+        alarms: [
+          Alarm(
+            id: 'a1',
             incidentId: 'i1',
-            state: AlarmState.planned,
-            scheduledAt: DateTime.now().add(const Duration(minutes: 5)),
+            state: AlarmState.triggered,
+            triggeredAt: DateTime.now().subtract(const Duration(minutes: 10)),
             vehicleIds: const ['v1'],
             recipients: const [],
           ),
+        ],
+        alarmRepository: alarmRepository,
+      );
+
+      await tester.tap(find.text('laufend'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('nachalarmieren-incident-i1')));
+      await tester.pumpAndSettle();
+
+      final relativeTile = tester.widget<RadioListTile<AlarmDialogMode>>(
+        find.byKey(const Key('alarm-mode-relative')),
+      );
+      // ignore: deprecated_member_use
+      expect(relativeTile.onChanged, isNotNull);
+
+      await tester.tap(find.byKey(const Key('alarm-vehicle-v2')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('alarm-mode-relative')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('alarm-offset-minutes')),
+        '15',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('alarm-dialog-submit')));
+      await tester.pumpAndSettle();
+
+      expect(alarmRepository.planCalls, hasLength(1));
+      final call = alarmRepository.planCalls.single;
+      expect(call.incidentId, 'i1');
+      expect(call.vehicleIds, ['v2']);
+      expect(call.offsetMinutes, 15);
+      expect(call.scheduledAt, isNull);
+    },
+  );
+
+  testWidgets(
+    '"Zeitpunkt" mode plans with the picked scheduledAt converted to UTC',
+    (tester) async {
+      final alarmRepository = _FakeAlarmRepository();
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [_vehicle(id: 'v1')],
+        alarmRepository: alarmRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('alarm-mode-scheduled')));
+      await tester.pump();
+
+      final submitButtonDisabled = tester.widget<FilledButton>(
+        find.byKey(const Key('alarm-dialog-submit')),
+      );
+      expect(
+        submitButtonDisabled.onPressed,
+        isNull,
+        reason: 'no date/time picked yet',
+      );
+    },
+  );
+
+  testWidgets(
+    'Einsatz verwerfen warns with the count of planned Alarmierungen for '
+    'a draft incident',
+    (tester) async {
+      final incident = _incident(
+        id: 'i1',
+        number: 1,
+        state: IncidentState.draft,
+      );
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [incident],
+        },
+        permission: Permission.dispatch,
+        scheduledAlarms: [
+          ScheduledAlarm(
+            incident: incident,
+            alarm: Alarm(
+              id: 'sa1',
+              incidentId: 'i1',
+              state: AlarmState.planned,
+              scheduledAt: DateTime.now().add(const Duration(minutes: 5)),
+              vehicleIds: const ['v1'],
+              recipients: const [],
+            ),
+          ),
+        ],
+      );
+
+      await tester.tap(find.byKey(const Key('discard-incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          '1 geplante Alarmierung werden ebenfalls verworfen.',
         ),
-      ],
-    );
+        findsOneWidget,
+      );
+    },
+  );
 
-    await tester.tap(find.byKey(const Key('discard-incident-i1')));
-    await tester.pumpAndSettle();
+  group('Einsatzort (Karte) (ADR 0026)', () {
+    testWidgets('search finds a suggestion, selecting it and saving sends its '
+        'coordinates', (tester) async {
+      tester.view.physicalSize = const Size(900, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    expect(
-      find.textContaining('1 geplante Alarmierung werden ebenfalls verworfen.'),
-      findsOneWidget,
-    );
+      final geocodeRepository = _FakeGeocodeRepository(
+        results: const [
+          GeocodeSuggestion(
+            label: 'Musterweg 5, Musterstadt',
+            latitude: 52.5,
+            longitude: 13.4,
+          ),
+        ],
+      );
+      final incidentRepository = await _pump(
+        tester,
+        days: [_bfDay()],
+        geocodeRepository: geocodeRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('create-incident')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('incident-form-address')),
+        'Musterweg 5',
+      );
+      await tester.tap(
+        find.byKey(const Key('incident-form-location-search-button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(geocodeRepository.queries, ['Musterweg 5']);
+      // The address field itself is never overwritten by the search.
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('incident-form-address')))
+            .controller!
+            .text,
+        'Musterweg 5',
+      );
+
+      await tester.tap(find.text('Musterweg 5, Musterstadt'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('incident-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(incidentRepository.createCalls, hasLength(1));
+      final call = incidentRepository.createCalls.single;
+      expect(call.latitude, 52.5);
+      expect(call.longitude, 13.4);
+    });
+
+    testWidgets('empty search results show "Keine Vorschläge"', (tester) async {
+      tester.view.physicalSize = const Size(900, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        geocodeRepository: _FakeGeocodeRepository(results: const []),
+      );
+
+      await tester.tap(find.byKey(const Key('create-incident')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('incident-form-address')),
+        'Nirgendwo',
+      );
+      await tester.tap(
+        find.byKey(const Key('incident-form-location-search-button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keine Vorschläge'), findsOneWidget);
+    });
+
+    testWidgets('"Pin entfernen" removes an existing pin and save sends null '
+        'coordinates', (tester) async {
+      tester.view.physicalSize = const Size(900, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final incident = _incident(
+        id: 'i1',
+        number: 1,
+        state: IncidentState.draft,
+      ).copyWith(latitude: 52.5, longitude: 13.4);
+      final incidentRepository = await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [incident],
+        },
+      );
+
+      await tester.tap(find.text('#1 Verkehrsunfall – Hauptstraße 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('incident-form-remove-pin')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('incident-form-remove-pin')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('incident-form-remove-pin')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('incident-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(incidentRepository.updateCalls, hasLength(1));
+      final call = incidentRepository.updateCalls.single;
+      expect(call.latitude, isNull);
+      expect(call.longitude, isNull);
+      expect(call.clearLocation, isTrue);
+    });
   });
 }

@@ -208,6 +208,48 @@ describe('FcmPushSender', () => {
     const [result] = await sender.send([baseMessage()]);
     expect(result).toEqual<PushResult>({ deviceId: 'device-1', outcome: 'rejected' });
   });
+
+  it('sends the Durchsage payload (ADR 0024): channel_id announcement, priority normal, no sound alarm', async () => {
+    const sender = makeSender();
+    await sender.send([
+      baseMessage({
+        data: {
+          type: 'announcement.created',
+          announcement_id: 'announcement-1',
+          bf_day_id: 'bf-day-1',
+          text: 'Essen ist fertig',
+        },
+      }),
+    ]);
+
+    expect(fcmRequests).toHaveLength(1);
+    const body = fcmRequests[0]?.body as {
+      message: { android: { priority: string; notification: Record<string, unknown> } };
+    };
+    expect(body.message.android.priority).toBe('normal');
+    expect(body.message.android.notification['channel_id']).toBe('announcement');
+    expect(body.message.android.notification['sound']).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain('"sound":"alarm"');
+    expect(fcmRequests[0]?.body).toEqual({
+      message: {
+        token: 'fcm-token-1',
+        android: {
+          priority: 'normal',
+          ttl: '3600s',
+          notification: {
+            channel_id: 'announcement',
+            tag: 'announcement-announcement-1',
+          },
+        },
+        notification: { title: 'Durchsage', body: 'Essen ist fertig' },
+        data: {
+          type: 'announcement.created',
+          announcement_id: 'announcement-1',
+          bf_day_id: 'bf-day-1',
+        },
+      },
+    });
+  });
 });
 
 describe('ApnsPushSender', () => {
@@ -348,6 +390,41 @@ describe('ApnsPushSender', () => {
     const [result] = await sender.send([baseMessage({ platform: 'ios', token: 'apns-token-1' })]);
     await sender.close();
     expect(result).toEqual<PushResult>({ deviceId: 'device-1', outcome: 'rejected' });
+  });
+
+  it('sends the Durchsage payload (ADR 0024): apns-priority 5, no interruption-level, no alarm.wav', async () => {
+    const sender = makeSender();
+    await sender.send([
+      baseMessage({
+        platform: 'ios',
+        token: 'apns-token-1',
+        data: {
+          type: 'announcement.created',
+          announcement_id: 'announcement-1',
+          bf_day_id: 'bf-day-1',
+          text: 'Essen ist fertig',
+        },
+      }),
+    ]);
+    await sender.close();
+
+    expect(requests).toHaveLength(1);
+    const req = requests[0];
+    expect(req?.headers['apns-priority']).toBe('5');
+    expect(req?.headers['apns-push-type']).toBe('alert');
+
+    const parsed = JSON.parse(req?.body ?? '{}');
+    expect(parsed).toEqual({
+      aps: {
+        alert: { title: 'Durchsage', body: 'Essen ist fertig' },
+        sound: 'default',
+      },
+      type: 'announcement.created',
+      announcement_id: 'announcement-1',
+      bf_day_id: 'bf-day-1',
+    });
+    expect(parsed.aps['interruption-level']).toBeUndefined();
+    expect(JSON.stringify(parsed)).not.toContain('alarm.wav');
   });
 });
 

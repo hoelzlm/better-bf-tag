@@ -125,3 +125,5 @@ All config via environment variables (validated by zod in `src/config.ts`):
 | `APNS_TEAM_ID`              | no       | -                | Apple Developer Team ID                                                                                                 |
 | `APNS_BUNDLE_ID`            | no       | -                | App bundle identifier, sent as `apns-topic`                                                                             |
 | `APNS_PRODUCTION`           | no       | false            | `true` ⇒ production APNs endpoint; `false` ⇒ sandbox. All four `APNS_*` vars must be set for iOS push to be configured. |
+| `STATION_LATITUDE`          | no       | -                | Wache-Breitengrad (ADR 0026), -90..90; muss zusammen mit `STATION_LONGITUDE` gesetzt sein                               |
+| `STATION_LONGITUDE`         | no       | -                | Wache-Längengrad (ADR 0026), -180..180; muss zusammen mit `STATION_LATITUDE` gesetzt sein                               |

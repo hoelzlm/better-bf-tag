@@ -22,6 +22,7 @@ interface AnonymizationSummaryJson {
   alarm_recipients: number;
   status_events: number;
   persons_deleted: number;
+  announcements: number;
 }
 
 interface AnonymizeResponseJson {
@@ -284,10 +285,28 @@ describe('anonymization', () => {
     // Status event while this BF-Tag is running: bf_day_id gets stamped.
     await setVehicleStatus(vehicle.id, 3, dispatchToken);
 
+    const announcementRes = await app.client().post(
+      `/api/v1/bf-days/${day.id}/announcements`,
+      { text: 'Hinweis' },
+      {
+        token: dispatchToken,
+      }
+    );
+    expect(announcementRes.status).toBe(201);
+
     await endBfDay(day.id);
 
     // Status event with no BF-Tag running: bf_day_id stays null, person_id kept.
     await setVehicleStatus(vehicle.id, 4, dispatchToken);
+
+    const announcementAfterEndRes = await app.client().post(
+      `/api/v1/bf-days/${day.id}/announcements`,
+      { text: 'Zu spät' },
+      {
+        token: dispatchToken,
+      }
+    );
+    expect(announcementAfterEndRes.status).toBe(409); // day already ended above
 
     const otherDay = await createBfDay(`${label}-Other`);
     await setParticipants(otherDay.id, [otherAlsoOtherDay]);
@@ -320,6 +339,7 @@ describe('anonymization', () => {
       alarm_recipients: 2,
       status_events: 1,
       persons_deleted: 1,
+      announcements: 1,
     });
 
     const anonRes = await app
@@ -347,6 +367,12 @@ describe('anonymization', () => {
       [f.day.id]
     );
     expect(recipientRows.rowCount).toBe(0);
+
+    // The day's Durchsage (ADR 0024) is gone.
+    const announcementRows = await pool.query('select 1 from announcement where bf_day_id = $1', [
+      f.day.id,
+    ]);
+    expect(announcementRows.rowCount).toBe(0);
 
     // The other BF-Tag's participation is untouched.
     const otherDayParticipation = await pool.query(
@@ -580,5 +606,60 @@ describe('anonymization', () => {
     } finally {
       ws.close();
     }
+  });
+
+  it('program items (ADR 0025) survive anonymize; preview/summary keys stay unchanged', async () => {
+    const day = await createBfDay('ProgramItem-Anon');
+
+    const createRes = await app.client().post(
+      `/api/v1/bf-days/${day.id}/program-items`,
+      {
+        title: 'Mittagessen',
+        type: 'meal',
+        starts_at: app.clock.now().toISOString(),
+        ends_at: new Date(app.clock.now().getTime() + 60 * 60 * 1000).toISOString(),
+      },
+      { token: dispatchToken }
+    );
+    expect(createRes.status).toBe(201);
+    const programItemRow = createRes.body as { id: string };
+
+    await startBfDay(day.id);
+    await endBfDay(day.id);
+
+    const previewRes = await app
+      .client()
+      .get(`/api/v1/bf-days/${day.id}/anonymization-preview`, { token: dispatchToken });
+    expect(previewRes.status).toBe(200);
+    expect(Object.keys(previewRes.body as object).sort()).toEqual(
+      [
+        'participations',
+        'crew_assignments',
+        'alarm_recipients',
+        'status_events',
+        'persons_deleted',
+        'announcements',
+      ].sort()
+    );
+
+    const anonRes = await app
+      .client()
+      .post(`/api/v1/bf-days/${day.id}/anonymize`, {}, { token: dispatchToken });
+    expect(anonRes.status).toBe(200);
+    const anonBody = anonRes.body as { summary: object };
+    expect(Object.keys(anonBody.summary).sort()).toEqual(
+      Object.keys(previewRes.body as object).sort()
+    );
+
+    const itemRows = await pool.query('select 1 from program_item where id = $1', [
+      programItemRow.id,
+    ]);
+    expect(itemRows.rowCount).toBe(1);
+
+    const listRes = await app
+      .client()
+      .get(`/api/v1/bf-days/${day.id}/program-items`, { token: dispatchToken });
+    expect(listRes.status).toBe(200);
+    expect((listRes.body as Array<{ id: string }>).map(i => i.id)).toContain(programItemRow.id);
   });
 });

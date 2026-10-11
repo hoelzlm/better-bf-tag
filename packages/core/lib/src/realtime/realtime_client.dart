@@ -2,9 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:latlong2/latlong.dart';
+
 import '../domain/alarm.dart';
+import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -36,6 +40,9 @@ class RealtimeState {
     this.alarms = const <Alarm>[],
     this.closeSuggestedIncidentIds = const <String>{},
     this.scheduledAlarms = const <ScheduledAlarm>[],
+    this.announcements = const <Announcement>[],
+    this.programItems = const <ProgramItem>[],
+    this.station,
   });
 
   final int seq;
@@ -47,6 +54,10 @@ class RealtimeState {
   final List<Incident> incidents;
   final List<Alarm> alarms;
 
+  /// Die Wache-Koordinaten aus dem Snapshot (ADR 0026), `null` wenn keine
+  /// konfiguriert ist. Ändert sich nur per Neustart (kein Event).
+  final LatLng? station;
+
   /// Ids of `running` Einsätze that are abschlussreif (ADR 0019), computed
   /// for `dispatch`/`admin` only -- always empty for other Berechtigungen.
   final Set<String> closeSuggestedIncidentIds;
@@ -54,6 +65,13 @@ class RealtimeState {
   /// `planned`/`missed` Alarmierungen (ADR 0022), sorted by
   /// `scheduled_at`, `id` -- only for callers with Drehbuch permission.
   final List<ScheduledAlarm> scheduledAlarms;
+
+  /// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst.
+  final List<Announcement> announcements;
+
+  /// Die sortierten Programmpunkte des laufenden BF-Tags (ADR 0025), sonst
+  /// leer.
+  final List<ProgramItem> programItems;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -126,16 +144,31 @@ class RealtimeClient {
   /// reload must never re-trigger it.
   Stream<Alarm> get liveAlarmTriggered => _liveAlarmTriggeredController.stream;
 
+  final StreamController<Announcement> _liveAnnouncementCreatedController =
+      StreamController<Announcement>.broadcast();
+
+  /// Emits an [Announcement] only for `announcement.created` events
+  /// received live over the WebSocket (ADR 0024) -- never for Durchsagen
+  /// loaded via the (initial or a gap/resync-triggered) snapshot. Drives
+  /// the monitor banner and the app SnackBar; a reload must never
+  /// re-trigger it. Exposed via `announcementCreatedProvider` in
+  /// providers.dart.
+  Stream<Announcement> get liveAnnouncementCreated =>
+      _liveAnnouncementCreatedController.stream;
+
   int _lastSeq = 0;
   final Map<String, Vehicle> _vehiclesById = <String, Vehicle>{};
   List<Slide> _slides = <Slide>[];
   BfDay? _bfDay;
+  LatLng? _station;
   final Map<String, Shift> _shiftsById = <String, Shift>{};
   final Map<String, Incident> _incidentsById = <String, Incident>{};
   final Map<String, Alarm> _alarmsById = <String, Alarm>{};
   final Set<String> _closeSuggestedIncidentIds = <String>{};
   final Map<String, ScheduledAlarm> _scheduledAlarmsById =
       <String, ScheduledAlarm>{};
+  List<Announcement> _announcements = <Announcement>[];
+  List<ProgramItem> _programItems = <ProgramItem>[];
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -180,6 +213,7 @@ class RealtimeClient {
     }
     await _controller.close();
     await _liveAlarmTriggeredController.close();
+    await _liveAnnouncementCreatedController.close();
   }
 
   Future<void> _connect() async {
@@ -223,6 +257,7 @@ class RealtimeClient {
         ..addEntries(snapshot.vehicles.map((v) => MapEntry(v.id, v)));
       _slides = List.of(snapshot.slides);
       _bfDay = snapshot.bfDay;
+      _station = snapshot.station;
       _shiftsById
         ..clear()
         ..addEntries(snapshot.shifts.map((s) => MapEntry(s.id, s)));
@@ -240,6 +275,8 @@ class RealtimeClient {
         ..addEntries(
           snapshot.scheduledAlarms.map((sa) => MapEntry(sa.alarm.id, sa)),
         );
+      _announcements = List.of(snapshot.announcements);
+      _programItems = List.of(snapshot.programItems);
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -337,6 +374,7 @@ class RealtimeClient {
         }
       case ShiftDeleted(:final id):
         _shiftsById.remove(id);
+        _announcements.removeWhere((a) => a.shiftId == id);
       case IncidentCreated(:final incident):
         _applyIncident(incident);
       case IncidentUpdated(:final incident):
@@ -373,6 +411,18 @@ class RealtimeClient {
           _closeSuggestedIncidentIds.add(id);
         } else {
           _closeSuggestedIncidentIds.remove(id);
+        }
+      case AnnouncementCreated(:final announcement):
+        _applyAnnouncementCreated(announcement);
+        _liveAnnouncementCreatedController.add(announcement);
+      case AnnouncementDeleted(:final id):
+        _announcements.removeWhere((a) => a.id == id);
+      case ProgramChanged(:final bfDayId, :final items):
+        // Replace the list only if it belongs to the currently running
+        // BF-Tag (ADR 0025, "Echtzeit") -- planned days' changes are
+        // discarded.
+        if (_bfDay != null && bfDayId == _bfDay!.id) {
+          _programItems = List.of(items);
         }
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
@@ -438,6 +488,19 @@ class RealtimeClient {
       pushDelivered: pushDelivered,
       pushRejected: pushRejected,
     );
+  }
+
+  /// Inserts [announcement] at the front, dedupes by id (a repeat of an
+  /// id already present replaces the old entry rather than duplicating
+  /// it), and keeps at most the newest 20 (ADR 0024, "Snapshot").
+  void _applyAnnouncementCreated(Announcement announcement) {
+    _announcements = [
+      announcement,
+      ..._announcements.where((a) => a.id != announcement.id),
+    ];
+    if (_announcements.length > 20) {
+      _announcements = _announcements.sublist(0, 20);
+    }
   }
 
   /// A gap was detected (gaps include: gaps in event seq, hello/heartbeat
@@ -538,6 +601,9 @@ class RealtimeClient {
         alarms: _sortedAlarms,
         closeSuggestedIncidentIds: Set.of(_closeSuggestedIncidentIds),
         scheduledAlarms: _sortedScheduledAlarms,
+        announcements: List.of(_announcements),
+        programItems: List.of(_programItems),
+        station: _station,
       ),
     );
   }

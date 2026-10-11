@@ -10,13 +10,16 @@ import 'package:bftag_api_client/src/auth/basic_auth.dart';
 import 'package:bftag_api_client/src/auth/bearer_auth.dart';
 import 'package:bftag_api_client/src/auth/oauth.dart';
 import 'package:bftag_api_client/src/api/alarms_api.dart';
+import 'package:bftag_api_client/src/api/announcements_api.dart';
 import 'package:bftag_api_client/src/api/auth_api.dart';
 import 'package:bftag_api_client/src/api/bf_days_api.dart';
 import 'package:bftag_api_client/src/api/devices_api.dart';
+import 'package:bftag_api_client/src/api/geocode_api.dart';
 import 'package:bftag_api_client/src/api/health_api.dart';
 import 'package:bftag_api_client/src/api/incidents_api.dart';
 import 'package:bftag_api_client/src/api/monitors_api.dart';
 import 'package:bftag_api_client/src/api/persons_api.dart';
+import 'package:bftag_api_client/src/api/program_items_api.dart';
 import 'package:bftag_api_client/src/api/shifts_api.dart';
 import 'package:bftag_api_client/src/api/slides_api.dart';
 import 'package:bftag_api_client/src/api/snapshot_api.dart';
@@ -82,6 +85,12 @@ class BftagApiClient {
     return AlarmsApi(dio, serializers);
   }
 
+  /// Get AnnouncementsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AnnouncementsApi getAnnouncementsApi() {
+    return AnnouncementsApi(dio, serializers);
+  }
+
   /// Get AuthApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AuthApi getAuthApi() {
@@ -98,6 +107,12 @@ class BftagApiClient {
   /// by doing that all interceptors will not be executed
   DevicesApi getDevicesApi() {
     return DevicesApi(dio, serializers);
+  }
+
+  /// Get GeocodeApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  GeocodeApi getGeocodeApi() {
+    return GeocodeApi(dio, serializers);
   }
 
   /// Get HealthApi instance, base route and serializer can be overridden by a given but be careful,
@@ -122,6 +137,12 @@ class BftagApiClient {
   /// by doing that all interceptors will not be executed
   PersonsApi getPersonsApi() {
     return PersonsApi(dio, serializers);
+  }
+
+  /// Get ProgramItemsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ProgramItemsApi getProgramItemsApi() {
+    return ProgramItemsApi(dio, serializers);
   }
 
   /// Get ShiftsApi instance, base route and serializer can be overridden by a given but be careful,

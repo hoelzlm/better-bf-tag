@@ -17,6 +17,8 @@ interface IncidentJson {
   address: string;
   report: string;
   state: 'draft' | 'running' | 'closed' | 'discarded';
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   updated_at: string;
   closed_at: string | null;
@@ -110,7 +112,14 @@ describe('incidents', () => {
 
   async function createIncident(
     bfDayId: string,
-    overrides?: Partial<{ keyword: string; address: string; report: string; script: string }>,
+    overrides?: Partial<{
+      keyword: string;
+      address: string;
+      report: string;
+      script: string;
+      latitude: number | null;
+      longitude: number | null;
+    }>,
     token: string = preparationToken
   ): Promise<{ status: number; body: IncidentJson }> {
     const res = await app.client().post(
@@ -551,6 +560,142 @@ describe('incidents', () => {
         expect((event.data as { bf_day_id: string }).bf_day_id).toBe(day.id);
       } finally {
         ws.close();
+      }
+    });
+  });
+
+  describe('Einsatzort (ADR 0026)', () => {
+    it('create with both coordinates -> 201, JSON has them', async () => {
+      const day = await createBfDay('CoordsCreateBoth');
+      const res = await createIncident(day.id, { latitude: 48.1, longitude: 11.5 });
+      expect(res.status).toBe(201);
+      expect(res.body.latitude).toBe(48.1);
+      expect(res.body.longitude).toBe(11.5);
+    });
+
+    it('create without coordinates -> 201, both null', async () => {
+      const day = await createBfDay('CoordsCreateNone');
+      const res = await createIncident(day.id);
+      expect(res.status).toBe(201);
+      expect(res.body.latitude).toBeNull();
+      expect(res.body.longitude).toBeNull();
+    });
+
+    it('create with only one coordinate -> 400 validation_error', async () => {
+      const day = await createBfDay('CoordsCreateOne');
+      const onlyLat = await createIncident(day.id, { latitude: 48.1, longitude: undefined });
+      expect(onlyLat.status).toBe(400);
+      expect(onlyLat.body).toMatchObject({ error: { code: 'validation_error' } });
+
+      const onlyLng = await createIncident(day.id, { latitude: undefined, longitude: 11.5 });
+      expect(onlyLng.status).toBe(400);
+      expect(onlyLng.body).toMatchObject({ error: { code: 'validation_error' } });
+    });
+
+    it('create with out-of-range coordinates -> 400 validation_error', async () => {
+      const day = await createBfDay('CoordsCreateRange');
+      const latOutOfRange = await createIncident(day.id, { latitude: 91, longitude: 11.5 });
+      expect(latOutOfRange.status).toBe(400);
+      expect(latOutOfRange.body).toMatchObject({ error: { code: 'validation_error' } });
+
+      const lngOutOfRange = await createIncident(day.id, { latitude: 48.1, longitude: 181 });
+      expect(lngOutOfRange.status).toBe(400);
+      expect(lngOutOfRange.body).toMatchObject({ error: { code: 'validation_error' } });
+    });
+
+    it('patch sets coordinates, patch with both null removes them', async () => {
+      const day = await createBfDay('CoordsPatchSetRemove');
+      const created = await createIncident(day.id);
+      expect(created.body.latitude).toBeNull();
+
+      const setRes = await app
+        .client()
+        .patch(
+          `/api/v1/incidents/${created.body.id}`,
+          { latitude: 48.1, longitude: 11.5 },
+          { token: preparationToken }
+        );
+      expect(setRes.status).toBe(200);
+      expect((setRes.body as IncidentJson).latitude).toBe(48.1);
+      expect((setRes.body as IncidentJson).longitude).toBe(11.5);
+
+      const removeRes = await app
+        .client()
+        .patch(
+          `/api/v1/incidents/${created.body.id}`,
+          { latitude: null, longitude: null },
+          { token: preparationToken }
+        );
+      expect(removeRes.status).toBe(200);
+      expect((removeRes.body as IncidentJson).latitude).toBeNull();
+      expect((removeRes.body as IncidentJson).longitude).toBeNull();
+    });
+
+    it('patch only latitude when existing has none -> 400 validation_error', async () => {
+      const day = await createBfDay('CoordsPatchOnlyLatNone');
+      const created = await createIncident(day.id);
+      expect(created.body.latitude).toBeNull();
+
+      const res = await app
+        .client()
+        .patch(
+          `/api/v1/incidents/${created.body.id}`,
+          { latitude: 48.1 },
+          { token: preparationToken }
+        );
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: { code: 'validation_error' } });
+    });
+
+    it('patch only latitude when existing has both -> 200 (merged result valid)', async () => {
+      const day = await createBfDay('CoordsPatchOnlyLatBoth');
+      const created = await createIncident(day.id, { latitude: 48.1, longitude: 11.5 });
+
+      const res = await app
+        .client()
+        .patch(
+          `/api/v1/incidents/${created.body.id}`,
+          { latitude: 49.2 },
+          { token: preparationToken }
+        );
+      expect(res.status).toBe(200);
+      expect((res.body as IncidentJson).latitude).toBe(49.2);
+      expect((res.body as IncidentJson).longitude).toBe(11.5);
+    });
+
+    it('Mannschaft (crew) GET of a running incident with coordinates: has them, still no script key', async () => {
+      const day = await createBfDay('CoordsCrewNoScript');
+      const created = await createIncident(day.id, { latitude: 48.1, longitude: 11.5 });
+      await setState(created.body.id, 'running');
+
+      const crewDetail = await app
+        .client()
+        .get(`/api/v1/incidents/${created.body.id}`, { token: crewToken });
+      expect(crewDetail.status).toBe(200);
+      assertNoScript(JSON.stringify(crewDetail.body));
+      expect((crewDetail.body as IncidentJson).latitude).toBe(48.1);
+      expect((crewDetail.body as IncidentJson).longitude).toBe(11.5);
+    });
+  });
+
+  describe('Wache / snapshot station (ADR 0026)', () => {
+    it('snapshot station is null without STATION_LATITUDE/LONGITUDE config', async () => {
+      const res = await app.client().get('/api/v1/snapshot', { token: adminToken });
+      expect(res.status).toBe(200);
+      expect((res.body as { station: unknown }).station).toBeNull();
+    });
+
+    it('snapshot station is the configured object when STATION_LATITUDE/LONGITUDE are set', async () => {
+      const withStation = await app.restart({ STATION_LATITUDE: 48.5, STATION_LONGITUDE: 11.6 });
+      try {
+        const res = await withStation.client().get('/api/v1/snapshot', { token: adminToken });
+        expect(res.status).toBe(200);
+        expect((res.body as { station: { latitude: number; longitude: number } }).station).toEqual({
+          latitude: 48.5,
+          longitude: 11.6,
+        });
+      } finally {
+        app = withStation;
       }
     });
   });

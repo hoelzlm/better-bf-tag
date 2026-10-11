@@ -15,6 +15,10 @@ class _$UpdateIncidentRequest extends UpdateIncidentRequest {
   final String? report;
   @override
   final String? script;
+  @override
+  final num? latitude;
+  @override
+  final num? longitude;
 
   factory _$UpdateIncidentRequest([
     void Function(UpdateIncidentRequestBuilder)? updates,
@@ -25,6 +29,8 @@ class _$UpdateIncidentRequest extends UpdateIncidentRequest {
     this.address,
     this.report,
     this.script,
+    this.latitude,
+    this.longitude,
   }) : super._();
   @override
   UpdateIncidentRequest rebuild(
@@ -42,7 +48,9 @@ class _$UpdateIncidentRequest extends UpdateIncidentRequest {
         keyword == other.keyword &&
         address == other.address &&
         report == other.report &&
-        script == other.script;
+        script == other.script &&
+        latitude == other.latitude &&
+        longitude == other.longitude;
   }
 
   @override
@@ -52,6 +60,8 @@ class _$UpdateIncidentRequest extends UpdateIncidentRequest {
     _$hash = $jc(_$hash, address.hashCode);
     _$hash = $jc(_$hash, report.hashCode);
     _$hash = $jc(_$hash, script.hashCode);
+    _$hash = $jc(_$hash, latitude.hashCode);
+    _$hash = $jc(_$hash, longitude.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -62,7 +72,9 @@ class _$UpdateIncidentRequest extends UpdateIncidentRequest {
           ..add('keyword', keyword)
           ..add('address', address)
           ..add('report', report)
-          ..add('script', script))
+          ..add('script', script)
+          ..add('latitude', latitude)
+          ..add('longitude', longitude))
         .toString();
   }
 }
@@ -87,6 +99,14 @@ class UpdateIncidentRequestBuilder
   String? get script => _$this._script;
   set script(String? script) => _$this._script = script;
 
+  num? _latitude;
+  num? get latitude => _$this._latitude;
+  set latitude(num? latitude) => _$this._latitude = latitude;
+
+  num? _longitude;
+  num? get longitude => _$this._longitude;
+  set longitude(num? longitude) => _$this._longitude = longitude;
+
   UpdateIncidentRequestBuilder() {
     UpdateIncidentRequest._defaults(this);
   }
@@ -98,6 +118,8 @@ class UpdateIncidentRequestBuilder
       _address = $v.address;
       _report = $v.report;
       _script = $v.script;
+      _latitude = $v.latitude;
+      _longitude = $v.longitude;
       _$v = null;
     }
     return this;
@@ -124,6 +146,8 @@ class UpdateIncidentRequestBuilder
           address: address,
           report: report,
           script: script,
+          latitude: latitude,
+          longitude: longitude,
         );
     replace(_$result);
     return _$result;

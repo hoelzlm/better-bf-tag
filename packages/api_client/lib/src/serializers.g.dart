@@ -14,6 +14,7 @@ Serializers _$serializers =
           ..add(CreateAlarm200Response.serializer)
           ..add(CreateAlarm200ResponseDoubleCrewedInner.serializer)
           ..add(CreateAlarmRequest.serializer)
+          ..add(CreateAnnouncementRequest.serializer)
           ..add(CreateBfDayRequest.serializer)
           ..add(CreateIncidentRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
@@ -24,9 +25,13 @@ Serializers _$serializers =
           ..add(CreatePersonRequest.serializer)
           ..add(CreatePersonRequestPermissionEnum.serializer)
           ..add(CreatePersonRequestPersonTypeEnum.serializer)
+          ..add(CreateProgramItemRequest.serializer)
+          ..add(CreateProgramItemRequestTypeEnum.serializer)
           ..add(CreateSlideRequest.serializer)
           ..add(CreateVehicleRequest.serializer)
           ..add(DeviceRefreshRequest.serializer)
+          ..add(Geocode200Response.serializer)
+          ..add(Geocode200ResponseResultsInner.serializer)
           ..add(GetBfDayAnonymizationPreview200Response.serializer)
           ..add(GetHealth200Response.serializer)
           ..add(GetHealth200ResponseDatabaseEnum.serializer)
@@ -42,15 +47,19 @@ Serializers _$serializers =
           ..add(GetSnapshot200ResponseAlarmsInner.serializer)
           ..add(GetSnapshot200ResponseAlarmsInnerRecipientsInner.serializer)
           ..add(GetSnapshot200ResponseAlarmsInnerStateEnum.serializer)
+          ..add(GetSnapshot200ResponseAnnouncementsInner.serializer)
           ..add(GetSnapshot200ResponseBfDay.serializer)
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
           ..add(GetSnapshot200ResponseIncidentsInner.serializer)
           ..add(GetSnapshot200ResponseIncidentsInnerStateEnum.serializer)
+          ..add(GetSnapshot200ResponseProgramItemsInner.serializer)
+          ..add(GetSnapshot200ResponseProgramItemsInnerTypeEnum.serializer)
           ..add(GetSnapshot200ResponseScheduledAlarmsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInnerCrewInner.serializer)
           ..add(GetSnapshot200ResponseSlidesInner.serializer)
           ..add(GetSnapshot200ResponseSlidesInnerImage.serializer)
+          ..add(GetSnapshot200ResponseStation.serializer)
           ..add(GetVehicleStatusHistory200ResponseInner.serializer)
           ..add(GetVehicleStatusHistory200ResponseInnerSource_Enum.serializer)
           ..add(ListBfDays200ResponseInner.serializer)
@@ -96,6 +105,8 @@ Serializers _$serializers =
           ..add(UpdatePersonRequest.serializer)
           ..add(UpdatePersonRequestPermissionEnum.serializer)
           ..add(UpdatePersonRequestPersonTypeEnum.serializer)
+          ..add(UpdateProgramItemRequest.serializer)
+          ..add(UpdateProgramItemRequestTypeEnum.serializer)
           ..add(UpdatePushTokenRequest.serializer)
           ..add(UpdateSlideRequest.serializer)
           ..add(UpdateVehicleRequest.serializer)
@@ -110,6 +121,12 @@ Serializers _$serializers =
               const FullType(CreatePairingCode201Response),
             ]),
             () => ListBuilder<CreatePairingCode201Response>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(Geocode200ResponseResultsInner),
+            ]),
+            () => ListBuilder<Geocode200ResponseResultsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [
@@ -168,6 +185,18 @@ Serializers _$serializers =
               const FullType(GetSnapshot200ResponseScheduledAlarmsInner),
             ]),
             () => ListBuilder<GetSnapshot200ResponseScheduledAlarmsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseAnnouncementsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseAnnouncementsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseProgramItemsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseProgramItemsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

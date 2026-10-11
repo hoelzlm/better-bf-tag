@@ -19,6 +19,7 @@ import type { Clock } from './clock.js';
 import type { PushSender } from './push/push-sender.js';
 import { TestAlarmScheduler } from './push/test-alarm.js';
 import { AlarmScheduler } from './alarms/scheduler.js';
+import { Geocoder } from './geocoding/geocoder.js';
 import { createErrorHandler, createNotFoundHandler, ApiError } from './errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
@@ -33,6 +34,9 @@ import { slideRoutes } from './routes/slides.js';
 import { shiftRoutes } from './routes/shifts.js';
 import { incidentRoutes } from './routes/incidents.js';
 import { alarmRoutes } from './routes/alarms.js';
+import { announcementRoutes } from './routes/announcements.js';
+import { programItemRoutes } from './routes/program-items.js';
+import { geocodeRoutes } from './routes/geocode.js';
 import { Realtime } from './realtime/realtime.js';
 import { createWsPlugin } from './realtime/ws.js';
 import './access/authenticate.js';
@@ -53,6 +57,13 @@ export interface AppDeps {
     setTimer: (fn: () => void, ms: number) => unknown;
     clearTimer: (handle: unknown) => void;
   };
+  /**
+   * Test-only override for the Geocoder (ADR 0026): lets route tests
+   * inject a fake geocoder (controlled results, no real `fetch`) instead
+   * of the one built from `config.GEOCODING_*`. Omitted in production
+   * (`server.ts`).
+   */
+  geocoder?: Geocoder;
 }
 
 declare module 'fastify' {
@@ -65,6 +76,7 @@ declare module 'fastify' {
     realtime: Realtime;
     testAlarmScheduler: TestAlarmScheduler;
     alarmScheduler: AlarmScheduler;
+    geocoder: Geocoder;
   }
 }
 
@@ -100,6 +112,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       now: () => clock.now().getTime(),
       ...(deps.testAlarmTimer ?? {}),
     })
+  );
+  app.decorate(
+    'geocoder',
+    deps.geocoder ??
+      new Geocoder({
+        enabled: config.GEOCODING_ENABLED,
+        baseUrl: config.GEOCODING_URL,
+        contact: config.GEOCODING_CONTACT,
+        countryCodes: config.GEOCODING_COUNTRY_CODES,
+      })
   );
 
   // ADR 0018: real push senders (ApnsPushSender via PlatformPushSender) hold
@@ -195,6 +217,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await fastify.register(shiftRoutes, { prefix: '/api/v1' });
     await fastify.register(incidentRoutes, { prefix: '/api/v1' });
     await fastify.register(alarmRoutes, { prefix: '/api/v1' });
+    await fastify.register(announcementRoutes, { prefix: '/api/v1' });
+    await fastify.register(programItemRoutes, { prefix: '/api/v1' });
+    await fastify.register(geocodeRoutes, { prefix: '/api/v1' });
 
     // The generated spec is served for the Dart client codegen; hidden from
     // the spec itself to avoid a self-referential entry.

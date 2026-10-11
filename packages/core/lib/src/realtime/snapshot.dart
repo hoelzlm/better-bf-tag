@@ -1,6 +1,10 @@
+import 'package:latlong2/latlong.dart';
+
 import '../domain/alarm.dart';
+import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -25,7 +29,14 @@ import '../domain/vehicle.dart';
 /// Alarmierungen of the `draft`/`running` Einsätze of the running BF-Tag,
 /// sorted by `scheduled_at`, `id` -- only for callers with Drehbuch
 /// permission (`preparation`/`dispatch`/`admin`), defaulting to empty when
-/// the backend doesn't send it (older servers/tests).
+/// the backend doesn't send it (older servers/tests). [announcements]
+/// (ADR 0024) holds the last 20 sichtbaren Durchsagen of the running
+/// BF-Tag, newest first, defaulting to empty when the backend doesn't
+/// send it (older servers/tests) or no BF-Tag is running. [programItems]
+/// (ADR 0025) holds the sorted Programmpunkte of the running BF-Tag,
+/// defaulting to empty when the backend doesn't send it or no BF-Tag is
+/// running. [station] (ADR 0026) is the Wache's coordinates from backend
+/// config, or `null` when not configured.
 class Snapshot {
   const Snapshot({
     required this.seq,
@@ -38,6 +49,9 @@ class Snapshot {
     this.alarms = const <Alarm>[],
     this.closeSuggestedIncidentIds = const <String>{},
     this.scheduledAlarms = const <ScheduledAlarm>[],
+    this.announcements = const <Announcement>[],
+    this.programItems = const <ProgramItem>[],
+    this.station,
   });
 
   final int seq;
@@ -55,4 +69,49 @@ class Snapshot {
 
   /// `planned`/`missed` Alarmierungen (ADR 0022), see above.
   final List<ScheduledAlarm> scheduledAlarms;
+
+  /// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst.
+  final List<Announcement> announcements;
+
+  /// Die sortierten Programmpunkte des laufenden BF-Tags (ADR 0025), sonst
+  /// leer.
+  final List<ProgramItem> programItems;
+
+  /// Koordinaten der Wache (ADR 0026), aus der Backend-Config, `null`
+  /// wenn nicht konfiguriert.
+  final LatLng? station;
+
+  /// Returns a copy with the given fields replaced.
+  Snapshot copyWith({
+    int? seq,
+    List<Vehicle>? vehicles,
+    List<Slide>? slides,
+    BfDay? bfDay,
+    List<Shift>? shifts,
+    String? currentShiftId,
+    List<Incident>? incidents,
+    List<Alarm>? alarms,
+    Set<String>? closeSuggestedIncidentIds,
+    List<ScheduledAlarm>? scheduledAlarms,
+    List<Announcement>? announcements,
+    List<ProgramItem>? programItems,
+    LatLng? station,
+  }) {
+    return Snapshot(
+      seq: seq ?? this.seq,
+      vehicles: vehicles ?? this.vehicles,
+      slides: slides ?? this.slides,
+      bfDay: bfDay ?? this.bfDay,
+      shifts: shifts ?? this.shifts,
+      currentShiftId: currentShiftId ?? this.currentShiftId,
+      incidents: incidents ?? this.incidents,
+      alarms: alarms ?? this.alarms,
+      closeSuggestedIncidentIds:
+          closeSuggestedIncidentIds ?? this.closeSuggestedIncidentIds,
+      scheduledAlarms: scheduledAlarms ?? this.scheduledAlarms,
+      announcements: announcements ?? this.announcements,
+      programItems: programItems ?? this.programItems,
+      station: station ?? this.station,
+    );
+  }
 }

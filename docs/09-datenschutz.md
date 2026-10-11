@@ -34,6 +34,23 @@ Adressen fiktiv bzw. Übungsorte.
 Keine weiteren SDKs: kein Analytics, kein Crashlytics, keine Werbung. Fehlerprotokolle
 bleiben auf dem eigenen Server. Optional später ein selbst gehostetes Sentry/GlitchTip.
 
+## Karte: Geocoding, Kartenkacheln ([ADR 0026](adr/0026-karte.md))
+
+- **Adresssuche:** Suchtexte (z. B. „Hauptstraße 1“) gehen vom Backend aus an **Nominatim**
+  (standardmäßig `nominatim.openstreetmap.org`, betrieben von der OpenStreetMap Foundation,
+  OSMF) — nie direkt vom Client. Das Backend schickt dabei nur den Suchtext (keine Namen,
+  keine sonstigen Personendaten) sowie optional eine Kontakt-E-Mail (`GEOCODING_CONTACT`),
+  wie von der [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/)
+  empfohlen. Lässt sich per `GEOCODING_ENABLED=false` ganz abschalten.
+- **Kartenkacheln:** Die Clients (Web, App, Monitor) laden die Kartenkacheln direkt von
+  `tile.openstreetmap.org`, nicht über das Backend. Dabei wird die **IP-Adresse des jeweiligen
+  Geräts an OpenStreetMap übertragen** (wie bei jedem Abruf einer Web-Ressource).
+- **Koordinaten am Einsatz:** `latitude`/`longitude` gehören zum Meldebild des Einsatzes, haben
+  keinen Personenbezug und bleiben bei der Anonymisierung (siehe oben) unverändert erhalten.
+
+**Offener Punkt:** Die Datenschutzerklärung (GitHub #20) muss Nominatim und die
+OSM-Kartenkacheln noch aufnehmen (Drittanbieter-Tabelle oben entsprechend ergänzen).
+
 ## Minderjährige
 
 - **Einwilligung der Erziehungsberechtigten** für die App-Nutzung einholen (Formular zusammen mit

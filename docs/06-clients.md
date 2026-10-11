@@ -12,12 +12,12 @@ Zielgerät: Laptop bzw. Desktop-Browser. Was sichtbar ist, hängt von der Berech
 | Login | – | Benutzername, Passwort | MVP |
 | Lage (Startseite Leitstelle) | Leitstelle | laufende Einsätze, Fahrzeugstatus-Leiste, nächste geplante Alarmierungen, Quittierungen live (quittiert / ausstehend / kein Gerät), verpasste Alarmierungen, Abschlussvorschläge | MVP |
 | Einsätze | Einsatzvorbereitung, Leitstelle | Liste je BF-Tag, Filter Entwurf/laufend/abgeschlossen | MVP |
-| Einsatz bearbeiten | Einsatzvorbereitung, Leitstelle | Meldebild, Drehbuch (deutlich als „geheim“ markiert), Alarmierungen anlegen: Fahrzeuge + „sofort“ oder Zeitpunkt; Nachalarmierungen relativ zum Erstalarm planen | MVP |
+| Einsatz bearbeiten | Einsatzvorbereitung, Leitstelle | Meldebild, Drehbuch (deutlich als „geheim“ markiert), Alarmierungen anlegen: Fahrzeuge + „sofort“ oder Zeitpunkt; Nachalarmierungen relativ zum Erstalarm planen; Karte mit Einsatz-Pin ([ADR 0026](adr/0026-karte.md), siehe unten) | MVP |
 | Schichten | Leitstelle | Schichten des BF-Tags, Besatzung per Drag & Drop (Person → Fahrzeug + Funktion), Warnung bei Doppelbesetzung | MVP |
 | Anstehende Einsätze | Einsatzvorbereitung | Countdown bis zur geplanten Alarmierung, Drehbuch, Button „Bereitmeldung“ | später |
 | Einsatzberichte | Leitstelle | eingereichte Berichte, Vergleich mit Drehbuch, freigeben/zurückgeben | später |
-| Durchsage | Leitstelle | Text an alle oder an eine Schicht | später |
-| Tagesablauf | Leitstelle | Programmpunkte | später |
+| Durchsage (`/admin/durchsagen`) | Leitstelle, Administrator | Formular: Text (max. 500 Zeichen, Zähler), Ziel „Alle“ oder Schicht des laufenden BF-Tags, „Senden“; Liste der Durchsagen des Tags (neueste zuerst, Uhrzeit, Ziel, Text), Löschen mit Rückfrage; ohne laufenden BF-Tag Hinweis „Kein laufender BF-Tag“ und deaktiviertes Formular | MVP |
+| Tagesablauf (`/admin/tagesablauf`) | Leitstelle, Administrator | BF-Tag-Auswahl (Standard: laufend, sonst nächster geplanter, sonst letzter) wie bei Schichten; Liste der Programmpunkte nach Zeit (`HH:mm–HH:mm`, Typ-Icon + Label, Titel); Anlegen/Bearbeiten (Titel 1–80 Zeichen, Typ, Start/Ende)/Löschen mit Rückfrage; bei beendetem BF-Tag nur lesend | MVP |
 | BF-Tage | Administrator | anlegen, Zeitraum, Teilnahmen, Anonymisierung | MVP |
 | Personen | Administrator | Personentyp, Berechtigung, Feuerwehr, Geräte, QR-Codes drucken | MVP |
 | Fahrzeuge | Administrator | Stammdaten, Sortierung | MVP |
@@ -48,7 +48,16 @@ Bei einem **laufenden Einsatz**:
 Im **Standby**:
 - MVP: große Uhr, Fahrzeugstatus-Leiste, **aktuelle Schicht mit Besatzungen** (wer sitzt auf
   welchem Fahrzeug), rotierende Folien
-- später: aktueller bzw. nächster Programmpunkt, letzte Durchsage
+- MVP: Banner bei neuer Durchsage (`announcement.created`, 60 s, zeigt den Text; verschwindet
+  sofort bei Löschung), danach Panel „Letzte Durchsage“ mit der neuesten Durchsage des Tags
+  (Uhrzeit + Text) aus `snapshot.announcements`, leer wenn keine vorhanden; läuft ein Einsatz
+  (Einsatzansicht), hat diese immer Vorrang – Banner und Panel werden dann nicht angezeigt
+- MVP: Block „Jetzt“ / „Danach“ (ADR 0025) aus `snapshot.program_items` bzw. `program.changed`,
+  Anzeige über `currentAndNext(programItems, now)` (`now` aus `monitorClockProvider`, rein
+  zeitgesteuert – kein Event nötig, um von einem Programmpunkt zum nächsten zu wechseln); je
+  Zeile `HH:mm–HH:mm  Titel` (Lokalzeit), fehlt „Jetzt“ oder „Danach“ wird die Zeile weggelassen;
+  ohne Programmpunkte ist der Block ganz unsichtbar; eine laufende Einsatzansicht hat weiterhin
+  Vorrang (der Block erscheint nur im Standby)
 
 Technik: Gong bzw. Alarmton bei `alarm.triggered` (der Browser verlangt einmal „Zum Aktivieren
 tippen“), Screen Wake Lock, rotes Banner bei Verbindungsverlust, Rotation bei mehreren laufenden
@@ -67,7 +76,8 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
 | Einsatzdetail | Meldebild, Alarmierungen, Quittierungen; Drehbuch nur bei Berechtigung | MVP |
 | Einsatzbericht | für die Funktion GF nach Status 1/2: Lage, Maßnahmen, Vorkommnisse; Zeiten automatisch | später |
 | Vorwarnung / Bereitmeldung | für Einsatzvorbereitung | später |
-| Tagesablauf, Durchsagen | | später |
+| Durchsagen (`/durchsagen`) | Liste aus `snapshot.announcements`, neueste zuerst; dritter Eintrag der Navigationsleiste | MVP |
+| Tagesablauf (`/tagesablauf`) | Liste aus `snapshot.program_items` (laufender BF-Tag), aktuelle Punkte hervorgehoben, vergangene ausgegraut; vierter Eintrag der Navigationsleiste | MVP |
 | Einstellungen | Gerät abmelden, Testalarm, Hinweise zu Akku und Ton | MVP |
 
 ### Technik
@@ -76,6 +86,57 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
 - `flutter_local_notifications` für Channel-Setup und Anzeige im Vordergrund
 - `flutter_secure_storage` für Tokens, `mobile_scanner` für den QR-Code
 - Deep Link aus der Notification auf den Alarm-Screen
+
+### Durchsagen (ADR 0024)
+
+- Android-Notification-Channel `announcement` ("Durchsagen"), `IMPORTANCE_DEFAULT`, Standard-Ton,
+  **kein** `setBypassDnd` -- angelegt in `MainActivity.kt` neben dem bestehenden `alarm`-Channel.
+- App im Vordergrund: ein live empfangenes `announcement.created` (nie aus dem Snapshot, siehe
+  `pairedAnnouncementCreatedProvider`) zeigt eine SnackBar "Durchsage: …" mit Aktion "Anzeigen",
+  die zu `/durchsagen` navigiert. Der Listener (`AnnouncementSnackbarListener`) sitzt app-weit neben
+  `AlarmNavigationListener`.
+- Tippen auf eine Durchsage-Push-Benachrichtigung öffnet `/durchsagen`, sowohl bei laufender App
+  (`PushService.onAnnouncementOpened`) als auch beim Kaltstart aus der Benachrichtigung (FCM
+  `getInitialMessage`). Auf iOS ist dieser Stream vorerst ein No-op (TODO, natives APNs-Channel-
+  Wiring fehlt noch). Alarm- und Durchsage-Pushes schließen sich gegenseitig aus:
+  `PushService.onAlarmOpened` ignoriert `type: 'announcement.created'`.
+
+### Tagesablauf (ADR 0025)
+
+- `ProgramScreen` (`/tagesablauf`, vierter Eintrag der Navigationsleiste "Ablauf") listet die
+  sortierten Programmpunkte des laufenden BF-Tags aus `pairedProgramItemsProvider` -- kein eigener
+  Fetch, nur der Realtime-Snapshot-State. Jede Zeile zeigt `HH:mm–HH:mm` (lokale Zeit), ein
+  Typ-Icon (Essen, Ausbildung, Fahrzeugpflege, Ruhe, Sonstiges) und den Titel.
+- Aktuelle Punkte (`isCurrentProgramItem`) werden als Card in `primaryContainer`-Farbe mit einem
+  "Jetzt"-Chip hervorgehoben, vergangene (`isPastProgramItem`) ausgegraut (reduzierte Opazität).
+  Ohne Programmpunkte zeigt der Screen "Kein Tagesablauf vorhanden."
+- `programNowProvider` tickt alle 30 s (startet mit `DateTime.now()`) und treibt die
+  Hervorhebung, unabhängig von Realtime-Events; Tests überschreiben ihn für einen deterministischen
+  Ablauf.
+
+## Karte ([ADR 0026](adr/0026-karte.md))
+
+Gemeinsames Widget `IncidentMap` in `packages/core/lib/src/map/incident_map.dart` auf Basis von
+`flutter_map` (plus `latlong2`): Kacheln von `https://tile.openstreetmap.org/{z}/{x}/{y}.png`,
+`userAgentPackageName: 'de.bftag.app'`, `maxZoom 19`, dauerhaft sichtbare Attribution
+„© OpenStreetMap-Mitwirkende“. Einsatz-Pin rot (`Icons.location_on`), Wache als eigenes Symbol
+(`Icons.home`). Mit Wache passt die Kamera beide Punkte ein (max. Zoom 16), ohne Wache zeigt sie
+nur den Einsatz-Pin (Zoom 15). Der `TileProvider` ist injizierbar, damit Widget-Tests ohne Netz
+laufen. Kein Routing, kein API-Key.
+
+- **Monitor-Einsatzansicht:** mit Koordinaten erscheint die Karte neben bzw. unter dem
+  Meldebild, nicht interaktiv; ohne Koordinaten bleibt die Ansicht unverändert.
+- **Web-Einsatzformular:** Adresssuche über `GET /geocode` (Button „Suchen“, Vorschläge als
+  Liste; Auswahl setzt den Pin und zentriert die Karte, überschreibt aber nicht das
+  Adress-Textfeld — der Pin ist nur ein Vorschlag), Klick auf die Karte setzt/versetzt den Pin,
+  Button „Pin entfernen“. Startansicht ohne Pin: Wache (Zoom 13) sofern konfiguriert, sonst
+  Mitte Deutschland.
+- **App (Alarm-Screen, Einsatzdetail):** kleine Karte (Höhe ca. 180) wenn Koordinaten
+  vorhanden, darunter Button „Navigation starten“. URI über die reine Funktion
+  `navigationUri(lat, lng, platform)`: Android `geo:<lat>,<lng>?q=<lat>,<lng>`, iOS
+  `https://maps.apple.com/?daddr=<lat>,<lng>`; Start über `url_launcher`
+  (`LaunchMode.externalApplication`). Das Android-Manifest deklariert `<queries>` für
+  `geo`-Intents.
 
 ## Gemeinsamer Code (`packages/core`)
 

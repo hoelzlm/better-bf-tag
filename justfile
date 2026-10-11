@@ -54,6 +54,10 @@ mobile:
 infra-smoke:
     ./infra/smoke-test.sh
 
+# Build the production images and run the full API (+ UI) e2e suite against them.
+e2e:
+    ./e2e/run.sh
+
 # Automated local round-trip test for the nightly backup/restore scripts.
 infra-backup-test:
     ./infra/test/backup-restore.sh

@@ -261,11 +261,11 @@ Map<String, dynamic> _incidentUpdatedClosedEvent({
 
 class _Env {
   _Env()
-      : adapter = _FakeMonitorAdapter(),
-        tokenStore = InMemoryTokenStore(),
-        platform = _FakeMonitorPlatform(),
-        alarmSound = _FakeAlarmSound(),
-        connector = _FakeConnector() {
+    : adapter = _FakeMonitorAdapter(),
+      tokenStore = InMemoryTokenStore(),
+      platform = _FakeMonitorPlatform(),
+      alarmSound = _FakeAlarmSound(),
+      connector = _FakeConnector() {
     final dio = Dio(BaseOptions(baseUrl: ''));
     dio.httpClientAdapter = adapter;
     overrides = [
@@ -285,10 +285,15 @@ class _Env {
 }
 
 Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
+  // Mirrors production: `main.dart`'s root ProviderScope with the
+  // `/monitor` route's own scoped ProviderScope nested inside (router.dart).
+  // A single flat scope hides "provider not scoped" bugs.
   await tester.pumpWidget(
     ProviderScope(
-      overrides: env.overrides,
-      child: const MaterialApp(home: MonitorScreen()),
+      child: ProviderScope(
+        overrides: env.overrides,
+        child: const MaterialApp(home: MonitorScreen()),
+      ),
     ),
   );
   await tester.pump();
@@ -307,83 +312,70 @@ Future<void> _activateAndPair(WidgetTester tester, _Env env) async {
 }
 
 void main() {
-  testWidgets(
-    'standby is shown when no running incident has an alarm',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': [_incidentJson()],
-        'alarms': <dynamic>[],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('standby is shown when no running incident has an alarm', (
+    tester,
+  ) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': [_incidentJson()],
+      'alarms': <dynamic>[],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      expect(find.byKey(const Key('monitor-clock-time')), findsOneWidget);
-      expect(find.byKey(const Key('monitor-incident-number')), findsNothing);
-    },
-  );
+    expect(find.byKey(const Key('monitor-clock-time')), findsOneWidget);
+    expect(find.byKey(const Key('monitor-incident-number')), findsNothing);
+  });
 
-  testWidgets(
-    'shows the Einsatzansicht from the snapshot with number/keyword/'
-    'address/Meldebild/recipients/vehicles, without playing the gong',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': [
-          _vehicleJson(id: 'v1', shortName: 'HLF 1', status: 3),
-        ],
-        'incidents': [_incidentJson()],
-        'alarms': [
-          _alarmJson(
-            vehicleIds: ['v1'],
-            recipients: [
-              _recipientJson(
-                personId: 'p1',
-                displayName: 'Max M.',
-                acknowledgedAt: '2026-10-09T08:01:00Z',
-              ),
-              _recipientJson(personId: 'p2', displayName: 'Lea K.'),
-              _recipientJson(
-                personId: 'p3',
-                displayName: 'Ben R.',
-                hasDevice: false,
-              ),
-            ],
-          ),
-        ],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('shows the Einsatzansicht from the snapshot with number/keyword/'
+      'address/Meldebild/recipients/vehicles, without playing the gong', (
+    tester,
+  ) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': [_vehicleJson(id: 'v1', shortName: 'HLF 1', status: 3)],
+      'incidents': [_incidentJson()],
+      'alarms': [
+        _alarmJson(
+          vehicleIds: ['v1'],
+          recipients: [
+            _recipientJson(
+              personId: 'p1',
+              displayName: 'Max M.',
+              acknowledgedAt: '2026-10-09T08:01:00Z',
+            ),
+            _recipientJson(personId: 'p2', displayName: 'Lea K.'),
+            _recipientJson(
+              personId: 'p3',
+              displayName: 'Ben R.',
+              hasDevice: false,
+            ),
+          ],
+        ),
+      ],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      expect(find.text('EINSATZ 7'), findsOneWidget);
-      expect(find.text('B2 – WOHNUNGSBRAND'), findsOneWidget);
-      expect(find.text('Musterstraße 1, Musterstadt'), findsOneWidget);
-      expect(
-        find.text('Rauchentwicklung aus Fenster, 2. OG, Person vermisst'),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('incident-recipient-p1')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('incident-recipient-p2')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('incident-recipient-p3')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('incident-vehicle-v1')), findsOneWidget);
-      expect(find.text('HLF 1'), findsOneWidget);
+    expect(find.text('EINSATZ 7'), findsOneWidget);
+    expect(find.text('B2 – WOHNUNGSBRAND'), findsOneWidget);
+    expect(find.text('Musterstraße 1, Musterstadt'), findsOneWidget);
+    expect(
+      find.text('Rauchentwicklung aus Fenster, 2. OG, Person vermisst'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('incident-recipient-p1')), findsOneWidget);
+    expect(find.byKey(const Key('incident-recipient-p2')), findsOneWidget);
+    expect(find.byKey(const Key('incident-recipient-p3')), findsOneWidget);
+    expect(find.byKey(const Key('incident-vehicle-v1')), findsOneWidget);
+    expect(find.text('HLF 1'), findsOneWidget);
 
-      // Alarms arriving via the initial snapshot never ring the gong.
-      expect(env.alarmSound.playCalls, 0);
-    },
-  );
+    // Alarms arriving via the initial snapshot never ring the gong.
+    expect(env.alarmSound.playCalls, 0);
+  });
 
   testWidgets(
     'switches from standby to Einsatzansicht and rings the gong exactly '
@@ -443,24 +435,21 @@ void main() {
     },
   );
 
-  testWidgets(
-    'no script text appears on the Einsatzansicht',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': [_incidentJson()],
-        'alarms': [_alarmJson()],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('no script text appears on the Einsatzansicht', (tester) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': [_incidentJson()],
+      'alarms': [_alarmJson()],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      expect(find.text('EINSATZ 7'), findsOneWidget);
-      expect(find.textContaining('Drehbuch'), findsNothing);
-      expect(find.byKey(const Key('monitor-incident-script')), findsNothing);
-    },
-  );
+    expect(find.text('EINSATZ 7'), findsOneWidget);
+    expect(find.textContaining('Drehbuch'), findsNothing);
+    expect(find.byKey(const Key('monitor-incident-script')), findsNothing);
+  });
 
   testWidgets(
     'returns to standby after incident.closed for the only running Einsatz',

@@ -2,7 +2,9 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../map_tile_provider.dart';
 import '../monitor/monitor_clock.dart';
+import '../station_provider.dart';
 
 String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
@@ -89,6 +91,8 @@ class MonitorIncidentScreen extends ConsumerWidget {
     final vehicles =
         ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
     final now = ref.watch(monitorClockProvider).valueOrNull ?? DateTime.now();
+    final station = ref.watch(stationProvider).valueOrNull;
+    final mapTileProvider = ref.watch(mapTileProviderProvider);
 
     final incident = _findIncident(incidents, incidentId);
     if (incident == null) {
@@ -270,6 +274,18 @@ class MonitorIncidentScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (incident.location != null) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 160,
+                      child: IncidentMap(
+                        incident: incident.location,
+                        station: station,
+                        interactive: false,
+                        tileProvider: mapTileProvider,
+                      ),
+                    ),
+                  ],
                   const Divider(color: Colors.white24),
                   const SizedBox(height: 8),
                   Wrap(

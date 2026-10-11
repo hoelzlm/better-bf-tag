@@ -107,3 +107,40 @@ describe('config push env vars (ADR 0018)', () => {
     expect(config.APNS_PRODUCTION).toBe(true);
   });
 });
+
+describe('config Wache (ADR 0026)', () => {
+  it('both unset -> undefined', () => {
+    const config = loadConfig({ ...base });
+    expect(config.STATION_LATITUDE).toBeUndefined();
+    expect(config.STATION_LONGITUDE).toBeUndefined();
+  });
+
+  it('only STATION_LATITUDE set -> throws', () => {
+    expect(() => loadConfig({ ...base, STATION_LATITUDE: '48.1' })).toThrow();
+  });
+
+  it('only STATION_LONGITUDE set -> throws', () => {
+    expect(() => loadConfig({ ...base, STATION_LONGITUDE: '11.5' })).toThrow();
+  });
+
+  it('both set -> parsed as numbers', () => {
+    const config = loadConfig({ ...base, STATION_LATITUDE: '48.1', STATION_LONGITUDE: '11.5' });
+    expect(config.STATION_LATITUDE).toBe(48.1);
+    expect(config.STATION_LONGITUDE).toBe(11.5);
+  });
+
+  it('empty strings -> undefined (infra/docker-compose.yml passes ${VAR:-})', () => {
+    const config = loadConfig({ ...base, STATION_LATITUDE: '', STATION_LONGITUDE: '' });
+    expect(config.STATION_LATITUDE).toBeUndefined();
+    expect(config.STATION_LONGITUDE).toBeUndefined();
+  });
+
+  it('out-of-range values -> throws', () => {
+    expect(() =>
+      loadConfig({ ...base, STATION_LATITUDE: '91', STATION_LONGITUDE: '11.5' })
+    ).toThrow();
+    expect(() =>
+      loadConfig({ ...base, STATION_LATITUDE: '48.1', STATION_LONGITUDE: '181' })
+    ).toThrow();
+  });
+});

@@ -4,6 +4,7 @@ import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:bftag_core/bftag_core.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:bftag_web/station_provider.dart';
 
 /// The state of the web monitor's own session (ADR 0012, "Monitor im
 /// Browser"), independent of the admin web session
@@ -191,7 +192,9 @@ class MonitorSessionController extends Notifier<MonitorSessionState> {
 
   Future<void> _applyResult(MonitorPair200Response data) async {
     _refreshToken = data.refreshToken;
-    await ref.read(tokenStoreProvider).write(
+    await ref
+        .read(tokenStoreProvider)
+        .write(
           StoredDeviceSession(
             refreshToken: data.refreshToken,
             deviceId: data.monitor.id,
@@ -207,8 +210,8 @@ class MonitorSessionController extends Notifier<MonitorSessionState> {
 
 final monitorSessionControllerProvider =
     NotifierProvider<MonitorSessionController, MonitorSessionState>(
-  MonitorSessionController.new,
-);
+      MonitorSessionController.new,
+    );
 
 class _MonitorSessionAuthBinding implements AuthSessionBinding {
   _MonitorSessionAuthBinding(this._ref);
@@ -244,8 +247,9 @@ Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
     shortName: v.shortName,
     type: v.type,
     status: FmsStatus.fromCode(v.status),
-    statusChangedAt:
-        statusChangedAtRaw == null ? null : DateTime.parse(statusChangedAtRaw),
+    statusChangedAt: statusChangedAtRaw == null
+        ? null
+        : DateTime.parse(statusChangedAtRaw),
     sortOrder: v.sortOrder,
     active: v.active,
   );
@@ -312,6 +316,10 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'state': i.state.name,
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
+    // ADR 0026: the Monitor-Einsatzansicht shows a map when the Einsatz
+    // has coordinates, so mirror the admin's `_incidentFromApi` here too.
+    'latitude': i.latitude,
+    'longitude': i.longitude,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -325,8 +333,9 @@ AlarmRecipient _alarmRecipientFromApi(
     vehicleId: r.vehicleId,
     function: r.function_,
     hasDevice: r.hasDevice,
-    acknowledgedAt:
-        r.acknowledgedAt == null ? null : DateTime.parse(r.acknowledgedAt!),
+    acknowledgedAt: r.acknowledgedAt == null
+        ? null
+        : DateTime.parse(r.acknowledgedAt!),
   );
 }
 
@@ -339,6 +348,36 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
     triggeredAt: a.triggeredAt == null ? null : DateTime.parse(a.triggeredAt!),
     vehicleIds: a.vehicleIds.toList(),
     recipients: a.recipients.map(_alarmRecipientFromApi).toList(),
+  );
+}
+
+/// Mirrors `_announcementFromApi` in `providers.dart` (ADR 0024): wires
+/// the monitor's own snapshot loader to the same wire shape as the admin
+/// one, so the monitor's "Letzte Durchsage" panel and banner get
+/// `snapshot.announcements` too.
+Announcement _announcementFromApi(GetSnapshot200ResponseAnnouncementsInner a) {
+  return Announcement(
+    id: a.id,
+    bfDayId: a.bfDayId,
+    shiftId: a.shiftId,
+    text: a.text,
+    createdBy: a.createdBy,
+    createdAt: DateTime.parse(a.createdAt),
+  );
+}
+
+/// Mirrors `_programItemFromApi` in `program_item_repository.dart` (ADR
+/// 0025): wires the monitor's own snapshot loader to the same wire shape
+/// as the admin one, so the monitor's "Jetzt"/"Danach"-Block gets
+/// `snapshot.program_items` too.
+ProgramItem _programItemFromApi(GetSnapshot200ResponseProgramItemsInner p) {
+  return ProgramItem(
+    id: p.id,
+    bfDayId: p.bfDayId,
+    title: p.title,
+    type: ProgramItemType.fromWire(p.type.name),
+    startsAt: DateTime.parse(p.startsAt),
+    endsAt: DateTime.parse(p.endsAt),
   );
 }
 
@@ -376,6 +415,8 @@ RealtimeClient? _buildMonitorRealtimeClient(Ref ref) {
         currentShiftId: data.currentShiftId,
         incidents: data.incidents.map(_incidentFromApi).toList(),
         alarms: data.alarms.map(_alarmFromApi).toList(),
+        announcements: data.announcements.map(_announcementFromApi).toList(),
+        programItems: data.programItems.map(_programItemFromApi).toList(),
       );
     },
     accessToken: () async {
@@ -462,6 +503,36 @@ Stream<Alarm> _buildMonitorLiveAlarmTriggered(Ref ref) {
   return client.liveAlarmTriggered;
 }
 
+Stream<List<Announcement>> _buildMonitorAnnouncements(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Announcement>[]);
+  }
+  return client.states.map((state) => state.announcements);
+}
+
+Stream<Announcement> _buildMonitorAnnouncementCreated(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return const Stream<Announcement>.empty();
+  }
+  return client.liveAnnouncementCreated;
+}
+
+/// Mirrors `programItemsProvider` in `providers.dart` (ADR 0025): without
+/// this override the monitor scope's un-overridden `programItemsProvider`
+/// would resolve against the root container's `realtimeClientProvider`
+/// (never built for the monitor session) instead of the monitor's own
+/// `RealtimeClient` -- the same gap that `announcementsProvider` had
+/// before ADR 0024's fix.
+Stream<List<ProgramItem>> _buildMonitorProgramItems(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ProgramItem>[]);
+  }
+  return client.states.map((state) => state.programItems);
+}
+
 /// The provider overrides that wire the `/monitor` `ProviderScope` to its
 /// own session, own `Dio`/`RealtimeClient`, and keep the admin web session
 /// out of the picture entirely -- so `VehicleStatusBar`
@@ -496,9 +567,7 @@ List<Override> monitorProviderOverrides({
     // provider resolves against the *root* container regardless of where
     // it is read from, which would make its own `ref.read(tokenStoreProvider)`
     // miss the override above entirely.
-    monitorSessionControllerProvider.overrideWith(
-      MonitorSessionController.new,
-    ),
+    monitorSessionControllerProvider.overrideWith(MonitorSessionController.new),
     realtimeClientProvider.overrideWith(_buildMonitorRealtimeClient),
     vehiclesProvider.overrideWith(_buildMonitorVehicles),
     slidesProvider.overrideWith(_buildMonitorSlides),
@@ -508,5 +577,10 @@ List<Override> monitorProviderOverrides({
     incidentsProvider.overrideWith(_buildMonitorIncidents),
     alarmsProvider.overrideWith(_buildMonitorAlarms),
     liveAlarmTriggeredProvider.overrideWith(_buildMonitorLiveAlarmTriggered),
+    announcementsProvider.overrideWith(_buildMonitorAnnouncements),
+    announcementCreatedProvider.overrideWith(_buildMonitorAnnouncementCreated),
+    programItemsProvider.overrideWith(_buildMonitorProgramItems),
+    // Map pin on the Einsatzansicht; must use the Monitor's API client.
+    stationProvider.overrideWith(loadStation),
   ];
 }

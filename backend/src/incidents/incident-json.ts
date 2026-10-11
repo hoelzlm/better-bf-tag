@@ -11,6 +11,9 @@ export interface IncidentRow {
   report: string;
   script: string;
   state: IncidentState;
+  // Einsatzort (ADR 0026): nullable, immer gemeinsam gesetzt (DB-Check).
+  latitude: number | null;
+  longitude: number | null;
   createdAt: Date;
   updatedAt: Date;
   closedAt: Date | null;
@@ -30,6 +33,8 @@ export const incidentJsonSchema = z.object({
   address: z.string(),
   report: z.string(),
   state: z.enum(['draft', 'running', 'closed', 'discarded']),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   closed_at: z.string().nullable(),
@@ -53,6 +58,8 @@ export function toIncidentJson(row: IncidentRow, opts: { includeScript: boolean 
     address: row.address,
     report: row.report,
     state: row.state,
+    latitude: row.latitude,
+    longitude: row.longitude,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
     closed_at: row.closedAt ? row.closedAt.toISOString() : null,

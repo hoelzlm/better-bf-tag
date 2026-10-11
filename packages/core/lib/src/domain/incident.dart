@@ -1,3 +1,5 @@
+import 'package:latlong2/latlong.dart';
+
 /// Zustand eines Einsatzes (ADR 0016): `draft` -> `running` -> `closed`,
 /// oder `draft` -> `discarded`. `running` -> `closed` und die
 /// Alarmierungs-Übergänge kommen mit Ticket 08.
@@ -54,6 +56,8 @@ class Incident {
     required this.createdAt,
     required this.updatedAt,
     this.closedAt,
+    this.latitude,
+    this.longitude,
   });
 
   final String id;
@@ -62,6 +66,15 @@ class Incident {
   final String keyword;
   final String address;
   final String report;
+
+  /// Einsatzort (ADR 0026): `null` unless both [latitude] and [longitude]
+  /// are set (backend enforces this pairing).
+  final double? latitude;
+  final double? longitude;
+
+  /// [latitude]/[longitude] as a [LatLng], or `null` unless both are set.
+  LatLng? get location =>
+      (latitude == null || longitude == null) ? null : LatLng(latitude!, longitude!);
 
   /// Drehbuch: `null` when the server didn't include the `script` key at
   /// all (ADR 0016, "Ein Serialisierer, Feld fehlt statt `null`") -- i.e.
@@ -81,6 +94,8 @@ class Incident {
   /// with `script` present only when the caller may see it.
   factory Incident.fromJson(Map<String, dynamic> json) {
     final closedAtRaw = json['closed_at'] as String?;
+    final latitudeRaw = json['latitude'] as num?;
+    final longitudeRaw = json['longitude'] as num?;
     return Incident(
       id: json['id'] as String,
       bfDayId: json['bf_day_id'] as String,
@@ -93,6 +108,8 @@ class Incident {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       closedAt: closedAtRaw == null ? null : DateTime.parse(closedAtRaw),
+      latitude: latitudeRaw?.toDouble(),
+      longitude: longitudeRaw?.toDouble(),
     );
   }
 
@@ -111,6 +128,8 @@ class Incident {
       'updated_at': updatedAt.toIso8601String(),
       if (closedAt != null) 'closed_at': closedAt!.toIso8601String(),
       if (script != null) 'script': script,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -122,6 +141,8 @@ class Incident {
     IncidentState? state,
     DateTime? updatedAt,
     DateTime? closedAt,
+    double? latitude,
+    double? longitude,
   }) {
     return Incident(
       id: id,
@@ -135,6 +156,8 @@ class Incident {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       closedAt: closedAt ?? this.closedAt,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 
@@ -151,7 +174,9 @@ class Incident {
       other.state == state &&
       other.createdAt == createdAt &&
       other.updatedAt == updatedAt &&
-      other.closedAt == closedAt;
+      other.closedAt == closedAt &&
+      other.latitude == latitude &&
+      other.longitude == longitude;
 
   @override
   int get hashCode => Object.hash(
@@ -166,6 +191,8 @@ class Incident {
         createdAt,
         updatedAt,
         closedAt,
+        latitude,
+        longitude,
       );
 
   @override

@@ -57,6 +57,18 @@ String describeAlarmTriggerError(Object error) {
   return describeApiError(error, 'Alarmierung konnte nicht ausgelöst werden.');
 }
 
+/// German message for `POST /bf-days/{day}/announcements` and `DELETE
+/// /announcements/{id}` (ADR 0024): a 409 `bf_day_not_running` means the
+/// BF-Tag isn't running (anymore) -- e.g. it ended between loading this
+/// screen and sending/deleting. Falls back to [describeApiError] for
+/// anything else.
+String describeAnnouncementError(Object error) {
+  if (_apiErrorCode(error) == 'bf_day_not_running') {
+    return 'Der BF-Tag läuft nicht (mehr).';
+  }
+  return describeApiError(error, 'Durchsage konnte nicht gespeichert werden.');
+}
+
 /// German message for `POST /incidents/{id}/alarms` with `scheduled_at`/
 /// `offset_minutes` and `PATCH /alarms/{id}` (ADR 0022): maps the specific
 /// 409/400 error codes a plan/update can return to German messages, falling
@@ -93,4 +105,23 @@ String describeAnonymizationError(Object error) {
       return 'BF-Tag wurde bereits anonymisiert.';
   }
   return describeApiError(error, 'BF-Tag konnte nicht anonymisiert werden.');
+}
+
+/// German message for `POST /bf-days/{day}/program-items`, `PATCH
+/// /program-items/{id}` and `DELETE /program-items/{id}` (ADR 0025): a 400
+/// `validation_error` means the title/zeitraum is invalid (e.g. outside
+/// the BF-Tag-Zeitraum, or `ends_at <= starts_at`), a 409 `bf_day_ended`
+/// means the BF-Tag has already ended. Falls back to [describeApiError]
+/// for anything else.
+String describeProgramItemError(Object error) {
+  switch (_apiErrorCode(error)) {
+    case 'validation_error':
+      return 'Titel oder Zeitraum sind ungültig.';
+    case 'bf_day_ended':
+      return 'BF-Tag ist bereits beendet.';
+  }
+  return describeApiError(
+    error,
+    'Programmpunkt konnte nicht gespeichert werden.',
+  );
 }

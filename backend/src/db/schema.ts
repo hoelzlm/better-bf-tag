@@ -2,6 +2,7 @@ import {
   pgTable,
   uuid,
   text,
+  varchar,
   boolean,
   timestamp,
   pgEnum,
@@ -13,9 +14,10 @@ import {
   bigint,
   primaryKey,
   customType,
+  doublePrecision,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { sql, desc } from 'drizzle-orm';
 
 /** Raw binary data (ADR 0014): Folienbilder liegen als `bytea` in Postgres. */
 const bytea = customType<{ data: Buffer }>({
@@ -49,6 +51,13 @@ export const alarmStateEnum = pgEnum('alarm_state', [
   'triggered',
   'missed',
   'discarded',
+]);
+export const programItemTypeEnum = pgEnum('program_item_type', [
+  'meal',
+  'training',
+  'maintenance',
+  'rest',
+  'other',
 ]);
 
 export const fireDepartment = pgTable(
@@ -282,6 +291,11 @@ export const incident = pgTable(
     report: text('report').notNull().default(''),
     script: text('script').notNull().default(''),
     state: incidentStateEnum('state').notNull().default('draft'),
+    // Einsatzort (ADR 0026): nullable, nur gemeinsam gesetzt (Check unten).
+    // Gehört zum Meldebild, kein Personenbezug -> bleibt bei der
+    // Anonymisierung unverändert.
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
     closedAt: timestamp('closed_at', { withTimezone: true }),
@@ -289,6 +303,12 @@ export const incident = pgTable(
   table => [
     uniqueIndex('incident_bf_day_number_unique').on(table.bfDayId, table.number),
     index('incident_bf_day_state_idx').on(table.bfDayId, table.state),
+    check(
+      'incident_coordinates_pair',
+      sql`(${table.latitude} is null) = (${table.longitude} is null)`
+    ),
+    check('incident_latitude_range', sql`${table.latitude} between -90 and 90`),
+    check('incident_longitude_range', sql`${table.longitude} between -180 and 180`),
   ]
 );
 
@@ -364,3 +384,40 @@ export const slideImage = pgTable('slide_image', {
   sizeBytes: integer('size_bytes').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 });
+
+export const announcement = pgTable(
+  'announcement',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    // `on delete cascade` statt `set null` (ADR 0024): eine an eine Schicht
+    // gerichtete Durchsage darf nie nachträglich für alle sichtbar werden.
+    shiftId: uuid('shift_id').references(() => shift.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => person.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  table => [index('announcement_bf_day_created_at_idx').on(table.bfDayId, desc(table.createdAt))]
+);
+
+export const programItem = pgTable(
+  'program_item',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 80 }).notNull(),
+    type: programItemTypeEnum('type').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  },
+  table => [
+    check('program_item_period', sql`${table.endsAt} > ${table.startsAt}`),
+    index('program_item_bf_day_starts_at_idx').on(table.bfDayId, table.startsAt),
+  ]
+);

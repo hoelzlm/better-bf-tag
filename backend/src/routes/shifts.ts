@@ -1,13 +1,14 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { and, asc, eq } from 'drizzle-orm';
-import { shift, crewAssignment, vehicle, participation } from '../db/schema.js';
+import { shift, crewAssignment, vehicle, participation, announcement } from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import { errorResponseSchema } from '../access/schemas.js';
 import { resolveBfDay } from '../bf-days/resolve-day.js';
 import { loadShiftJson, shiftJsonSchema, setShiftCrewBodySchema } from './shift-schemas.js';
 import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
+import { announcementVisibleTo, loadShiftCrewPersonIds } from '../announcements/visibility.js';
 
 const isoDateTime = z.string().datetime({ offset: true });
 
@@ -251,6 +252,26 @@ export const shiftRoutes: FastifyPluginAsyncZod = async fastify => {
             'last_shift',
             'Die letzte Schicht eines BF-Tags kann nicht gelöscht werden.'
           );
+        }
+
+        // Durchsagen dieser Schicht verschwinden mit ihr (ADR 0024):
+        // `announcement.deleted` für jede betroffene Durchsage in derselben
+        // mutate vor dem Löschen, mit derselben Audience wie ihr `created`.
+        const shiftAnnouncements = await tx
+          .select()
+          .from(announcement)
+          .where(eq(announcement.shiftId, existing.id));
+        if (shiftAnnouncements.length > 0) {
+          const crewPersonIds = await loadShiftCrewPersonIds(tx, existing.id);
+          for (const row of shiftAnnouncements) {
+            await emit(
+              'announcement.deleted',
+              { id: row.id },
+              {
+                audience: v => announcementVisibleTo(v, { shiftId: existing.id }, crewPersonIds),
+              }
+            );
+          }
         }
 
         await tx.delete(shift).where(eq(shift.id, existing.id));

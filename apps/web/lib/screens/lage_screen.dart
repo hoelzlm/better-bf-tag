@@ -56,6 +56,22 @@ class LageScreen extends ConsumerWidget {
             ),
           if (permission == Permission.dispatch || permission == Permission.admin)
             IconButton(
+              key: const Key('nav-durchsagen'),
+              style: navButtonStyle,
+              icon: const Icon(Icons.campaign),
+              tooltip: 'Durchsagen',
+              onPressed: () => context.go('/admin/durchsagen'),
+            ),
+          if (permission == Permission.dispatch || permission == Permission.admin)
+            IconButton(
+              key: const Key('nav-tagesablauf'),
+              style: navButtonStyle,
+              icon: const Icon(Icons.calendar_today),
+              tooltip: 'Tagesablauf',
+              onPressed: () => context.go('/admin/tagesablauf'),
+            ),
+          if (permission == Permission.dispatch || permission == Permission.admin)
+            IconButton(
               key: const Key('nav-bf-tage'),
               style: navButtonStyle,
               icon: const Icon(Icons.event),

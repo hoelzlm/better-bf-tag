@@ -42,6 +42,8 @@ Das JWT enthält `sub` (Person- oder Monitor-ID); bei Personen zusätzlich `perm
 | Schichten/Besatzungen pflegen | | | ✓ | ✓ |
 | Einsatzbericht prüfen (später) | | | ✓ | ✓ |
 | Anonymisierung auslösen | | | ✓ | ✓ |
+| Durchsagen anlegen/löschen ([ADR 0024](adr/0024-durchsage.md)) | | | ✓ | ✓ |
+| Programmpunkte anlegen/bearbeiten/löschen ([ADR 0025](adr/0025-tagesablauf.md)) | | | ✓ | ✓ |
 | Personen, Fahrzeuge, Feuerwehren, Monitore, BF-Tage, Folien verwalten | | | | ✓ |
 
 Die Spalten sind getrennte Rechte und keine Hierarchie, nur der Administrator darf alles.
@@ -56,7 +58,6 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 
 | Methode | Pfad |
 |---------|------|
-| GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` |
 | GET/POST/PATCH | `/persons[/{id}]` |
 | PUT/DELETE | `/persons/{id}/web-access` |
 | POST | `/persons/{id}/pairing-code` |
@@ -80,6 +81,57 @@ Pfade unter einem BF-Tag nutzen `{day}` = BF-Tag-ID oder `current` für den lauf
 | POST/PATCH/DELETE | `/bf-days/{day}/shifts[/{id}]` | Leitstelle |
 | PUT | `/shifts/{id}/crew` | Leitstelle; Body: Liste aus `{vehicle_id, person_id, function}` |
 
+#### Durchsagen ([ADR 0024](adr/0024-durchsage.md))
+
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET | `/bf-days/{day}/announcements` | alle (gefiltert, s. u.) |
+| POST | `/bf-days/{day}/announcements` | Leitstelle, Admin |
+| DELETE | `/announcements/{id}` | Leitstelle, Admin |
+
+`POST` Body `{ text: string (1–500), shift_id?: uuid }`; `shift_id` fehlt oder `null` = an alle
+Schichten (Broadcast), sonst nur an die Besatzung dieser Schicht. `shift_id` muss zum selben
+BF-Tag gehören, sonst 400 `validation_error`. Beide Routen nur während der BF-Tag `running` ist,
+sonst 409 `bf_day_not_running`. `GET` liefert die Durchsagen des BF-Tags neueste zuerst, gefiltert
+auf das, was der Aufrufer sehen darf (Broadcast: alle; Schicht-Durchsage: nur die Besatzung dieser
+Schicht zum jetzigen Zeitpunkt, sowie Einsatzvorbereitung/Leitstelle/Admin/Monitor). `DELETE` löst
+`announcement.deleted` mit demselben Publikum wie die ursprüngliche `announcement.created` aus,
+bevor die Zeile gelöscht wird. Löschen einer Schicht löscht ihre Durchsagen mit (`on delete
+cascade`) und löst für jede zuvor `announcement.deleted` aus.
+
+#### Tagesablauf, Programmpunkte ([ADR 0025](adr/0025-tagesablauf.md))
+
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET | `/bf-days/{day}/program-items` | alle |
+| POST | `/bf-days/{day}/program-items` | Leitstelle, Admin |
+| PATCH | `/program-items/{id}` | Leitstelle, Admin |
+| DELETE | `/program-items/{id}` | Leitstelle, Admin |
+
+`POST`/`PATCH` Body `{ title: string (1–80), type: 'meal'|'training'|'maintenance'|'rest'|'other',
+starts_at, ends_at }` (bei `PATCH` alle Felder optional, Merge mit dem bestehenden Programmpunkt).
+`ends_at` muss nach `starts_at` liegen und beide müssen vollständig im Zeitraum des BF-Tags liegen,
+sonst 400 `validation_error`. Erlaubt während `planning` und `running`, sonst (BF-Tag `ended`) 409
+`bf_day_ended` für POST/PATCH/DELETE. `GET` liefert alle Programmpunkte des BF-Tags sortiert nach
+`starts_at`, `ends_at`, `id` (auch für Monitore). Jede Änderung löst `program.changed` mit der
+vollständigen sortierten Liste aus (kein `.created`/`.updated`/`.deleted`, analog zu den Folien).
+Verschiebt ein `PATCH /bf-days/{id}` den Zeitraum des BF-Tags so, dass ein Programmpunkt nicht mehr
+vollständig darin liegt, antwortet die Route mit 409 `program_item_outside_bf_day`, ohne etwas zu
+ändern (Programmpunkte werden dabei nicht automatisch verschoben, anders als Schichten).
+
+#### Geocoding-Proxy ([ADR 0026](adr/0026-karte.md))
+
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET | `/geocode?q=` | Einsatzvorbereitung, Leitstelle, Admin |
+
+`q` wird getrimmt, 3–200 Zeichen, sonst 400 `validation_error`. Antwort 200
+`{ results: [{ label, latitude, longitude }] }`, max. 5 Einträge, nie 5xx: deaktiviert
+(`GEOCODING_ENABLED=false`), Timeout (5 s), HTTP-Fehler, ungültiges JSON oder eine zu lange
+Rate-Limit-Wartezeit liefern alle `{ results: [] }`. Serialisiert gegen Nominatim (≥ 1000 ms
+zwischen zwei Upstream-Anfragen, Aufgabe nach 3000 ms Wartezeit ohne Upstream-Aufruf), In-Memory-Cache
+(Schlüssel = normalisierte `q`, TTL 24 h, max. 500 Einträge; nur erfolgreiche Antworten gecacht).
+
 ### Fahrzeugstatus
 
 | Methode | Pfad | Berechtigung |
@@ -94,14 +146,15 @@ Einsatzzustände: `draft` → `running` (Erstalarm, Ticket 08) → `closed` (Lei
 werden nicht wiederverwendet. Drehbuch (`script`) nur für Einsatzvorbereitung, Leitstelle, Admin —
 für Mannschaft/Monitor fehlt der Schlüssel `script` in der Antwort ganz (ADR 0016). Mannschaft/
 Monitor sehen in Liste und Einzelabruf nur `running`/`closed` (Entwürfe und Verworfene filtert die
-Liste, der Einzelabruf antwortet 404 `not_found`).
+Liste, der Einzelabruf antwortet 404 `not_found`). `latitude`/`longitude` ([ADR 0026](adr/0026-karte.md)):
+`number | null`, immer vorhanden, für jeden, der den Einsatz sieht (kein Drehbuch-Filter).
 
 | Methode | Pfad | Berechtigung | Beschreibung |
 |---------|------|--------------|--------------|
 | GET | `/bf-days/{day}/incidents?state=draft\|running\|closed\|discarded` | alle | Liste, sortiert nach `number` (Drehbuch je nach Berechtigung, Zustandsfilter nach Sichtbarkeit); ohne `alarms` |
 | GET | `/incidents/{id}` | alle | Einzelabruf, inkl. `alarms: Alarm[]` (nach `triggered_at`, dann `created_at`); Mannschaft/Monitor 404 für `draft`/`discarded` |
-| POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung, Leitstelle, Admin | `{ keyword, address, report?, script? }` → 201 `draft`; 409 `bf_day_ended` |
-| PATCH | `/incidents/{id}` | Einsatzvorbereitung, Leitstelle, Admin | Meldebild/Drehbuch bearbeiten, nur `draft`/`running`; sonst 409 `incident_not_editable` |
+| POST | `/bf-days/{day}/incidents` | Einsatzvorbereitung, Leitstelle, Admin | `{ keyword, address, report?, script?, latitude?, longitude? }` → 201 `draft`; 409 `bf_day_ended`; `latitude`/`longitude` ([ADR 0026](adr/0026-karte.md)): genau eine der beiden gesetzt (nicht `null`) → 400 `validation_error` |
+| PATCH | `/incidents/{id}` | Einsatzvorbereitung, Leitstelle, Admin | Meldebild/Drehbuch/Koordinaten bearbeiten, nur `draft`/`running`; sonst 409 `incident_not_editable`; `latitude`/`longitude` geprüft wird das zusammengeführte Ergebnis (bestehende Zeile + Patch), Pin entfernen = beide `null` schicken ([ADR 0026](adr/0026-karte.md)) |
 | POST | `/incidents/{id}/discard` | Einsatzvorbereitung, Leitstelle, Admin | nur `draft`, sonst 409 `invalid_state_transition` |
 | POST | `/incidents/{id}/close` | Leitstelle, Admin | Einsatz schließen (ADR 0019), siehe unten |
 | POST | `/incidents/{id}/alarms` | Leitstelle, Admin | Erstalarm, Nachalarmierung und Planung (ADR 0017, ADR 0019, [ADR 0022](adr/0022-zeitgesteuerte-alarmierung.md)), siehe unten |
@@ -249,14 +302,13 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 ### Später
 
 | Methode | Pfad | Beschreibung |
-|---------|------|--------------|
+|---------|------|---------------|
+| GET/POST/PATCH/DELETE | `/fire-departments[/{id}]` | (später) weitere Feuerwehren im UI; im Datenmodell schon vorhanden, Route existiert noch nicht (404) |
 | PATCH | `/alarms/{id}` | geplante Zeit oder Fahrzeuge ändern (Ticket 11) |
 | POST | `/alarms/{id}/discard` | geplante Alarmierung verwerfen (Ticket 11) |
 | GET/PUT | `/incidents/{id}/reports/{vehicle_id}` | Einsatzbericht (GF der Besatzung) |
 | POST | `/incidents/{id}/reports/{vehicle_id}/approve` bzw. `/return` | Prüfung |
 | POST | `/vehicles/{id}/talk-request` | Sprechaufforderung |
-| POST | `/bf-days/{day}/announcements` | Durchsage `{ text, shift_id? }` |
-| GET/POST/PATCH/DELETE | `/bf-days/{day}/program-items[/{id}]` | Tagesablauf |
 
 ### Eigenes Gerät und Snapshot
 
@@ -265,7 +317,7 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren ([ADR 0018](adr/0018-push-alarm-zustellung.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ token: string (1–4096) }` → 204. Setzt `device.push_token` des eigenen Geräts; trägt ein anderes Gerät dasselbe Token, wird es dort auf `null` gesetzt |
 | POST | `/me/device/test-alarm` | Testalarm auslösen ([ADR 0021](adr/0021-onboarding-testalarm.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ delay_seconds?: integer 0–30 }`. Ohne Push-Token → 409 `no_push_token`. Läuft bereits ein Timer oder war der letzte Versand vor < 10 s → 429 `test_alarm_cooldown`. `delay_seconds` 0 (Default): sendet sofort, 200 `{ outcome: "delivered" \| "rejected" \| "invalid_token" }`. `delay_seconds` > 0: 202 `{ scheduled: true }`, Versand erfolgt verzögert auf demselben Gerät; weder Einsatz/Alarm/Event noch `seq`-Änderung |
-| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `seq` |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `announcements` (die letzten 20 für den Aufrufer sichtbaren Durchsagen des laufenden BF-Tags, neueste zuerst, [ADR 0024](adr/0024-durchsage.md); `[]` ohne laufenden BF-Tag), `program_items` (alle Programmpunkte des laufenden BF-Tags, sortiert wie `GET /bf-days/{day}/program-items`, [ADR 0025](adr/0025-tagesablauf.md); `[]` ohne laufenden BF-Tag), `station` (Wache aus Config `STATION_LATITUDE`/`STATION_LONGITUDE`, [ADR 0026](adr/0026-karte.md): `{ latitude, longitude } | null`, für alle Empfänger gleich), `seq` |
 
 ## WebSocket `/ws`
 
@@ -303,7 +355,9 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | `shift.deleted` | `{ id, bf_day_id }` | alle |
 | `slides.changed` | `{ slides }` = alle aktiven Folien (ADR 0014) | alle |
 | `session.revoked` | – | betroffenes Gerät (kein `seq`, Verbindung wird danach mit Close-Code **4403** geschlossen) |
-| später: `announcement.created`, `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
+| `announcement.created` / `announcement.deleted` ([ADR 0024](adr/0024-durchsage.md)) | `Announcement` bzw. `{ id }` | Broadcast (`shift_id = null`): alle; Schicht-Durchsage: Besatzung dieser Schicht zum jetzigen Zeitpunkt, sowie Einsatzvorbereitung, Leitstelle, Admin, Monitor |
+| `program.changed` ([ADR 0025](adr/0025-tagesablauf.md)) | `{ bf_day_id, items }` = alle Programmpunkte dieses BF-Tags, sortiert wie `GET /bf-days/{day}/program-items` | alle |
+| später: `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 
 ## Fehlerformat
 
@@ -317,6 +371,8 @@ Zusätzliche Codes aus ADR 0017: 409 `vehicle_inactive`, 409 `bf_day_not_running
 `not_recipient`, 409 `alarm_not_active`. Aus [ADR 0019](adr/0019-nachalarmierung-abschluss.md):
 409 `incident_not_alarmable` (Alarm auf `closed`/`discarded` Einsatz), 409
 `vehicle_already_alarmed` (Fahrzeug schon in einer `triggered` Alarmierung des Einsatzes).
+Durchsagen ([ADR 0024](adr/0024-durchsage.md)): 409 `bf_day_not_running`, 400 `validation_error`
+(Text leer/zu lang, `shift_id` gehört zu einem anderen BF-Tag).
 
 ## Client-Generierung
 

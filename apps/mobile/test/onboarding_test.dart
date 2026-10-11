@@ -106,6 +106,9 @@ class _FakePushService implements PushService {
   @override
   Stream<void> get onTestAlarmReceived => _testAlarmReceivedController.stream;
 
+  @override
+  Stream<void> get onAnnouncementOpened => const Stream<void>.empty();
+
   void emitTestAlarmReceived() => _testAlarmReceivedController.add(null);
 }
 

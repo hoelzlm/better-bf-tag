@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'monitor/local_storage_token_store.dart';
 import 'monitor/monitor_session.dart';
+import 'screens/announcements_screen.dart';
 import 'screens/bf_days_screen.dart';
 import 'screens/incidents_screen.dart';
 import 'screens/lage_screen.dart';
@@ -12,6 +13,7 @@ import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
 import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
+import 'screens/program_screen.dart';
 import 'screens/shifts_screen.dart';
 import 'screens/slides_screen.dart';
 import 'screens/vehicles_screen.dart';
@@ -93,6 +95,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               person.permission != Permission.dispatch) {
             return '/admin';
           }
+          final isDurchsagenRoute =
+              state.matchedLocation == '/admin/durchsagen';
+          if (isDurchsagenRoute &&
+              person.permission != Permission.admin &&
+              person.permission != Permission.dispatch) {
+            return '/admin';
+          }
+          final isTagesablaufRoute =
+              state.matchedLocation == '/admin/tagesablauf';
+          if (isTagesablaufRoute &&
+              person.permission != Permission.admin &&
+              person.permission != Permission.dispatch) {
+            return '/admin';
+          }
           final isEinsaetzeRoute = state.matchedLocation == '/admin/einsaetze';
           if (isEinsaetzeRoute && person.permission == Permission.crew) {
             return '/admin';
@@ -143,6 +159,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/schichten',
         builder: (context, state) =>
             const _SessionGate(child: ShiftsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/durchsagen',
+        builder: (context, state) =>
+            const _SessionGate(child: AnnouncementsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/tagesablauf',
+        builder: (context, state) =>
+            const _SessionGate(child: ProgramScreen()),
       ),
       GoRoute(
         path: '/admin/einsaetze',

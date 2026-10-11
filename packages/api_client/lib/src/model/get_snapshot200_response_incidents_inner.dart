@@ -19,6 +19,8 @@ part 'get_snapshot200_response_incidents_inner.g.dart';
 /// * [address] 
 /// * [report] 
 /// * [state] 
+/// * [latitude] 
+/// * [longitude] 
 /// * [createdAt] 
 /// * [updatedAt] 
 /// * [closedAt] 
@@ -46,6 +48,12 @@ abstract class GetSnapshot200ResponseIncidentsInner implements Built<GetSnapshot
   @BuiltValueField(wireName: r'state')
   GetSnapshot200ResponseIncidentsInnerStateEnum get state;
   // enum stateEnum {  draft,  running,  closed,  discarded,  };
+
+  @BuiltValueField(wireName: r'latitude')
+  num? get latitude;
+
+  @BuiltValueField(wireName: r'longitude')
+  num? get longitude;
 
   @BuiltValueField(wireName: r'created_at')
   String get createdAt;
@@ -116,6 +124,16 @@ class _$GetSnapshot200ResponseIncidentsInnerSerializer implements PrimitiveSeria
     yield serializers.serialize(
       object.state,
       specifiedType: const FullType(GetSnapshot200ResponseIncidentsInnerStateEnum),
+    );
+    yield r'latitude';
+    yield object.latitude == null ? null : serializers.serialize(
+      object.latitude,
+      specifiedType: const FullType.nullable(num),
+    );
+    yield r'longitude';
+    yield object.longitude == null ? null : serializers.serialize(
+      object.longitude,
+      specifiedType: const FullType.nullable(num),
     );
     yield r'created_at';
     yield serializers.serialize(
@@ -210,6 +228,22 @@ class _$GetSnapshot200ResponseIncidentsInnerSerializer implements PrimitiveSeria
             specifiedType: const FullType(GetSnapshot200ResponseIncidentsInnerStateEnum),
           ) as GetSnapshot200ResponseIncidentsInnerStateEnum;
           result.state = valueDes;
+          break;
+        case r'latitude':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(num),
+          ) as num?;
+          if (valueDes == null) continue;
+          result.latitude = valueDes;
+          break;
+        case r'longitude':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(num),
+          ) as num?;
+          if (valueDes == null) continue;
+          result.longitude = valueDes;
           break;
         case r'created_at':
           final valueDes = serializers.deserialize(
