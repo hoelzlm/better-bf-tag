@@ -1,5 +1,6 @@
 import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 
 void main() {
   group('Snapshot.scheduledAlarms (ADR 0022)', () {
@@ -125,6 +126,33 @@ void main() {
       expect(updated.seq, original.seq);
       expect(updated.vehicles, original.vehicles);
       expect(updated.programItems, [item]);
+    });
+  });
+
+  group('Snapshot.station (ADR 0026)', () {
+    test('defaults to null (no Wache configured)', () {
+      const snapshot = Snapshot(seq: 1, vehicles: []);
+      expect(snapshot.station, isNull);
+    });
+
+    test('can be set to the Wache coordinates', () {
+      const snapshot = Snapshot(
+        seq: 1,
+        vehicles: [],
+        station: LatLng(52.5, 13.4),
+      );
+
+      expect(snapshot.station, const LatLng(52.5, 13.4));
+    });
+
+    test('copyWith replaces only the given fields', () {
+      const original = Snapshot(seq: 1, vehicles: []);
+
+      final updated = original.copyWith(station: const LatLng(52.5, 13.4));
+
+      expect(updated.seq, original.seq);
+      expect(updated.vehicles, original.vehicles);
+      expect(updated.station, const LatLng(52.5, 13.4));
     });
   });
 }

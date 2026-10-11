@@ -50,6 +50,8 @@ class _FakeIncidentRepository implements IncidentRepository {
     required String address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
   }) =>
       throw UnimplementedError();
 
@@ -70,6 +72,9 @@ class _FakeIncidentRepository implements IncidentRepository {
     String? address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
   }) =>
       throw UnimplementedError();
 }

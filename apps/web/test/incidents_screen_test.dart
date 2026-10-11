@@ -131,6 +131,8 @@ class _FakeIncidentRepository implements IncidentRepository {
     required String address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
   }) async {
     createCalls.add((
       day: day,
@@ -162,6 +164,9 @@ class _FakeIncidentRepository implements IncidentRepository {
     String? address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
   }) async {
     for (final entry in incidentsByDay.entries) {
       final idx = entry.value.indexWhere((i) => i.id == id);
@@ -171,6 +176,8 @@ class _FakeIncidentRepository implements IncidentRepository {
           address: address,
           report: report,
           script: script,
+          latitude: latitude,
+          longitude: longitude,
         );
         incidentsByDay[entry.key] = [
           for (final i in entry.value) if (i.id == id) updated else i,
