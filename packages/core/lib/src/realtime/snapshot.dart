@@ -1,3 +1,5 @@
+import 'package:latlong2/latlong.dart';
+
 import '../domain/alarm.dart';
 import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
@@ -33,7 +35,8 @@ import '../domain/vehicle.dart';
 /// send it (older servers/tests) or no BF-Tag is running. [programItems]
 /// (ADR 0025) holds the sorted Programmpunkte of the running BF-Tag,
 /// defaulting to empty when the backend doesn't send it or no BF-Tag is
-/// running.
+/// running. [station] (ADR 0026) is the Wache's coordinates from backend
+/// config, or `null` when not configured.
 class Snapshot {
   const Snapshot({
     required this.seq,
@@ -48,6 +51,7 @@ class Snapshot {
     this.scheduledAlarms = const <ScheduledAlarm>[],
     this.announcements = const <Announcement>[],
     this.programItems = const <ProgramItem>[],
+    this.station,
   });
 
   final int seq;
@@ -73,6 +77,10 @@ class Snapshot {
   /// leer.
   final List<ProgramItem> programItems;
 
+  /// Koordinaten der Wache (ADR 0026), aus der Backend-Config, `null`
+  /// wenn nicht konfiguriert.
+  final LatLng? station;
+
   /// Returns a copy with the given fields replaced.
   Snapshot copyWith({
     int? seq,
@@ -87,6 +95,7 @@ class Snapshot {
     List<ScheduledAlarm>? scheduledAlarms,
     List<Announcement>? announcements,
     List<ProgramItem>? programItems,
+    LatLng? station,
   }) {
     return Snapshot(
       seq: seq ?? this.seq,
@@ -102,6 +111,7 @@ class Snapshot {
       scheduledAlarms: scheduledAlarms ?? this.scheduledAlarms,
       announcements: announcements ?? this.announcements,
       programItems: programItems ?? this.programItems,
+      station: station ?? this.station,
     );
   }
 }

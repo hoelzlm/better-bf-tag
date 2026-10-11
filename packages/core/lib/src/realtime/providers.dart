@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../api/api_config.dart';
 import '../api/dio_provider.dart';
@@ -100,6 +101,8 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
     if (i.closedAt != null) 'closed_at': i.closedAt,
+    'latitude': i.latitude,
+    'longitude': i.longitude,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -170,6 +173,7 @@ ProgramItem _programItemFromApi(
 }
 
 Snapshot _snapshotFromApi(GetSnapshot200Response data) {
+  final station = data.station;
   return Snapshot(
     seq: data.seq,
     vehicles: data.vehicles.map(_vehicleFromApi).toList(),
@@ -183,6 +187,9 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     scheduledAlarms: data.scheduledAlarms.map(_scheduledAlarmFromApi).toList(),
     announcements: data.announcements.map(_announcementFromApi).toList(),
     programItems: data.programItems.map(_programItemFromApi).toList(),
+    station: station == null
+        ? null
+        : LatLng(station.latitude.toDouble(), station.longitude.toDouble()),
   );
 }
 

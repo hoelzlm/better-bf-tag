@@ -1,5 +1,6 @@
 import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,6 +19,8 @@ Incident _incidentFromApi(GetSnapshot200ResponseIncidentsInner i) {
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
     if (i.closedAt != null) 'closed_at': i.closedAt,
+    'latitude': i.latitude,
+    'longitude': i.longitude,
     // The generated model always exposes `script` (as `null` when the
     // wire payload omitted it), so the `containsKey` check in
     // [Incident.fromJson] would always be true here; explicitly drop the
@@ -44,6 +47,8 @@ Incident _incidentFromGetIncidentApi(GetIncident200Response i) {
     'created_at': i.createdAt,
     'updated_at': i.updatedAt,
     if (i.closedAt != null) 'closed_at': i.closedAt,
+    'latitude': i.latitude,
+    'longitude': i.longitude,
     if (i.script != null) 'script': i.script,
   });
 }
@@ -114,16 +119,27 @@ abstract class IncidentRepository {
     required String address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
   });
 
   /// `PATCH /incidents/{id}`: only the given fields are sent. Fails
   /// (`incident_not_editable`) for `closed`/`discarded` Einsätze.
+  ///
+  /// [latitude]/[longitude] set the Einsatzort pin (ADR 0026); pass
+  /// [clearLocation] `true` to explicitly send `latitude: null,
+  /// longitude: null` and remove an existing pin (the backend requires
+  /// both to be `null` together, so omitting the fields -- the usual
+  /// "unset" behaviour of this method -- would leave the pin unchanged).
   Future<Incident> update(
     String id, {
     String? keyword,
     String? address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
   });
 
   /// `POST /incidents/{id}/discard`. Fails (`invalid_state_transition`)
@@ -151,9 +167,16 @@ class CloseIncidentResult {
 
 /// [IncidentRepository] backed by the generated [IncidentsApi].
 class ApiIncidentRepository implements IncidentRepository {
-  const ApiIncidentRepository(this._api);
+  const ApiIncidentRepository(this._api, this._dio);
 
   final IncidentsApi _api;
+
+  /// Raw [Dio] of the same [BftagApiClient] as [_api], used only to send
+  /// the explicit `latitude: null, longitude: null` PATCH body needed to
+  /// remove an Einsatzort pin (ADR 0026) -- the generated
+  /// [UpdateIncidentRequest] serializer omits `null` fields entirely, so
+  /// it cannot express "unset this field" vs. "set it to null".
+  final Dio _dio;
 
   @override
   Future<List<Incident>> list(String day, {IncidentState? state}) async {
@@ -184,6 +207,8 @@ class ApiIncidentRepository implements IncidentRepository {
     required String address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
   }) async {
     final response = await _api.createIncident(
       day: day,
@@ -192,7 +217,9 @@ class ApiIncidentRepository implements IncidentRepository {
           ..keyword = keyword
           ..address = address
           ..report = report
-          ..script = script,
+          ..script = script
+          ..latitude = latitude
+          ..longitude = longitude,
       ),
     );
     final data = response.data;
@@ -209,7 +236,37 @@ class ApiIncidentRepository implements IncidentRepository {
     String? address,
     String? report,
     String? script,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
   }) async {
+    if (clearLocation) {
+      final body = <String, dynamic>{
+        if (keyword != null) 'keyword': keyword,
+        if (address != null) 'address': address,
+        if (report != null) 'report': report,
+        if (script != null) 'script': script,
+        'latitude': null,
+        'longitude': null,
+      };
+      final response = await _dio.patch<Object>(
+        '/api/v1/incidents/$id',
+        data: body,
+      );
+      final rawData = response.data;
+      if (rawData == null) {
+        throw StateError('PATCH /incidents/{id} returned no body');
+      }
+      final data =
+          standardSerializers.deserialize(
+                rawData,
+                specifiedType: const FullType(
+                  GetSnapshot200ResponseIncidentsInner,
+                ),
+              )
+              as GetSnapshot200ResponseIncidentsInner;
+      return _incidentFromApi(data);
+    }
     final response = await _api.updateIncident(
       id: id,
       updateIncidentRequest: UpdateIncidentRequest(
@@ -217,7 +274,9 @@ class ApiIncidentRepository implements IncidentRepository {
           ..keyword = keyword
           ..address = address
           ..report = report
-          ..script = script,
+          ..script = script
+          ..latitude = latitude
+          ..longitude = longitude,
       ),
     );
     final data = response.data;
@@ -253,5 +312,5 @@ class ApiIncidentRepository implements IncidentRepository {
 
 final incidentRepositoryProvider = Provider<IncidentRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return ApiIncidentRepository(apiClient.getIncidentsApi());
+  return ApiIncidentRepository(apiClient.getIncidentsApi(), apiClient.dio);
 });
