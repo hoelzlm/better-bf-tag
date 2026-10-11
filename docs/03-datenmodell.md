@@ -21,7 +21,7 @@ englisch, die Zuordnung zeigt die folgende Tabelle.
 | Vorwarnung, Bereitmeldung | `incident.prewarning_minutes`, `incident.ready_at` | später |
 | Sprechaufforderung | `vehicle_status_event` (Typ `talk_request`) | später |
 | Durchsage | `announcement` | [ADR 0024](adr/0024-durchsage.md) |
-| Tagesablauf, Programmpunkt | `program_item` | später |
+| Tagesablauf, Programmpunkt | `program_item` | [ADR 0025](adr/0025-tagesablauf.md) |
 | Anonymisierung | `bf_day.anonymized_at` + Job | MVP (manuell), automatisch später |
 
 ## ER-Diagramm (MVP)
@@ -241,6 +241,18 @@ ersten Fahrzeug nach `sort_order`, s. ADR 0017).
 
 Index auf `(bf_day_id, created_at desc)` für die Liste und den Snapshot (neueste zuerst).
 
+### `program_item` – Programmpunkt ([ADR 0025](adr/0025-tagesablauf.md))
+
+| Spalte | Typ | Hinweis |
+|--------|-----|---------|
+| id | uuid PK | |
+| bf_day_id | uuid FK | cascade |
+| title | varchar(80) | |
+| type | enum `meal`, `training`, `maintenance`, `rest`, `other` | |
+| starts_at, ends_at | timestamptz | `ends_at > starts_at` (Check-Constraint); beide müssen innerhalb `[bf_day.starts_at, bf_day.ends_at]` liegen |
+
+Index auf `(bf_day_id, starts_at)` für die sortierte Liste und den Snapshot.
+
 ## Später
 
 ### `incident_report` – Einsatzbericht
@@ -256,10 +268,6 @@ Index auf `(bf_day_id, created_at desc)` für die Liste und den Snapshot (neuest
 | reviewed_by, reviewed_at | | Prüfung durch Leitstelle/Administrator |
 
 Die Zeiten (Alarm, Status 3/4/1) werden aus `alarm` und `vehicle_status_event` berechnet.
-
-### `program_item` – Programmpunkt
-
-`bf_day_id`, `title`, `type` (z. B. `meal`, `training`, `maintenance`, `rest`), `starts_at`, `ends_at`.
 
 ## Fahrzeugstatus (FMS)
 

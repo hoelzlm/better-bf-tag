@@ -29,6 +29,7 @@ import 'package:bftag_api_client/src/model/create_pairing_code201_response.dart'
 import 'package:bftag_api_client/src/model/create_pairing_codes201_response.dart';
 import 'package:bftag_api_client/src/model/create_pairing_codes_request.dart';
 import 'package:bftag_api_client/src/model/create_person_request.dart';
+import 'package:bftag_api_client/src/model/create_program_item_request.dart';
 import 'package:bftag_api_client/src/model/create_slide_request.dart';
 import 'package:bftag_api_client/src/model/create_vehicle_request.dart';
 import 'package:bftag_api_client/src/model/device_refresh_request.dart';
@@ -44,6 +45,7 @@ import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner
 import 'package:bftag_api_client/src/model/get_snapshot200_response_announcements_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_program_items_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_scheduled_alarms_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart';
@@ -81,6 +83,7 @@ import 'package:bftag_api_client/src/model/update_alarm_request.dart';
 import 'package:bftag_api_client/src/model/update_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/update_incident_request.dart';
 import 'package:bftag_api_client/src/model/update_person_request.dart';
+import 'package:bftag_api_client/src/model/update_program_item_request.dart';
 import 'package:bftag_api_client/src/model/update_push_token_request.dart';
 import 'package:bftag_api_client/src/model/update_slide_request.dart';
 import 'package:bftag_api_client/src/model/update_vehicle_request.dart';
@@ -103,6 +106,7 @@ part 'serializers.g.dart';
   CreatePairingCodes201Response,
   CreatePairingCodesRequest,
   CreatePersonRequest,
+  CreateProgramItemRequest,
   CreateSlideRequest,
   CreateVehicleRequest,
   DeviceRefreshRequest,
@@ -118,6 +122,7 @@ part 'serializers.g.dart';
   GetSnapshot200ResponseAnnouncementsInner,
   GetSnapshot200ResponseBfDay,
   GetSnapshot200ResponseIncidentsInner,
+  GetSnapshot200ResponseProgramItemsInner,
   GetSnapshot200ResponseScheduledAlarmsInner,
   GetSnapshot200ResponseShiftsInner,
   GetSnapshot200ResponseShiftsInnerCrewInner,
@@ -155,6 +160,7 @@ part 'serializers.g.dart';
   UpdateBfDayRequest,
   UpdateIncidentRequest,
   UpdatePersonRequest,
+  UpdateProgramItemRequest,
   UpdatePushTokenRequest,
   UpdateSlideRequest,
   UpdateVehicleRequest,
@@ -203,6 +209,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListPersonDevices200ResponseInner)]),
         () => ListBuilder<ListPersonDevices200ResponseInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GetSnapshot200ResponseProgramItemsInner)]),
+        () => ListBuilder<GetSnapshot200ResponseProgramItemsInner>(),
       )
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())

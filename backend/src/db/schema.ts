@@ -2,6 +2,7 @@ import {
   pgTable,
   uuid,
   text,
+  varchar,
   boolean,
   timestamp,
   pgEnum,
@@ -49,6 +50,13 @@ export const alarmStateEnum = pgEnum('alarm_state', [
   'triggered',
   'missed',
   'discarded',
+]);
+export const programItemTypeEnum = pgEnum('program_item_type', [
+  'meal',
+  'training',
+  'maintenance',
+  'rest',
+  'other',
 ]);
 
 export const fireDepartment = pgTable(
@@ -382,4 +390,22 @@ export const announcement = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   },
   table => [index('announcement_bf_day_created_at_idx').on(table.bfDayId, desc(table.createdAt))]
+);
+
+export const programItem = pgTable(
+  'program_item',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bfDayId: uuid('bf_day_id')
+      .notNull()
+      .references(() => bfDay.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 80 }).notNull(),
+    type: programItemTypeEnum('type').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  },
+  table => [
+    check('program_item_period', sql`${table.endsAt} > ${table.startsAt}`),
+    index('program_item_bf_day_starts_at_idx').on(table.bfDayId, table.startsAt),
+  ]
 );

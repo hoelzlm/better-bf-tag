@@ -15,6 +15,7 @@ import { computeCloseSuggested } from '../incidents/close-suggestion.js';
 import { closeSuggestedAudience } from '../incidents/visibility.js';
 import { announcementSchema, toAnnouncementJson } from '../announcements/announcement-json.js';
 import { announcementVisibleTo, loadShiftCrewPersonIds } from '../announcements/visibility.js';
+import { programItemSchema, loadProgramItems } from '../program/program-item-json.js';
 import type { Viewer } from '../realtime/realtime.js';
 
 const SNAPSHOT_ANNOUNCEMENT_LIMIT = 20;
@@ -31,6 +32,7 @@ const snapshotResponseSchema = z.object({
   close_suggested_incident_ids: z.array(z.string()),
   scheduled_alarms: z.array(z.object({ incident: incidentJsonSchema, alarm: alarmJsonSchema })),
   announcements: z.array(announcementSchema),
+  program_items: z.array(programItemSchema),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -94,6 +96,8 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             alarm: Awaited<ReturnType<typeof loadAlarms>>[number];
           }> = [];
           let announcementsJson: ReturnType<typeof toAnnouncementJson>[] = [];
+
+          let programItemsJson: Awaited<ReturnType<typeof loadProgramItems>> = [];
 
           if (runningBfDay) {
             const shiftRows = await tx
@@ -227,6 +231,8 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
               }
             }
             announcementsJson = visibleAnnouncements.map(toAnnouncementJson);
+
+            programItemsJson = await loadProgramItems(tx, runningBfDay.id);
           }
 
           return {
@@ -241,6 +247,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             close_suggested_incident_ids: closeSuggestedIncidentIds,
             scheduled_alarms: scheduledAlarmsJson,
             announcements: announcementsJson,
+            program_items: programItemsJson,
           };
         },
         { isolationLevel: 'repeatable read' }

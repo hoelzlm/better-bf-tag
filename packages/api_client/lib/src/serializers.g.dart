@@ -25,6 +25,8 @@ Serializers _$serializers =
           ..add(CreatePersonRequest.serializer)
           ..add(CreatePersonRequestPermissionEnum.serializer)
           ..add(CreatePersonRequestPersonTypeEnum.serializer)
+          ..add(CreateProgramItemRequest.serializer)
+          ..add(CreateProgramItemRequestTypeEnum.serializer)
           ..add(CreateSlideRequest.serializer)
           ..add(CreateVehicleRequest.serializer)
           ..add(DeviceRefreshRequest.serializer)
@@ -48,6 +50,8 @@ Serializers _$serializers =
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
           ..add(GetSnapshot200ResponseIncidentsInner.serializer)
           ..add(GetSnapshot200ResponseIncidentsInnerStateEnum.serializer)
+          ..add(GetSnapshot200ResponseProgramItemsInner.serializer)
+          ..add(GetSnapshot200ResponseProgramItemsInnerTypeEnum.serializer)
           ..add(GetSnapshot200ResponseScheduledAlarmsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInner.serializer)
           ..add(GetSnapshot200ResponseShiftsInnerCrewInner.serializer)
@@ -98,6 +102,8 @@ Serializers _$serializers =
           ..add(UpdatePersonRequest.serializer)
           ..add(UpdatePersonRequestPermissionEnum.serializer)
           ..add(UpdatePersonRequestPersonTypeEnum.serializer)
+          ..add(UpdateProgramItemRequest.serializer)
+          ..add(UpdateProgramItemRequestTypeEnum.serializer)
           ..add(UpdatePushTokenRequest.serializer)
           ..add(UpdateSlideRequest.serializer)
           ..add(UpdateVehicleRequest.serializer)
@@ -176,6 +182,12 @@ Serializers _$serializers =
               const FullType(GetSnapshot200ResponseAnnouncementsInner),
             ]),
             () => ListBuilder<GetSnapshot200ResponseAnnouncementsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseProgramItemsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseProgramItemsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

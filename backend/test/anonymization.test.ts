@@ -607,4 +607,57 @@ describe('anonymization', () => {
       ws.close();
     }
   });
+
+  it('program items (ADR 0025) survive anonymize; preview/summary keys stay unchanged', async () => {
+    const day = await createBfDay('ProgramItem-Anon');
+
+    const createRes = await app.client().post(
+      `/api/v1/bf-days/${day.id}/program-items`,
+      {
+        title: 'Mittagessen',
+        type: 'meal',
+        starts_at: app.clock.now().toISOString(),
+        ends_at: new Date(app.clock.now().getTime() + 60 * 60 * 1000).toISOString(),
+      },
+      { token: dispatchToken }
+    );
+    expect(createRes.status).toBe(201);
+    const programItemRow = createRes.body as { id: string };
+
+    await startBfDay(day.id);
+    await endBfDay(day.id);
+
+    const previewRes = await app
+      .client()
+      .get(`/api/v1/bf-days/${day.id}/anonymization-preview`, { token: dispatchToken });
+    expect(previewRes.status).toBe(200);
+    expect(Object.keys(previewRes.body as object).sort()).toEqual(
+      [
+        'participations',
+        'crew_assignments',
+        'alarm_recipients',
+        'status_events',
+        'persons_deleted',
+        'announcements',
+      ].sort()
+    );
+
+    const anonRes = await app
+      .client()
+      .post(`/api/v1/bf-days/${day.id}/anonymize`, {}, { token: dispatchToken });
+    expect(anonRes.status).toBe(200);
+    const anonBody = anonRes.body as { summary: object };
+    expect(Object.keys(anonBody.summary).sort()).toEqual(Object.keys(previewRes.body as object).sort());
+
+    const itemRows = await pool.query('select 1 from program_item where id = $1', [
+      programItemRow.id,
+    ]);
+    expect(itemRows.rowCount).toBe(1);
+
+    const listRes = await app
+      .client()
+      .get(`/api/v1/bf-days/${day.id}/program-items`, { token: dispatchToken });
+    expect(listRes.status).toBe(200);
+    expect((listRes.body as Array<{ id: string }>).map(i => i.id)).toContain(programItemRow.id);
+  });
 });
