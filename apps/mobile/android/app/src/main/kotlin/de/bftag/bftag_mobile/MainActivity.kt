@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         createAlarmNotificationChannel()
+        createAnnouncementNotificationChannel()
     }
 
     // Creates the `alarm` notification channel used for Alarmierung
@@ -44,6 +45,24 @@ class MainActivity : FlutterActivity() {
             setSound(soundUri, audioAttributes)
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 800, 400, 800, 400, 800)
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    // Creates the `announcement` notification channel used for Durchsage
+    // pushes (ADR 0024): Importance DEFAULT, default (system) sound, no
+    // Nicht-stören-Umgehung -- unlike `alarm`, a Durchsage must never
+    // bypass Do Not Disturb.
+    private fun createAnnouncementNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val manager = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            "announcement",
+            "Durchsagen",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = "Durchsagen zum BF-Tag"
         }
         manager.createNotificationChannel(channel)
     }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'alarm/alarm_navigation_listener.dart';
+import 'announcements/announcement_snackbar_listener.dart';
 import 'push/push_registrar.dart';
 import 'router.dart';
 import 'secure_token_store.dart';
@@ -29,6 +30,8 @@ class BftagMobileApp extends ConsumerStatefulWidget {
 }
 
 class _BftagMobileAppState extends ConsumerState<BftagMobileApp> {
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
   @override
   void initState() {
     super.initState();
@@ -44,10 +47,15 @@ class _BftagMobileAppState extends ConsumerState<BftagMobileApp> {
       router: router,
       child: AlarmNavigationListener(
         router: router,
-        child: MaterialApp.router(
-          title: 'BF-Tag',
-          theme: ThemeData(colorSchemeSeed: Colors.red, useMaterial3: true),
-          routerConfig: router,
+        child: AnnouncementSnackbarListener(
+          messengerKey: _scaffoldMessengerKey,
+          router: router,
+          child: MaterialApp.router(
+            title: 'BF-Tag',
+            scaffoldMessengerKey: _scaffoldMessengerKey,
+            theme: ThemeData(colorSchemeSeed: Colors.red, useMaterial3: true),
+            routerConfig: router,
+          ),
         ),
       ),
     );

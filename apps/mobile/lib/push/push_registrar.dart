@@ -37,6 +37,7 @@ class PushRegistrar extends ConsumerStatefulWidget {
 class _PushRegistrarState extends ConsumerState<PushRegistrar> {
   StreamSubscription<String>? _tokenRefreshSub;
   StreamSubscription<String>? _alarmOpenedSub;
+  StreamSubscription<void>? _announcementOpenedSub;
   bool _wired = false;
   bool _initializedForCurrentPairing = false;
 
@@ -89,6 +90,13 @@ class _PushRegistrarState extends ConsumerState<PushRegistrar> {
     widget.router.go('/alarm/$alarmId');
   }
 
+  void _navigateToAnnouncements() {
+    if (!mounted) return;
+    final session = ref.read(pairedSessionControllerProvider);
+    if (session is! Paired) return;
+    widget.router.go('/durchsagen');
+  }
+
   void _wireStreamsOnce() {
     if (_wired) return;
     _wired = true;
@@ -101,12 +109,17 @@ class _PushRegistrarState extends ConsumerState<PushRegistrar> {
       _navigate,
       onError: _logError,
     );
+    _announcementOpenedSub = service.onAnnouncementOpened.listen(
+      (_) => _navigateToAnnouncements(),
+      onError: _logError,
+    );
   }
 
   @override
   void dispose() {
     _tokenRefreshSub?.cancel();
     _alarmOpenedSub?.cancel();
+    _announcementOpenedSub?.cancel();
     super.dispose();
   }
 
