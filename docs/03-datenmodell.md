@@ -179,6 +179,8 @@ Höchstens ein BF-Tag ist gleichzeitig `running`.
 | address | text | Meldebild: Adresse |
 | report | text | Meldebild: Lagebeschreibung |
 | script | text | **Drehbuch**, nie an die Berechtigung Mannschaft ausliefern |
+| latitude | double precision null | Einsatzort ([ADR 0026](adr/0026-karte.md)), nur gemeinsam mit `longitude` gesetzt, -90..90 |
+| longitude | double precision null | Einsatzort ([ADR 0026](adr/0026-karte.md)), nur gemeinsam mit `latitude` gesetzt, -180..180 |
 | state | enum `draft`, `running`, `closed`, `discarded` | Entwurf / laufend / abgeschlossen / verworfen |
 | copied_from_id | uuid null | Einsatz aus früherem BF-Tag kopiert (später) |
 | prewarning_minutes | int null | Vorwarnung (später) |

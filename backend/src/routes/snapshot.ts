@@ -33,6 +33,7 @@ const snapshotResponseSchema = z.object({
   scheduled_alarms: z.array(z.object({ incident: incidentJsonSchema, alarm: alarmJsonSchema })),
   announcements: z.array(announcementSchema),
   program_items: z.array(programItemSchema),
+  station: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -248,6 +249,14 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             scheduled_alarms: scheduledAlarmsJson,
             announcements: announcementsJson,
             program_items: programItemsJson,
+            station:
+              fastify.config.STATION_LATITUDE !== undefined &&
+              fastify.config.STATION_LONGITUDE !== undefined
+                ? {
+                    latitude: fastify.config.STATION_LATITUDE,
+                    longitude: fastify.config.STATION_LONGITUDE,
+                  }
+                : null,
           };
         },
         { isolationLevel: 'repeatable read' }

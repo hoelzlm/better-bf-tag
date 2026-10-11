@@ -44,6 +44,9 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       OWN_FIRE_DEPARTMENT_NAME: ${OWN_FIRE_DEPARTMENT_NAME:-Eigene Feuerwehr}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+      # Wache (ADR 0026): optional, nur gemeinsam gesetzt (siehe infra/.env.example).
+      STATION_LATITUDE: ${STATION_LATITUDE:-}
+      STATION_LONGITUDE: ${STATION_LONGITUDE:-}
       # Push (ADR 0018), alle optional (siehe infra/.env.example):
       # FCM_SERVICE_ACCOUNT_FILE: /secrets/fcm-service-account.json
       # APNS_KEY_FILE: /secrets/apns-key.p8

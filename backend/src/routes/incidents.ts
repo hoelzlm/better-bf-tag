@@ -177,6 +177,8 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
             report: request.body.report ?? '',
             script: request.body.script ?? '',
             state: 'draft',
+            latitude: request.body.latitude ?? null,
+            longitude: request.body.longitude ?? null,
             createdAt: now,
             updatedAt: now,
           })
@@ -228,6 +230,22 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
         if (request.body.address !== undefined) patch.address = request.body.address;
         if (request.body.report !== undefined) patch.report = request.body.report;
         if (request.body.script !== undefined) patch.script = request.body.script;
+        if (request.body.latitude !== undefined) patch.latitude = request.body.latitude;
+        if (request.body.longitude !== undefined) patch.longitude = request.body.longitude;
+
+        // Einsatzort (ADR 0026): geprüft wird das zusammengeführte Ergebnis
+        // (bestehende Zeile + Patch) — genau eine gesetzte Koordinate ist
+        // ungültig, egal ob das aus dem Patch oder der bestehenden Zeile kommt.
+        const mergedLatitude = patch.latitude !== undefined ? patch.latitude : existing.latitude;
+        const mergedLongitude =
+          patch.longitude !== undefined ? patch.longitude : existing.longitude;
+        if ((mergedLatitude === null) !== (mergedLongitude === null)) {
+          throw new ApiError(
+            400,
+            'validation_error',
+            'latitude und longitude müssen gemeinsam gesetzt sein.'
+          );
+        }
 
         const [row] = await tx
           .update(incident)

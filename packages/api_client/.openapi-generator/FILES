@@ -61,6 +61,7 @@ lib/src/model/get_snapshot200_response_shifts_inner.dart
 lib/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart
 lib/src/model/get_snapshot200_response_slides_inner.dart
 lib/src/model/get_snapshot200_response_slides_inner_image.dart
+lib/src/model/get_snapshot200_response_station.dart
 lib/src/model/get_vehicle_status_history200_response_inner.dart
 lib/src/model/list_bf_days200_response_inner.dart
 lib/src/model/list_monitors200_response_inner.dart

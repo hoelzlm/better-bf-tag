@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:bftag_api_client/src/model/get_snapshot200_response_station.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner.dart';
@@ -33,6 +34,7 @@ part 'get_snapshot200_response.g.dart';
 /// * [scheduledAlarms] 
 /// * [announcements] 
 /// * [programItems] 
+/// * [station] 
 @BuiltValue()
 abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, GetSnapshot200ResponseBuilder> {
   @BuiltValueField(wireName: r'seq')
@@ -70,6 +72,9 @@ abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, G
 
   @BuiltValueField(wireName: r'program_items')
   BuiltList<GetSnapshot200ResponseProgramItemsInner> get programItems;
+
+  @BuiltValueField(wireName: r'station')
+  GetSnapshot200ResponseStation? get station;
 
   GetSnapshot200Response._();
 
@@ -153,6 +158,11 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
     yield serializers.serialize(
       object.programItems,
       specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseProgramItemsInner)]),
+    );
+    yield r'station';
+    yield object.station == null ? null : serializers.serialize(
+      object.station,
+      specifiedType: const FullType.nullable(GetSnapshot200ResponseStation),
     );
   }
 
@@ -262,6 +272,14 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
             specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseProgramItemsInner)]),
           ) as BuiltList<GetSnapshot200ResponseProgramItemsInner>;
           result.programItems.replace(valueDes);
+          break;
+        case r'station':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(GetSnapshot200ResponseStation),
+          ) as GetSnapshot200ResponseStation?;
+          if (valueDes == null) continue;
+          result.station.replace(valueDes);
           break;
         default:
           unhandled.add(key);

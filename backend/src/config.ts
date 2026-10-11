@@ -18,39 +18,73 @@ function strictBooleanEnv(defaultValue: boolean) {
     });
 }
 
-export const configSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  PORT: z.coerce.number().int().positive().default(8080),
-  HOST: z.string().default('0.0.0.0'),
-  JWT_SECRET: z.string().min(32),
-  ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
-  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(14),
-  COOKIE_SECURE: strictBooleanEnv(false),
-  TRUST_PROXY: strictBooleanEnv(false),
-  CORS_ORIGINS: z
-    .string()
-    .default('')
-    .transform(s => (s ? s.split(',').map(o => o.trim()) : [])),
-  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
-  WS_HEARTBEAT_MS: z.coerce.number().int().positive().default(25000),
-  PAIRING_CODE_TTL_HOURS: z.coerce.number().int().positive().default(24),
-  BOOTSTRAP_ADMIN_USERNAME: z.string().optional(),
-  BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
-  OWN_FIRE_DEPARTMENT_NAME: z.string().default('Eigene Feuerwehr'),
-  SLIDE_IMAGE_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
-  // Push (ADR 0018): all optional. Without them, the corresponding platform
-  // is unconfigured and its pushes are rejected (see createPushSender).
-  FCM_SERVICE_ACCOUNT_FILE: z.string().optional(),
-  APNS_KEY_FILE: z.string().optional(),
-  APNS_KEY_ID: z.string().optional(),
-  APNS_TEAM_ID: z.string().optional(),
-  APNS_BUNDLE_ID: z.string().optional(),
-  APNS_PRODUCTION: strictBooleanEnv(false),
-  // AlarmScheduler (ADR 0022): real-time interval between `runDue()` ticks;
-  // `0` disables the timer (tests call `runDue()` explicitly instead).
-  ALARM_SCHEDULER_INTERVAL_MS: z.coerce.number().int().min(0).default(1000),
-});
+/**
+ * Treats an empty string as "unset" before the rest of the schema parses it
+ * (ADR 0026: `infra/docker-compose.yml` passes `${STATION_LATITUDE:-}`,
+ * which is an empty string when the operator doesn't set it — not absent).
+ */
+function emptyStringToUndefined(value: unknown): unknown {
+  return value === '' ? undefined : value;
+}
+
+const stationCoordinateLatitude = z.preprocess(
+  emptyStringToUndefined,
+  z.coerce.number().min(-90).max(90).optional()
+);
+const stationCoordinateLongitude = z.preprocess(
+  emptyStringToUndefined,
+  z.coerce.number().min(-180).max(180).optional()
+);
+
+export const configSchema = z
+  .object({
+    DATABASE_URL: z.string().url(),
+    PORT: z.coerce.number().int().positive().default(8080),
+    HOST: z.string().default('0.0.0.0'),
+    JWT_SECRET: z.string().min(32),
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(14),
+    COOKIE_SECURE: strictBooleanEnv(false),
+    TRUST_PROXY: strictBooleanEnv(false),
+    CORS_ORIGINS: z
+      .string()
+      .default('')
+      .transform(s => (s ? s.split(',').map(o => o.trim()) : [])),
+    AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+    AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+    WS_HEARTBEAT_MS: z.coerce.number().int().positive().default(25000),
+    PAIRING_CODE_TTL_HOURS: z.coerce.number().int().positive().default(24),
+    BOOTSTRAP_ADMIN_USERNAME: z.string().optional(),
+    BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
+    OWN_FIRE_DEPARTMENT_NAME: z.string().default('Eigene Feuerwehr'),
+    SLIDE_IMAGE_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
+    // Push (ADR 0018): all optional. Without them, the corresponding platform
+    // is unconfigured and its pushes are rejected (see createPushSender).
+    FCM_SERVICE_ACCOUNT_FILE: z.string().optional(),
+    APNS_KEY_FILE: z.string().optional(),
+    APNS_KEY_ID: z.string().optional(),
+    APNS_TEAM_ID: z.string().optional(),
+    APNS_BUNDLE_ID: z.string().optional(),
+    APNS_PRODUCTION: strictBooleanEnv(false),
+    // AlarmScheduler (ADR 0022): real-time interval between `runDue()` ticks;
+    // `0` disables the timer (tests call `runDue()` explicitly instead).
+    ALARM_SCHEDULER_INTERVAL_MS: z.coerce.number().int().min(0).default(1000),
+    // Wache (ADR 0026): optional, nur gemeinsam gesetzt (siehe superRefine
+    // unten). Snapshot-Feld `station`, kein eigener Endpunkt.
+    STATION_LATITUDE: stationCoordinateLatitude,
+    STATION_LONGITUDE: stationCoordinateLongitude,
+  })
+  .superRefine((config, ctx) => {
+    const latSet = config.STATION_LATITUDE !== undefined;
+    const lngSet = config.STATION_LONGITUDE !== undefined;
+    if (latSet !== lngSet) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'STATION_LATITUDE und STATION_LONGITUDE müssen gemeinsam gesetzt sein.',
+        path: [latSet ? 'STATION_LONGITUDE' : 'STATION_LATITUDE'],
+      });
+    }
+  });
 
 export type Config = z.infer<typeof configSchema>;
 
