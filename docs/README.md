@@ -29,6 +29,7 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [0008](adr/0008-grundgeruest-konventionen.md) | Konventionen für das Grundgerüst (Backend, Tests, Web-Login, Codegen) | Angenommen |
 | [0023](adr/0023-e2e-suite.md) | E2E-Suite gegen den Produktions-Stack (`just e2e`) | Angenommen |
 | [0024](adr/0024-durchsage.md) | Durchsage: Sichtbarkeit, Echtzeit, Push, Monitor-Banner | Angenommen |
+| [0025](adr/0025-tagesablauf.md) | Tagesablauf: Programmpunkte, Echtzeit, Monitor-Standby, App | Angenommen |
 
 Neue ADRs nach dem Muster `adr/NNNN-titel.md` anlegen (Kontext → Entscheidung → Konsequenzen).
 
