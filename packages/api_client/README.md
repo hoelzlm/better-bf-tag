@@ -96,6 +96,7 @@ Class | Method | HTTP request | Description
 [*BfDaysApi*](doc/BfDaysApi.md) | [**startBfDay**](doc/BfDaysApi.md#startbfday) | **POST** /api/v1/bf-days/{id}/start | 
 [*BfDaysApi*](doc/BfDaysApi.md) | [**updateBfDay**](doc/BfDaysApi.md#updatebfday) | **PATCH** /api/v1/bf-days/{id} | 
 [*DevicesApi*](doc/DevicesApi.md) | [**revokeDevice**](doc/DevicesApi.md#revokedevice) | **DELETE** /api/v1/devices/{id} | 
+[*GeocodeApi*](doc/GeocodeApi.md) | [**geocode**](doc/GeocodeApi.md#geocode) | **GET** /api/v1/geocode | 
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /api/v1/health | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**closeIncident**](doc/IncidentsApi.md#closeincident) | **POST** /api/v1/incidents/{id}/close | 
 [*IncidentsApi*](doc/IncidentsApi.md) | [**createIncident**](doc/IncidentsApi.md#createincident) | **POST** /api/v1/bf-days/{day}/incidents | 
@@ -164,6 +165,8 @@ Class | Method | HTTP request | Description
  - [CreateSlideRequest](doc/CreateSlideRequest.md)
  - [CreateVehicleRequest](doc/CreateVehicleRequest.md)
  - [DeviceRefreshRequest](doc/DeviceRefreshRequest.md)
+ - [Geocode200Response](doc/Geocode200Response.md)
+ - [Geocode200ResponseResultsInner](doc/Geocode200ResponseResultsInner.md)
  - [GetBfDayAnonymizationPreview200Response](doc/GetBfDayAnonymizationPreview200Response.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [GetHealth503Response](doc/GetHealth503Response.md)

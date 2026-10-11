@@ -119,6 +119,19 @@ Verschiebt ein `PATCH /bf-days/{id}` den Zeitraum des BF-Tags so, dass ein Progr
 vollständig darin liegt, antwortet die Route mit 409 `program_item_outside_bf_day`, ohne etwas zu
 ändern (Programmpunkte werden dabei nicht automatisch verschoben, anders als Schichten).
 
+#### Geocoding-Proxy ([ADR 0026](adr/0026-karte.md))
+
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET | `/geocode?q=` | Einsatzvorbereitung, Leitstelle, Admin |
+
+`q` wird getrimmt, 3–200 Zeichen, sonst 400 `validation_error`. Antwort 200
+`{ results: [{ label, latitude, longitude }] }`, max. 5 Einträge, nie 5xx: deaktiviert
+(`GEOCODING_ENABLED=false`), Timeout (5 s), HTTP-Fehler, ungültiges JSON oder eine zu lange
+Rate-Limit-Wartezeit liefern alle `{ results: [] }`. Serialisiert gegen Nominatim (≥ 1000 ms
+zwischen zwei Upstream-Anfragen, Aufgabe nach 3000 ms Wartezeit ohne Upstream-Aufruf), In-Memory-Cache
+(Schlüssel = normalisierte `q`, TTL 24 h, max. 500 Einträge; nur erfolgreiche Antworten gecacht).
+
 ### Fahrzeugstatus
 
 | Methode | Pfad | Berechtigung |

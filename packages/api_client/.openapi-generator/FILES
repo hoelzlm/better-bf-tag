@@ -7,6 +7,7 @@ lib/src/api/announcements_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/bf_days_api.dart
 lib/src/api/devices_api.dart
+lib/src/api/geocode_api.dart
 lib/src/api/health_api.dart
 lib/src/api/incidents_api.dart
 lib/src/api/monitors_api.dart
@@ -43,6 +44,8 @@ lib/src/model/create_slide_request.dart
 lib/src/model/create_vehicle_request.dart
 lib/src/model/date.dart
 lib/src/model/device_refresh_request.dart
+lib/src/model/geocode200_response.dart
+lib/src/model/geocode200_response_results_inner.dart
 lib/src/model/get_bf_day_anonymization_preview200_response.dart
 lib/src/model/get_health200_response.dart
 lib/src/model/get_health503_response.dart

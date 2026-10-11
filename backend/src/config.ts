@@ -73,6 +73,13 @@ export const configSchema = z
     // unten). Snapshot-Feld `station`, kein eigener Endpunkt.
     STATION_LATITUDE: stationCoordinateLatitude,
     STATION_LONGITUDE: stationCoordinateLongitude,
+    // Geocoding-Proxy (ADR 0026): disabled -> `[]` without any upstream
+    // call. GEOCODING_CONTACT empty string means "unset" (same reasoning
+    // as the STATION_* vars above: docker-compose passes `${VAR:-}`).
+    GEOCODING_ENABLED: strictBooleanEnv(true),
+    GEOCODING_URL: z.string().url().default('https://nominatim.openstreetmap.org'),
+    GEOCODING_CONTACT: z.preprocess(emptyStringToUndefined, z.string().email().optional()),
+    GEOCODING_COUNTRY_CODES: z.string().default('de'),
   })
   .superRefine((config, ctx) => {
     const latSet = config.STATION_LATITUDE !== undefined;
