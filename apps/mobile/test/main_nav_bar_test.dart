@@ -22,6 +22,11 @@ Future<GoRouter> _pump(WidgetTester tester, {int currentIndex = 0}) async {
         builder: (context, state) =>
             MainNavBar(currentIndex: currentIndex),
       ),
+      GoRoute(
+        path: '/tagesablauf',
+        builder: (context, state) =>
+            MainNavBar(currentIndex: currentIndex),
+      ),
     ],
   );
   await tester.pumpWidget(MaterialApp.router(routerConfig: router));
@@ -29,15 +34,16 @@ Future<GoRouter> _pump(WidgetTester tester, {int currentIndex = 0}) async {
 }
 
 void main() {
-  testWidgets('has exactly three destinations', (tester) async {
+  testWidgets('has exactly four destinations', (tester) async {
     await _pump(tester);
 
     expect(find.byKey(const Key('nav-my-vehicle')), findsOneWidget);
     expect(find.byKey(const Key('nav-incidents')), findsOneWidget);
     expect(find.byKey(const Key('nav-announcements')), findsOneWidget);
+    expect(find.byKey(const Key('nav-program')), findsOneWidget);
     expect(
       tester.widget<NavigationBar>(find.byType(NavigationBar)).destinations,
-      hasLength(3),
+      hasLength(4),
     );
   });
 
@@ -50,6 +56,18 @@ void main() {
 
     expect(router.routerDelegate.currentConfiguration.uri.toString(),
         '/durchsagen');
+  });
+
+  testWidgets('tapping "Ablauf" navigates to /tagesablauf', (tester) async {
+    final router = await _pump(tester, currentIndex: 0);
+
+    await tester.tap(find.byKey(const Key('nav-program')));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.toString(),
+      '/tagesablauf',
+    );
   });
 
   testWidgets('tapping "Fahrzeug" navigates to /', (tester) async {

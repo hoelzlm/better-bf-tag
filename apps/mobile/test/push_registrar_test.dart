@@ -302,7 +302,7 @@ void main() {
       // visible/tappable area at the default test window size.
       final originalSize = tester.view.physicalSize;
       final originalDpr = tester.view.devicePixelRatio;
-      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.physicalSize = originalSize;
@@ -321,6 +321,10 @@ void main() {
       for (var i = 0; i < 5; i++) {
         await tester.pump(const Duration(milliseconds: 20));
       }
+      // Let the SnackBar's entrance animation finish laying out before
+      // measuring/tapping its action -- otherwise it can still be
+      // mid-slide and the computed position lands outside its bounds.
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Durchsage: Essen ist fertig'), findsOneWidget);
 
