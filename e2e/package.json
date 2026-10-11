@@ -7,7 +7,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "api": "node api.mjs"
+    "api": "node api.mjs",
+    "ui": "node ui.mjs"
   },
   "dependencies": {
     "ws": "^8.22.0"
