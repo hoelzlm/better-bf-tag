@@ -79,6 +79,10 @@ if ! node e2e/api.mjs; then
   OVERALL_STATUS=1
 fi
 
-# UI test: added in T18-2
+# UI test: runs regardless of the API test's result; overall exit stays
+# non-zero if either suite failed.
+if ! node e2e/ui.mjs; then
+  OVERALL_STATUS=1
+fi
 
 exit "$OVERALL_STATUS"
