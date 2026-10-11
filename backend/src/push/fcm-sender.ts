@@ -58,52 +58,7 @@ export class FcmPushSender implements PushSender {
   }
 
   private async sendOne(message: PushMessage, accessToken: string): Promise<PushResult> {
-    const body =
-      message.data.type === 'test_alarm'
-        ? {
-            message: {
-              token: message.token,
-              android: {
-                priority: 'high',
-                ttl: '300s',
-                notification: {
-                  channel_id: 'alarm',
-                  sound: 'alarm',
-                  tag: 'test-alarm',
-                },
-              },
-              notification: {
-                title: 'Testalarm',
-                body: 'Wenn du das hörst, funktioniert der Alarm.',
-              },
-              data: {
-                type: 'test_alarm',
-              },
-            },
-          }
-        : {
-            message: {
-              token: message.token,
-              android: {
-                priority: 'high',
-                ttl: '300s',
-                notification: {
-                  channel_id: 'alarm',
-                  sound: 'alarm',
-                  tag: `incident-${message.data.incident_id}`,
-                },
-              },
-              notification: {
-                title: message.data.keyword,
-                body: message.data.address,
-              },
-              data: {
-                type: 'alarm.triggered',
-                incident_id: message.data.incident_id,
-                alarm_id: message.data.alarm_id,
-              },
-            },
-          };
+    const body = this.buildBody(message);
 
     const url = `${this.endpoint}/v1/projects/${this.serviceAccount.project_id}/messages:send`;
 
@@ -143,6 +98,85 @@ export class FcmPushSender implements PushSender {
       return { deviceId: message.deviceId, outcome: 'rejected' };
     } catch {
       return { deviceId: message.deviceId, outcome: 'rejected' };
+    }
+  }
+
+  private buildBody(message: PushMessage): unknown {
+    const data = message.data;
+    switch (data.type) {
+      case 'test_alarm':
+        return {
+          message: {
+            token: message.token,
+            android: {
+              priority: 'high',
+              ttl: '300s',
+              notification: {
+                channel_id: 'alarm',
+                sound: 'alarm',
+                tag: 'test-alarm',
+              },
+            },
+            notification: {
+              title: 'Testalarm',
+              body: 'Wenn du das hörst, funktioniert der Alarm.',
+            },
+            data: {
+              type: 'test_alarm',
+            },
+          },
+        };
+      case 'alarm.triggered':
+        return {
+          message: {
+            token: message.token,
+            android: {
+              priority: 'high',
+              ttl: '300s',
+              notification: {
+                channel_id: 'alarm',
+                sound: 'alarm',
+                tag: `incident-${data.incident_id}`,
+              },
+            },
+            notification: {
+              title: data.keyword,
+              body: data.address,
+            },
+            data: {
+              type: 'alarm.triggered',
+              incident_id: data.incident_id,
+              alarm_id: data.alarm_id,
+            },
+          },
+        };
+      case 'announcement.created':
+        return {
+          message: {
+            token: message.token,
+            android: {
+              priority: 'normal',
+              ttl: '3600s',
+              notification: {
+                channel_id: 'announcement',
+                tag: `announcement-${data.announcement_id}`,
+              },
+            },
+            notification: {
+              title: 'Durchsage',
+              body: data.text,
+            },
+            data: {
+              type: 'announcement.created',
+              announcement_id: data.announcement_id,
+              bf_day_id: data.bf_day_id,
+            },
+          },
+        };
+      default: {
+        const exhaustive: never = data;
+        throw new Error(`FcmPushSender: unhandled PushData type ${JSON.stringify(exhaustive)}`);
+      }
     }
   }
 

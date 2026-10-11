@@ -50,36 +50,11 @@ export class ApnsPushSender implements PushSender {
   }
 
   private async sendOne(message: PushMessage, jwt: string): Promise<PushResult> {
-    const body =
-      message.data.type === 'test_alarm'
-        ? JSON.stringify({
-            aps: {
-              alert: {
-                title: 'Testalarm',
-                body: 'Wenn du das hörst, funktioniert der Alarm.',
-              },
-              sound: 'alarm.wav',
-              'interruption-level': 'time-sensitive',
-              'thread-id': 'test-alarm',
-            },
-            type: 'test_alarm',
-          })
-        : JSON.stringify({
-            aps: {
-              alert: {
-                title: message.data.keyword,
-                body: message.data.address,
-              },
-              sound: 'alarm.wav',
-              'interruption-level': 'time-sensitive',
-              'thread-id': `incident-${message.data.incident_id}`,
-            },
-            incident_id: message.data.incident_id,
-            alarm_id: message.data.alarm_id,
-          });
+    const body = JSON.stringify(this.buildBody(message));
+    const priority = message.data.type === 'announcement.created' ? '5' : '10';
 
     try {
-      const { status, body: responseBody } = await this.request(message.token, jwt, body);
+      const { status, body: responseBody } = await this.request(message.token, jwt, body, priority);
 
       if (status === 200) {
         return { deviceId: message.deviceId, outcome: 'delivered' };
@@ -104,10 +79,61 @@ export class ApnsPushSender implements PushSender {
     }
   }
 
+  private buildBody(message: PushMessage): unknown {
+    const data = message.data;
+    switch (data.type) {
+      case 'test_alarm':
+        return {
+          aps: {
+            alert: {
+              title: 'Testalarm',
+              body: 'Wenn du das hörst, funktioniert der Alarm.',
+            },
+            sound: 'alarm.wav',
+            'interruption-level': 'time-sensitive',
+            'thread-id': 'test-alarm',
+          },
+          type: 'test_alarm',
+        };
+      case 'alarm.triggered':
+        return {
+          aps: {
+            alert: {
+              title: data.keyword,
+              body: data.address,
+            },
+            sound: 'alarm.wav',
+            'interruption-level': 'time-sensitive',
+            'thread-id': `incident-${data.incident_id}`,
+          },
+          incident_id: data.incident_id,
+          alarm_id: data.alarm_id,
+        };
+      case 'announcement.created':
+        return {
+          aps: {
+            alert: {
+              title: 'Durchsage',
+              body: data.text,
+            },
+            sound: 'default',
+          },
+          type: 'announcement.created',
+          announcement_id: data.announcement_id,
+          bf_day_id: data.bf_day_id,
+        };
+      default: {
+        const exhaustive: never = data;
+        throw new Error(`ApnsPushSender: unhandled PushData type ${JSON.stringify(exhaustive)}`);
+      }
+    }
+  }
+
   private request(
     token: string,
     jwt: string,
-    body: string
+    body: string,
+    priority: string
   ): Promise<{ status: number; body: string }> {
     return new Promise((resolve, reject) => {
       const session = this.getSession();
@@ -117,7 +143,7 @@ export class ApnsPushSender implements PushSender {
         ':path': `/3/device/${token}`,
         authorization: `bearer ${jwt}`,
         'apns-push-type': 'alert',
-        'apns-priority': '10',
+        'apns-priority': priority,
         'apns-expiration': String(
           Math.floor(this.now().getTime() / 1000) + EXPIRATION_WINDOW_SECONDS
         ),

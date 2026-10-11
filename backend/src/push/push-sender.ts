@@ -9,7 +9,13 @@ export type PushData =
       keyword: string;
       address: string;
     }
-  | { type: 'test_alarm' };
+  | { type: 'test_alarm' }
+  | {
+      type: 'announcement.created';
+      announcement_id: string;
+      bf_day_id: string;
+      text: string;
+    };
 
 export interface PushMessage {
   deviceId: string;

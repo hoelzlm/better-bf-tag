@@ -12,6 +12,7 @@ import {
 } from './announcement-schemas.js';
 import { toAnnouncementJson, type AnnouncementRow } from '../announcements/announcement-json.js';
 import { announcementVisibleTo, loadShiftCrewPersonIds } from '../announcements/visibility.js';
+import { dispatchAnnouncementPushes } from '../push/announcement-push.js';
 import type { Viewer } from '../realtime/realtime.js';
 import { ApiError } from '../errors.js';
 import type { Tx } from '../realtime/realtime.js';
@@ -113,9 +114,20 @@ export const announcementRoutes: FastifyPluginAsyncZod = async fastify => {
           audience: v => announcementVisibleTo(v, { shiftId }, crewPersonIds),
         });
 
-        // push: card v2-01/2 — wire fastify.announcementPush?.(row.id, auth.personId) here.
+        // push: ADR 0024 — fire-and-forget, after the commit above; never
+        // blocks or fails the response.
 
         return json;
+      });
+
+      void dispatchAnnouncementPushes(
+        { db: fastify.db, pushSender: fastify.pushSender, log: fastify.log },
+        created.id
+      ).catch(err => {
+        fastify.log.warn(
+          { error: err instanceof Error ? err.message : String(err), announcementId: created.id },
+          'dispatchAnnouncementPushes failed'
+        );
       });
 
       return reply.status(201).send(created);
