@@ -30,6 +30,8 @@ Serializers _$serializers =
           ..add(CreateSlideRequest.serializer)
           ..add(CreateVehicleRequest.serializer)
           ..add(DeviceRefreshRequest.serializer)
+          ..add(Geocode200Response.serializer)
+          ..add(Geocode200ResponseResultsInner.serializer)
           ..add(GetBfDayAnonymizationPreview200Response.serializer)
           ..add(GetHealth200Response.serializer)
           ..add(GetHealth200ResponseDatabaseEnum.serializer)
@@ -119,6 +121,12 @@ Serializers _$serializers =
               const FullType(CreatePairingCode201Response),
             ]),
             () => ListBuilder<CreatePairingCode201Response>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(Geocode200ResponseResultsInner),
+            ]),
+            () => ListBuilder<Geocode200ResponseResultsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

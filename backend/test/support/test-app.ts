@@ -7,6 +7,7 @@ import { buildApp, type AppDeps } from '../../src/app.js';
 import { loadConfig, type Config } from '../../src/config.js';
 import { createDb, type Db } from '../../src/db/client.js';
 import { prepare } from '../../src/startup.js';
+import type { Geocoder } from '../../src/geocoding/geocoder.js';
 import { FakeClock } from './fake-clock.js';
 import { RecordingPushSender } from './recording-push-sender.js';
 import { ManualTimerRegistry } from './manual-timer.js';
@@ -16,6 +17,8 @@ export interface TestAppOptions {
   config?: Partial<Config>;
   /** Reuse an existing test database to simulate a server restart. */
   databaseUrl?: string;
+  /** ADR 0026: inject a fake Geocoder instead of the real-fetch default. */
+  geocoder?: Geocoder;
 }
 
 export interface TestApp {
@@ -44,6 +47,10 @@ function buildTestConfig(databaseUrl: string, overrides?: Partial<Config>): Conf
     // `TestApp.runScheduler()`; the real-time interval timer would just
     // make test timing nondeterministic.
     ALARM_SCHEDULER_INTERVAL_MS: '0',
+    // ADR 0026: no real network in tests ever; route tests that need
+    // geocode results inject a fake Geocoder via `TestAppOptions.geocoder`
+    // instead of enabling this.
+    GEOCODING_ENABLED: 'false',
   });
   return { ...base, ...overrides };
 }
@@ -67,7 +74,8 @@ async function createFreshDatabase(): Promise<string> {
 async function start(
   databaseUrl: string,
   config: Config,
-  existingClock?: FakeClock
+  existingClock?: FakeClock,
+  geocoder?: Geocoder
 ): Promise<TestApp> {
   const { db, pool } = createDb(databaseUrl);
   await prepare({ config, db: db as Db, pool });
@@ -86,6 +94,7 @@ async function start(
       setTimer: testAlarmTimer.setTimer,
       clearTimer: testAlarmTimer.clearTimer,
     },
+    ...(geocoder ? { geocoder } : {}),
   };
 
   const app: FastifyInstance = await buildApp(deps);
@@ -119,7 +128,7 @@ async function start(
       // can advance it before `restart()` and have the new app's startup
       // catch-up (`onReady` -> `alarmScheduler.start()` -> one `runDue()`)
       // observe that advanced time, not a clock reset to "now".
-      return start(databaseUrl, { ...config, ...configOverrides }, clock);
+      return start(databaseUrl, { ...config, ...configOverrides }, clock, geocoder);
     },
     async close(): Promise<void> {
       if (closed) return;
@@ -133,7 +142,7 @@ async function start(
 export async function startTestApp(opts: TestAppOptions = {}): Promise<TestApp> {
   const databaseUrl = opts.databaseUrl ?? (await createFreshDatabase());
   const config = buildTestConfig(databaseUrl, opts.config);
-  return start(databaseUrl, config);
+  return start(databaseUrl, config, undefined, opts.geocoder);
 }
 
 export { HttpClient } from './http-client.js';

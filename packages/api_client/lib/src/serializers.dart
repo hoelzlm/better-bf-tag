@@ -33,6 +33,8 @@ import 'package:bftag_api_client/src/model/create_program_item_request.dart';
 import 'package:bftag_api_client/src/model/create_slide_request.dart';
 import 'package:bftag_api_client/src/model/create_vehicle_request.dart';
 import 'package:bftag_api_client/src/model/device_refresh_request.dart';
+import 'package:bftag_api_client/src/model/geocode200_response.dart';
+import 'package:bftag_api_client/src/model/geocode200_response_results_inner.dart';
 import 'package:bftag_api_client/src/model/get_bf_day_anonymization_preview200_response.dart';
 import 'package:bftag_api_client/src/model/get_health200_response.dart';
 import 'package:bftag_api_client/src/model/get_health503_response.dart';
@@ -111,6 +113,8 @@ part 'serializers.g.dart';
   CreateSlideRequest,
   CreateVehicleRequest,
   DeviceRefreshRequest,
+  Geocode200Response,
+  Geocode200ResponseResultsInner,
   GetBfDayAnonymizationPreview200Response,
   GetHealth200Response,
   GetHealth503Response,

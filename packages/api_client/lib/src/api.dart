@@ -14,6 +14,7 @@ import 'package:bftag_api_client/src/api/announcements_api.dart';
 import 'package:bftag_api_client/src/api/auth_api.dart';
 import 'package:bftag_api_client/src/api/bf_days_api.dart';
 import 'package:bftag_api_client/src/api/devices_api.dart';
+import 'package:bftag_api_client/src/api/geocode_api.dart';
 import 'package:bftag_api_client/src/api/health_api.dart';
 import 'package:bftag_api_client/src/api/incidents_api.dart';
 import 'package:bftag_api_client/src/api/monitors_api.dart';
@@ -106,6 +107,12 @@ class BftagApiClient {
   /// by doing that all interceptors will not be executed
   DevicesApi getDevicesApi() {
     return DevicesApi(dio, serializers);
+  }
+
+  /// Get GeocodeApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  GeocodeApi getGeocodeApi() {
+    return GeocodeApi(dio, serializers);
   }
 
   /// Get HealthApi instance, base route and serializer can be overridden by a given but be careful,
