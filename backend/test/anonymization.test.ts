@@ -647,7 +647,9 @@ describe('anonymization', () => {
       .post(`/api/v1/bf-days/${day.id}/anonymize`, {}, { token: dispatchToken });
     expect(anonRes.status).toBe(200);
     const anonBody = anonRes.body as { summary: object };
-    expect(Object.keys(anonBody.summary).sort()).toEqual(Object.keys(previewRes.body as object).sort());
+    expect(Object.keys(anonBody.summary).sort()).toEqual(
+      Object.keys(previewRes.body as object).sort()
+    );
 
     const itemRows = await pool.query('select 1 from program_item where id = $1', [
       programItemRow.id,

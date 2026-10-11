@@ -147,7 +147,11 @@ describe('program-items', () => {
       }
       expect((await createProgramItem(day.id, {}, {})).status).toBe(401);
 
-      const created = await createProgramItem(day.id, { title: 'Admin-Punkt' }, { token: adminToken });
+      const created = await createProgramItem(
+        day.id,
+        { title: 'Admin-Punkt' },
+        { token: adminToken }
+      );
       expect(created.status).toBe(201);
       const item = created.body as ProgramItemJson;
 
@@ -156,9 +160,7 @@ describe('program-items', () => {
           .client()
           .patch(`/api/v1/program-items/${item.id}`, { title: 'x' }, { token });
         expect(patchRes.status).toBe(403);
-        const deleteRes = await app
-          .client()
-          .delete(`/api/v1/program-items/${item.id}`, { token });
+        const deleteRes = await app.client().delete(`/api/v1/program-items/${item.id}`, { token });
         expect(deleteRes.status).toBe(403);
       }
 
@@ -469,8 +471,7 @@ describe('program-items', () => {
           .client()
           .get('/api/v1/snapshot', { token: freshAdminToken });
         expect(snapshot.status).toBe(200);
-        const programItems = (snapshot.body as { program_items: ProgramItemJson[] })
-          .program_items;
+        const programItems = (snapshot.body as { program_items: ProgramItemJson[] }).program_items;
         expect(programItems.map(i => i.title)).toEqual(['Früh', 'Spät']);
       } finally {
         await freshApp.close();
@@ -487,11 +488,13 @@ describe('program-items', () => {
       });
       expect(itemRes.status).toBe(201);
 
-      const shrinkRes = await app.client().patch(
-        `/api/v1/bf-days/${day.id}`,
-        { ends_at: '2026-06-01T12:00:00Z' },
-        { token: adminToken }
-      );
+      const shrinkRes = await app
+        .client()
+        .patch(
+          `/api/v1/bf-days/${day.id}`,
+          { ends_at: '2026-06-01T12:00:00Z' },
+          { token: adminToken }
+        );
       expect(shrinkRes.status).toBe(409);
       expect(shrinkRes.body).toMatchObject({ error: { code: 'program_item_outside_bf_day' } });
 
@@ -500,11 +503,13 @@ describe('program-items', () => {
       expect((reloaded.body as BfDayJson).ends_at).toBe(day.ends_at);
 
       // Widening the period (program item still fits) is fine.
-      const widenRes = await app.client().patch(
-        `/api/v1/bf-days/${day.id}`,
-        { ends_at: '2026-06-02T08:00:00Z' },
-        { token: adminToken }
-      );
+      const widenRes = await app
+        .client()
+        .patch(
+          `/api/v1/bf-days/${day.id}`,
+          { ends_at: '2026-06-02T08:00:00Z' },
+          { token: adminToken }
+        );
       expect(widenRes.status).toBe(200);
     });
   });
