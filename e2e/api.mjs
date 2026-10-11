@@ -147,6 +147,25 @@ async function main() {
   await must('PUT', `/vehicles/${rtw.id}/status`, { token: cTok, body: { status: 7 } }, [200, 204]);
   await must('PUT', `/vehicles/${hlf.id}/status`, { token: dispTok, body: { status: 4 } }, [200, 204]);
 
+  // --- durchsage (ADR 0024)
+  const annCreate = await must(
+    'POST',
+    `/bf-days/${day.id}/announcements`,
+    { token: dispTok, body: { text: `Durchsage ${tag}`, shift_id: shift.id } },
+    201
+  );
+  const ann = annCreate.json;
+  ok(!!ann?.id && ann.shift_id === shift.id, 'announcement created with shift_id', ann);
+  const annCreatedEv = await wsA.waitFor((m) => m.type === 'announcement.created' && m.data?.id === ann.id);
+  ok(!!annCreatedEv, 'crew ws got announcement.created');
+  const annList = (await must('GET', `/bf-days/${day.id}/announcements`, { token: dispTok })).json;
+  ok(Array.isArray(annList) && annList[0]?.id === ann.id, 'GET announcements contains new one, newest first', annList);
+  await must('DELETE', `/announcements/${ann.id}`, { token: dispTok }, 204);
+  const annDeletedEv = await wsA.waitFor((m) => m.type === 'announcement.deleted' && m.data?.id === ann.id);
+  ok(!!annDeletedEv, 'crew ws got announcement.deleted');
+  const annListAfter = (await must('GET', `/bf-days/${day.id}/announcements`, { token: dispTok })).json;
+  ok(!annListAfter.some((a) => a.id === ann.id), 'deleted announcement no longer in GET list', annListAfter);
+
   // scheduled follow-up alarm, then discard
   const planned = await must('POST', `/incidents/${inc.id}/alarms`, { token: dispTok, body: { vehicle_ids: [rtw.id], offset_minutes: 30 } }, 201);
   ok(planned.json?.alarm?.state === 'planned', 'relative alarm planned', planned.json);
@@ -188,6 +207,7 @@ async function main() {
   // end + anonymize
   await must('POST', `/bf-days/${day.id}/end`, { token: admin }, 200);
   await expectErr('POST', `/bf-days/${day.id}/incidents`, { token: prepTok, body: { keyword: 'x', address: 'y' } }, 409, 'bf_day_ended', 'no incidents after day ended');
+  await expectErr('POST', `/bf-days/${day.id}/announcements`, { token: dispTok, body: { text: 'zu spät' } }, 409, 'bf_day_not_running', 'announcement blocked on non-running day');
   const prev = await must('GET', `/bf-days/${day.id}/anonymization-preview`, { token: dispTok }, 200);
   const anon = await must('POST', `/bf-days/${day.id}/anonymize`, { token: dispTok }, 200);
   ok(JSON.stringify(prev.json) === JSON.stringify(anon.json?.summary) && anon.json?.bf_day?.anonymized_at, 'anonymize summary matches preview', { prev: prev.json, anon: anon.json });

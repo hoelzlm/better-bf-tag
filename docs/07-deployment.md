@@ -125,8 +125,11 @@ Entscheidung: [ADR 0023](adr/0023-e2e-suite.md). `just e2e` baut die Produktions
 Compose-Projekt mit zufälligen Secrets und prüft API und Web-UI gegen Caddy/HTTPS/WebSocket
 end-to-end: Stammdaten, Berechtigungen, BF-Tag, Schicht/Besatzung, Geräte- und
 Monitor-Kopplung, Alarmierung (sofort, geplant, zeitgesteuert), Quittierung,
-Fahrzeugstatus, WebSocket-Events sowie den Web-UI-Login und alle Admin-Seiten im
-Browser (Chrome headless). Räumt per `trap … EXIT` immer mit `down -v --remove-orphans` ab.
+Fahrzeugstatus, Durchsagen (Erstellen/Löschen inkl. WebSocket-Events
+`announcement.created`/`announcement.deleted` und 409 `bf_day_not_running` auf
+einem nicht laufenden BF-Tag), WebSocket-Events sowie den Web-UI-Login und alle
+Admin-Seiten im Browser (Chrome headless). Räumt per `trap … EXIT` immer mit
+`down -v --remove-orphans` ab.
 
 Umgebungsvariablen:
 
