@@ -1,4 +1,5 @@
 import '../domain/alarm.dart';
+import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
@@ -166,6 +167,20 @@ sealed class RealtimeEvent {
           at: at,
           id: map['id'] as String,
           suggested: map['suggested'] as bool,
+        );
+      case 'announcement.created':
+        final map = data as Map<String, dynamic>;
+        return AnnouncementCreated(
+          seq: seq,
+          at: at,
+          announcement: Announcement.fromJson(map),
+        );
+      case 'announcement.deleted':
+        final map = data as Map<String, dynamic>;
+        return AnnouncementDeleted(
+          seq: seq,
+          at: at,
+          id: map['id'] as String,
         );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
@@ -412,6 +427,32 @@ class IncidentCloseSuggested extends RealtimeEvent {
 
   final String id;
   final bool suggested;
+}
+
+/// `announcement.created` (ADR 0024): a new Durchsage was created,
+/// already filtered for visibility (shift-targeted Durchsagen only reach
+/// connections allowed to see them).
+class AnnouncementCreated extends RealtimeEvent {
+  const AnnouncementCreated({
+    required super.seq,
+    required super.at,
+    required this.announcement,
+  });
+
+  final Announcement announcement;
+}
+
+/// `announcement.deleted` (ADR 0024): a Durchsage was deleted (explicitly,
+/// or as a cascade of its Schicht being deleted). Uses the same audience
+/// as the matching `announcement.created`.
+class AnnouncementDeleted extends RealtimeEvent {
+  const AnnouncementDeleted({
+    required super.seq,
+    required super.at,
+    required this.id,
+  });
+
+  final String id;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

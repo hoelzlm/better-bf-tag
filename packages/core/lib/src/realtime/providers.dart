@@ -8,6 +8,7 @@ import '../api/dio_provider.dart';
 import '../auth/paired_session.dart';
 import '../auth/session.dart';
 import '../domain/alarm.dart';
+import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
@@ -141,6 +142,19 @@ ScheduledAlarm _scheduledAlarmFromApi(
   );
 }
 
+Announcement _announcementFromApi(
+  GetSnapshot200ResponseAnnouncementsInner a,
+) {
+  return Announcement(
+    id: a.id,
+    bfDayId: a.bfDayId,
+    shiftId: a.shiftId,
+    text: a.text,
+    createdBy: a.createdBy,
+    createdAt: DateTime.parse(a.createdAt),
+  );
+}
+
 Snapshot _snapshotFromApi(GetSnapshot200Response data) {
   return Snapshot(
     seq: data.seq,
@@ -153,6 +167,7 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     alarms: data.alarms.map(_alarmFromApi).toList(),
     closeSuggestedIncidentIds: data.closeSuggestedIncidentIds.toSet(),
     scheduledAlarms: data.scheduledAlarms.map(_scheduledAlarmFromApi).toList(),
+    announcements: data.announcements.map(_announcementFromApi).toList(),
   );
 }
 
@@ -332,6 +347,29 @@ final missedAlarmsProvider = Provider<List<ScheduledAlarm>>((ref) {
   return scheduled.where((sa) => sa.alarm.isMissed).toList();
 });
 
+/// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst --
+/// empty while signed out, before the first snapshot has loaded, or when
+/// there are none.
+final announcementsProvider = StreamProvider<List<Announcement>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Announcement>[]);
+  }
+  return client.states.map((state) => state.announcements);
+});
+
+/// Emits an [Announcement] only for `announcement.created` events
+/// received live over the WebSocket (ADR 0024) -- never for Durchsagen
+/// loaded via the snapshot. Drives the monitor banner and the app
+/// SnackBar. Backed by [RealtimeClient.liveAnnouncementCreated].
+final announcementCreatedProvider = StreamProvider<Announcement>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return const Stream<Announcement>.empty();
+  }
+  return client.liveAnnouncementCreated;
+});
+
 /// The [RealtimeClient] for the current paired device session (mobile app,
 /// or the web monitor via Ticket 03), or `null` when unpaired. Mirrors
 /// [realtimeClientProvider] but is bound to [pairedSessionControllerProvider]
@@ -407,6 +445,29 @@ final pairedShiftsProvider = StreamProvider<List<Shift>>((ref) {
     return Stream.value(const <Shift>[]);
   }
   return client.states.map((state) => state.shifts);
+});
+
+/// Die letzten 20 sichtbaren Durchsagen von [pairedRealtimeClientProvider]
+/// (ADR 0024), neueste zuerst -- empty while unpaired, before the first
+/// snapshot has loaded, or when there are none. Mirrors
+/// [announcementsProvider].
+final pairedAnnouncementsProvider = StreamProvider<List<Announcement>>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Announcement>[]);
+  }
+  return client.states.map((state) => state.announcements);
+});
+
+/// Emits an [Announcement] only for `announcement.created` events
+/// received live over [pairedRealtimeClientProvider] -- drives the app
+/// SnackBar (ADR 0024). Mirrors [announcementCreatedProvider].
+final pairedAnnouncementCreatedProvider = StreamProvider<Announcement>((ref) {
+  final client = ref.watch(pairedRealtimeClientProvider);
+  if (client == null) {
+    return const Stream<Announcement>.empty();
+  }
+  return client.liveAnnouncementCreated;
 });
 
 /// The running Einsätze of the currently running BF-Tag from

@@ -2,6 +2,7 @@
 library bftag_core;
 
 export 'src/api/alarm_repository.dart';
+export 'src/api/announcement_repository.dart';
 export 'src/api/api_config.dart';
 export 'src/api/auth_interceptor.dart';
 export 'src/api/bf_day_admin_repository.dart';
@@ -20,6 +21,7 @@ export 'src/auth/paired_session.dart';
 export 'src/auth/session.dart';
 export 'src/auth/token_store.dart';
 export 'src/domain/alarm.dart';
+export 'src/domain/announcement.dart';
 export 'src/domain/anonymization_summary.dart';
 export 'src/domain/bf_day.dart';
 export 'src/domain/crew_function.dart';
