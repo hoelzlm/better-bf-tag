@@ -161,7 +161,7 @@ class ApiAlarmRepository implements AlarmRepository {
         (b) {
           if (id != null) b.id = id;
           b.vehicleIds.addAll(vehicleIds);
-          b.scheduledAt = scheduledAt;
+          b.scheduledAt = scheduledAt?.toUtc();
           b.offsetMinutes = offsetMinutes;
         },
       ),
@@ -184,7 +184,7 @@ class ApiAlarmRepository implements AlarmRepository {
       id: alarmId,
       updateAlarmRequest: UpdateAlarmRequest(
         (b) {
-          b.scheduledAt = scheduledAt;
+          b.scheduledAt = scheduledAt?.toUtc();
           b.offsetMinutes = offsetMinutes;
           if (vehicleIds != null) b.vehicleIds.addAll(vehicleIds);
         },
