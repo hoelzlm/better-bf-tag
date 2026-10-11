@@ -34,6 +34,7 @@ cleanup() {
 trap cleanup EXIT
 
 # --- 1. build the web app (unless the caller already built it) -------------
+PHASE_START=$SECONDS
 if [ "${SKIP_WEB_BUILD:-0}" != "1" ]; then
   (cd apps/web && flutter build web --release --base-href /)
 fi
@@ -41,6 +42,7 @@ fi
 # --- 2. build images tagged "e2e" (same names as infra/smoke-test.sh) ------
 docker build -f backend/Dockerfile -t ghcr.io/hoelzlm/better-bf-tag-backend:e2e backend
 docker build -f infra/web.Dockerfile -t ghcr.io/hoelzlm/better-bf-tag-web:e2e .
+echo "TIMING: build phase took $((SECONDS - PHASE_START))s"
 
 # --- 3. temp .env with random secrets ---------------------------------------
 POSTGRES_PASSWORD="$(openssl rand -hex 24)"
@@ -64,7 +66,9 @@ AUTH_RATE_LIMIT_MAX=1000
 EOF
 
 # --- 4. bring up the stack --------------------------------------------------
+PHASE_START=$SECONDS
 docker compose -p "$PROJECT" -f infra/docker-compose.yml --env-file "$ENV_FILE" up -d --wait
+echo "TIMING: up phase took $((SECONDS - PHASE_START))s"
 
 # --- 5. install e2e deps + run the scenarios --------------------------------
 npm ci --prefix e2e
@@ -75,14 +79,18 @@ export E2E_ADMIN_PASS="$BOOTSTRAP_ADMIN_PASSWORD"
 # Caddy serves a self-signed cert for BFTAG_DOMAIN=localhost.
 export NODE_TLS_REJECT_UNAUTHORIZED=0
 
+PHASE_START=$SECONDS
 if ! node e2e/api.mjs; then
   OVERALL_STATUS=1
 fi
+echo "TIMING: api phase took $((SECONDS - PHASE_START))s"
 
 # UI test: runs regardless of the API test's result; overall exit stays
 # non-zero if either suite failed.
+PHASE_START=$SECONDS
 if ! node e2e/ui.mjs; then
   OVERALL_STATUS=1
 fi
+echo "TIMING: ui phase took $((SECONDS - PHASE_START))s"
 
 exit "$OVERALL_STATUS"
