@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import '../domain/alarm.dart';
+import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
 import '../domain/shift.dart';
@@ -36,6 +37,7 @@ class RealtimeState {
     this.alarms = const <Alarm>[],
     this.closeSuggestedIncidentIds = const <String>{},
     this.scheduledAlarms = const <ScheduledAlarm>[],
+    this.announcements = const <Announcement>[],
   });
 
   final int seq;
@@ -54,6 +56,9 @@ class RealtimeState {
   /// `planned`/`missed` Alarmierungen (ADR 0022), sorted by
   /// `scheduled_at`, `id` -- only for callers with Drehbuch permission.
   final List<ScheduledAlarm> scheduledAlarms;
+
+  /// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst.
+  final List<Announcement> announcements;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -126,6 +131,18 @@ class RealtimeClient {
   /// reload must never re-trigger it.
   Stream<Alarm> get liveAlarmTriggered => _liveAlarmTriggeredController.stream;
 
+  final StreamController<Announcement> _liveAnnouncementCreatedController =
+      StreamController<Announcement>.broadcast();
+
+  /// Emits an [Announcement] only for `announcement.created` events
+  /// received live over the WebSocket (ADR 0024) -- never for Durchsagen
+  /// loaded via the (initial or a gap/resync-triggered) snapshot. Drives
+  /// the monitor banner and the app SnackBar; a reload must never
+  /// re-trigger it. Exposed via `announcementCreatedProvider` in
+  /// providers.dart.
+  Stream<Announcement> get liveAnnouncementCreated =>
+      _liveAnnouncementCreatedController.stream;
+
   int _lastSeq = 0;
   final Map<String, Vehicle> _vehiclesById = <String, Vehicle>{};
   List<Slide> _slides = <Slide>[];
@@ -136,6 +153,7 @@ class RealtimeClient {
   final Set<String> _closeSuggestedIncidentIds = <String>{};
   final Map<String, ScheduledAlarm> _scheduledAlarmsById =
       <String, ScheduledAlarm>{};
+  List<Announcement> _announcements = <Announcement>[];
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -180,6 +198,7 @@ class RealtimeClient {
     }
     await _controller.close();
     await _liveAlarmTriggeredController.close();
+    await _liveAnnouncementCreatedController.close();
   }
 
   Future<void> _connect() async {
@@ -240,6 +259,7 @@ class RealtimeClient {
         ..addEntries(
           snapshot.scheduledAlarms.map((sa) => MapEntry(sa.alarm.id, sa)),
         );
+      _announcements = List.of(snapshot.announcements);
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -337,6 +357,7 @@ class RealtimeClient {
         }
       case ShiftDeleted(:final id):
         _shiftsById.remove(id);
+        _announcements.removeWhere((a) => a.shiftId == id);
       case IncidentCreated(:final incident):
         _applyIncident(incident);
       case IncidentUpdated(:final incident):
@@ -374,6 +395,11 @@ class RealtimeClient {
         } else {
           _closeSuggestedIncidentIds.remove(id);
         }
+      case AnnouncementCreated(:final announcement):
+        _applyAnnouncementCreated(announcement);
+        _liveAnnouncementCreatedController.add(announcement);
+      case AnnouncementDeleted(:final id):
+        _announcements.removeWhere((a) => a.id == id);
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
         break;
@@ -438,6 +464,19 @@ class RealtimeClient {
       pushDelivered: pushDelivered,
       pushRejected: pushRejected,
     );
+  }
+
+  /// Inserts [announcement] at the front, dedupes by id (a repeat of an
+  /// id already present replaces the old entry rather than duplicating
+  /// it), and keeps at most the newest 20 (ADR 0024, "Snapshot").
+  void _applyAnnouncementCreated(Announcement announcement) {
+    _announcements = [
+      announcement,
+      ..._announcements.where((a) => a.id != announcement.id),
+    ];
+    if (_announcements.length > 20) {
+      _announcements = _announcements.sublist(0, 20);
+    }
   }
 
   /// A gap was detected (gaps include: gaps in event seq, hello/heartbeat
@@ -538,6 +577,7 @@ class RealtimeClient {
         alarms: _sortedAlarms,
         closeSuggestedIncidentIds: Set.of(_closeSuggestedIncidentIds),
         scheduledAlarms: _sortedScheduledAlarms,
+        announcements: List.of(_announcements),
       ),
     );
   }
