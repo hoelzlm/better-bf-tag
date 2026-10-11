@@ -4,16 +4,16 @@
 
 **Blocked by:** v2-01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Migration `program_item` (`bf_day_id`, `title`, `type`, `starts_at`, `ends_at`), Drizzle-Schema
-- [ ] Routen `GET/POST /bf-days/{day}/program-items`, `PATCH/DELETE /program-items/{id}` mit Berechtigungen, Zeitraum- und Zustandsprüfung
-- [ ] Event `program.changed` (komplette sortierte Liste), Snapshot `program_items`
-- [ ] Bleibt bei der Anonymisierung erhalten (Test)
-- [ ] Web: Seite „Tagesablauf“ für Leitstelle (Liste nach Zeit, anlegen/bearbeiten/löschen, Typ-Auswahl)
-- [ ] Monitor-Standby: aktueller + nächster Programmpunkt, wechselt anhand der Uhr
-- [ ] App: Bereich „Tagesablauf“, aktueller Punkt hervorgehoben, vergangene ausgegraut
-- [ ] `just gen-api`, Doku (`04-api`, `03-datenmodell`, `06-clients`), E2E-Schritt
-- [ ] Tests laut Spec „Testing Decisions“
+- [x] Migration `program_item` (`bf_day_id`, `title`, `type`, `starts_at`, `ends_at`), Drizzle-Schema
+- [x] Routen `GET/POST /bf-days/{day}/program-items`, `PATCH/DELETE /program-items/{id}` mit Berechtigungen, Zeitraum- und Zustandsprüfung
+- [x] Event `program.changed` (komplette sortierte Liste), Snapshot `program_items`
+- [x] Bleibt bei der Anonymisierung erhalten (Test)
+- [x] Web: Seite „Tagesablauf“ für Leitstelle (Liste nach Zeit, anlegen/bearbeiten/löschen, Typ-Auswahl)
+- [x] Monitor-Standby: aktueller + nächster Programmpunkt, wechselt anhand der Uhr
+- [x] App: Bereich „Tagesablauf“, aktueller Punkt hervorgehoben, vergangene ausgegraut
+- [x] `just gen-api`, Doku (`04-api`, `03-datenmodell`, `06-clients`), E2E-Schritt
+- [x] Tests laut Spec „Testing Decisions“
 
 Spec: `.scratch/v2/spec.md` · Glossar: `CONTEXT.md`
