@@ -28,6 +28,7 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [0007](adr/0007-personen-dauerhaft-anonymisierung.md) | Personen dauerhaft, Anonymisierung nach 8 Wochen | Angenommen |
 | [0008](adr/0008-grundgeruest-konventionen.md) | Konventionen für das Grundgerüst (Backend, Tests, Web-Login, Codegen) | Angenommen |
 | [0023](adr/0023-e2e-suite.md) | E2E-Suite gegen den Produktions-Stack (`just e2e`) | Angenommen |
+| [0024](adr/0024-durchsage.md) | Durchsage: Sichtbarkeit, Echtzeit, Push, Monitor-Banner | Angenommen |
 
 Neue ADRs nach dem Muster `adr/NNNN-titel.md` anlegen (Kontext → Entscheidung → Konsequenzen).
 

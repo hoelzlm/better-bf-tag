@@ -4,7 +4,7 @@
 
 **Blocked by:** MVP-Ticket 18
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] Migration `announcement` (`bf_day_id`, `shift_id null`, `text`, `created_by`, `created_at`), Drizzle-Schema
 - [ ] Routen `POST/GET /bf-days/{day}/announcements`, `DELETE /announcements/{id}` mit Berechtigungen und Zustandsprüfung
