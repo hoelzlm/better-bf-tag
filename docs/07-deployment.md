@@ -85,6 +85,22 @@ Das ruft `infra/deploy.sh` auf: kopiert `docker-compose.yml`, `backup.sh` und `r
 Ein bestimmtes Tag deployen: `just deploy sha-abc1234` oder `just deploy latest`.
 `./infra/deploy.sh --dry-run [tag]` zeigt die geplanten Kommandos an, ohne sie auszuführen.
 
+## Karte: Geocoding, Wache ([ADR 0026](adr/0026-karte.md))
+
+Umgebungsvariablen des Backends (`infra/.env.example`, `infra/docker-compose.yml`):
+
+| Variable | Default | Zweck |
+|---|---|---|
+| `GEOCODING_ENABLED` | `true` | Schaltet die Adresssuche (`GET /geocode`) ganz ab; liefert dann immer `{results: []}` ohne Upstream-Aufruf. In der E2E-Suite immer `false` (kein Netz zu Nominatim im Test). |
+| `GEOCODING_URL` | `https://nominatim.openstreetmap.org` | Ziel der Geocoding-Anfragen; kann auf eine eigene Nominatim-Instanz zeigen. |
+| `GEOCODING_CONTACT` | – (optional) | E-Mail-Adresse, wird als `email`-Parameter und im `User-Agent` mitgeschickt, gemäß [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/) empfohlen. |
+| `GEOCODING_COUNTRY_CODES` | `de` | Eingrenzung der Adresssuche auf Länder (`countrycodes`-Parameter). |
+| `STATION_LATITUDE` / `STATION_LONGITUDE` | – (optional) | Koordinaten der eigenen Wache für die Kartenanzeige (Snapshot-Feld `station`); nur gemeinsam gesetzt, sonst Config-Fehler beim Start. Ohne sie zeigt die Karte nur den Einsatz-Pin. |
+
+Clients laden die Kartenkacheln direkt von `tile.openstreetmap.org` (nicht über das Backend) —
+dafür ist keine eigene Konfiguration nötig, siehe [06 – Clients](06-clients.md) und
+[09 – Datenschutz](09-datenschutz.md).
+
 ## Rollback
 
 Ein älteres, bekanntes gutes Image-Tag erneut deployen:

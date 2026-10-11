@@ -12,7 +12,7 @@ Zielgerät: Laptop bzw. Desktop-Browser. Was sichtbar ist, hängt von der Berech
 | Login | – | Benutzername, Passwort | MVP |
 | Lage (Startseite Leitstelle) | Leitstelle | laufende Einsätze, Fahrzeugstatus-Leiste, nächste geplante Alarmierungen, Quittierungen live (quittiert / ausstehend / kein Gerät), verpasste Alarmierungen, Abschlussvorschläge | MVP |
 | Einsätze | Einsatzvorbereitung, Leitstelle | Liste je BF-Tag, Filter Entwurf/laufend/abgeschlossen | MVP |
-| Einsatz bearbeiten | Einsatzvorbereitung, Leitstelle | Meldebild, Drehbuch (deutlich als „geheim“ markiert), Alarmierungen anlegen: Fahrzeuge + „sofort“ oder Zeitpunkt; Nachalarmierungen relativ zum Erstalarm planen | MVP |
+| Einsatz bearbeiten | Einsatzvorbereitung, Leitstelle | Meldebild, Drehbuch (deutlich als „geheim“ markiert), Alarmierungen anlegen: Fahrzeuge + „sofort“ oder Zeitpunkt; Nachalarmierungen relativ zum Erstalarm planen; Karte mit Einsatz-Pin ([ADR 0026](adr/0026-karte.md), siehe unten) | MVP |
 | Schichten | Leitstelle | Schichten des BF-Tags, Besatzung per Drag & Drop (Person → Fahrzeug + Funktion), Warnung bei Doppelbesetzung | MVP |
 | Anstehende Einsätze | Einsatzvorbereitung | Countdown bis zur geplanten Alarmierung, Drehbuch, Button „Bereitmeldung“ | später |
 | Einsatzberichte | Leitstelle | eingereichte Berichte, Vergleich mit Drehbuch, freigeben/zurückgeben | später |
@@ -113,6 +113,30 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
 - `programNowProvider` tickt alle 30 s (startet mit `DateTime.now()`) und treibt die
   Hervorhebung, unabhängig von Realtime-Events; Tests überschreiben ihn für einen deterministischen
   Ablauf.
+
+## Karte ([ADR 0026](adr/0026-karte.md))
+
+Gemeinsames Widget `IncidentMap` in `packages/core/lib/src/map/incident_map.dart` auf Basis von
+`flutter_map` (plus `latlong2`): Kacheln von `https://tile.openstreetmap.org/{z}/{x}/{y}.png`,
+`userAgentPackageName: 'de.bftag.app'`, `maxZoom 19`, dauerhaft sichtbare Attribution
+„© OpenStreetMap-Mitwirkende“. Einsatz-Pin rot (`Icons.location_on`), Wache als eigenes Symbol
+(`Icons.home`). Mit Wache passt die Kamera beide Punkte ein (max. Zoom 16), ohne Wache zeigt sie
+nur den Einsatz-Pin (Zoom 15). Der `TileProvider` ist injizierbar, damit Widget-Tests ohne Netz
+laufen. Kein Routing, kein API-Key.
+
+- **Monitor-Einsatzansicht:** mit Koordinaten erscheint die Karte neben bzw. unter dem
+  Meldebild, nicht interaktiv; ohne Koordinaten bleibt die Ansicht unverändert.
+- **Web-Einsatzformular:** Adresssuche über `GET /geocode` (Button „Suchen“, Vorschläge als
+  Liste; Auswahl setzt den Pin und zentriert die Karte, überschreibt aber nicht das
+  Adress-Textfeld — der Pin ist nur ein Vorschlag), Klick auf die Karte setzt/versetzt den Pin,
+  Button „Pin entfernen“. Startansicht ohne Pin: Wache (Zoom 13) sofern konfiguriert, sonst
+  Mitte Deutschland.
+- **App (Alarm-Screen, Einsatzdetail):** kleine Karte (Höhe ca. 180) wenn Koordinaten
+  vorhanden, darunter Button „Navigation starten“. URI über die reine Funktion
+  `navigationUri(lat, lng, platform)`: Android `geo:<lat>,<lng>?q=<lat>,<lng>`, iOS
+  `https://maps.apple.com/?daddr=<lat>,<lng>`; Start über `url_launcher`
+  (`LaunchMode.externalApplication`). Das Android-Manifest deklariert `<queries>` für
+  `geo`-Intents.
 
 ## Gemeinsamer Code (`packages/core`)
 
