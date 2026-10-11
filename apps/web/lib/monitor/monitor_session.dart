@@ -4,6 +4,7 @@ import 'package:bftag_api_client/bftag_api_client.dart';
 import 'package:bftag_core/bftag_core.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:bftag_web/station_provider.dart';
 
 /// The state of the web monitor's own session (ADR 0012, "Monitor im
 /// Browser"), independent of the admin web session
@@ -579,5 +580,7 @@ List<Override> monitorProviderOverrides({
     announcementsProvider.overrideWith(_buildMonitorAnnouncements),
     announcementCreatedProvider.overrideWith(_buildMonitorAnnouncementCreated),
     programItemsProvider.overrideWith(_buildMonitorProgramItems),
+    // Map pin on the Einsatzansicht; must use the Monitor's API client.
+    stationProvider.overrideWith(loadStation),
   ];
 }
