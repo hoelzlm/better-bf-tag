@@ -1,4 +1,4 @@
-# Spec: v2 — Tagesbetrieb (Durchsage + Tagesablauf)
+# Spec: v2 — Tagesbetrieb (Durchsage, Tagesablauf, Karte)
 
 **Status:** ready-for-agent
 
@@ -19,6 +19,8 @@ Jugendlichen wissen nicht, was als Nächstes kommt. Die Software kennt nur Eins�
    auf dem Monitor.
 2. **Tagesablauf**: Die Leitstelle pflegt Programmpunkte (Zeitraum, Typ, Titel). Der Monitor zeigt im
    Standby den aktuellen und nächsten Programmpunkt, die App den ganzen Tagesablauf.
+3. **Karte**: Ein Einsatz bekommt einen Ort. Der Monitor zeigt ihn wie ein echter Alarmmonitor auf einer Karte,
+   die App auf dem Alarm-Screen mit Navigation.
 
 ## User Stories
 
@@ -30,6 +32,9 @@ Jugendlichen wissen nicht, was als Nächstes kommt. Die Software kennt nur Eins�
 6. Als Leitstelle möchte ich Programmpunkte anlegen, ändern und löschen.
 7. Als Monitor-Betrachter möchte ich im Standby sehen, was gerade läuft und was als Nächstes kommt.
 8. Als Mannschaft möchte ich den Tagesablauf in der App sehen, der aktuelle Punkt hervorgehoben.
+9. Als Einsatzvorbereitung möchte ich zur Adresse eines Einsatzes einen Pin setzen, per Suche oder frei auf der Karte (Übungen finden oft auf dem Gelände oder an erfundenen Adressen statt).
+10. Als Monitor-Betrachter möchte ich sehen, wo der Einsatz relativ zur Wache liegt.
+11. Als Mannschaft möchte ich auf dem Alarm-Screen sehen, wo es hingeht, und die Navigation starten können.
 
 ## Entscheidungen (vorgegeben, Rest entscheidet der Architekt per ADR)
 
@@ -57,6 +62,14 @@ Jugendlichen wissen nicht, was als Nächstes kommt. Die Software kennt nur Eins�
   - Monitor-Standby: aktueller und nächster Programmpunkt mit Uhrzeit, wechselt automatisch (Clock, kein Event nötig).
   - App: neuer Bereich „Tagesablauf“ (Liste, aktueller Punkt hervorgehoben, vergangene ausgegraut).
 
+- **Karte**
+  - `incident.latitude` / `incident.longitude` (nullable, nur gemeinsam). Gehören zum Meldebild: sichtbar für alle, die den Einsatz sehen.
+  - Geocoding nur über das Backend (`GET /geocode?q=`, Nominatim, eigener User-Agent, ≤ 1 Anfrage/s, Cache); Clients rufen
+    Nominatim nie direkt. Ergebnis ist nur ein Vorschlag, der Pin ist immer frei setzbar.
+  - Kacheln: OpenStreetMap über `flutter_map`, Attribution sichtbar. Keine kostenpflichtigen Dienste, kein API-Key.
+  - Wache-Standort aus Config (`STATION_LATITUDE` / `STATION_LONGITUDE`), optional.
+  - Kein Routing, keine Fahrzeit, keine Fahrzeugpositionen.
+
 ## Testing Decisions
 
 - Backend: Integrationstests (Testcontainers) für Berechtigungsmatrix positiv/negativ, Sichtbarkeit nach Schicht inkl.
@@ -69,4 +82,4 @@ Jugendlichen wissen nicht, was als Nächstes kommt. Die Software kennt nur Eins�
 ## Out of Scope
 
 Vorwarnung, Bereitmeldung, Sprechaufforderung, Einsatzbericht, Einsatz kopieren, automatische Anonymisierung,
-Durchsage per TTS/Gong, Lesebestätigung von Durchsagen, wiederkehrende Programmpunkte.
+Routing/Fahrzeit/Fahrzeugpositionen, Durchsage per TTS/Gong, Lesebestätigung von Durchsagen, wiederkehrende Programmpunkte.
