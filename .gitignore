@@ -42,3 +42,6 @@ GoogleService-Info.plist
 
 # Hermes kanban worktrees
 .worktrees/
+
+# e2e
+e2e/artifacts/
