@@ -39,6 +39,12 @@ class _FakeSessionController extends SessionController {
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
+  // The AppBar's nav-entry row doesn't scroll/wrap on overflow (see
+  // lage_screen.dart); admin now has enough entries that the default
+  // 800px test window overflows.
+  tester.view.physicalSize = const Size(1600, 900);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

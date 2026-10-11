@@ -359,6 +359,23 @@ Announcement _announcementFromApi(
   );
 }
 
+/// Mirrors `_programItemFromApi` in `program_item_repository.dart` (ADR
+/// 0025): wires the monitor's own snapshot loader to the same wire shape
+/// as the admin one, so the monitor's "Jetzt"/"Danach"-Block gets
+/// `snapshot.program_items` too.
+ProgramItem _programItemFromApi(
+  GetSnapshot200ResponseProgramItemsInner p,
+) {
+  return ProgramItem(
+    id: p.id,
+    bfDayId: p.bfDayId,
+    title: p.title,
+    type: ProgramItemType.fromWire(p.type.name),
+    startsAt: DateTime.parse(p.startsAt),
+    endsAt: DateTime.parse(p.endsAt),
+  );
+}
+
 /// The [WebSocketConnector] used by the monitor's [RealtimeClient].
 /// Production uses the real [connectWebSocket]; tests override this with a
 /// fake connector instead of hitting the network.
@@ -394,6 +411,7 @@ RealtimeClient? _buildMonitorRealtimeClient(Ref ref) {
         incidents: data.incidents.map(_incidentFromApi).toList(),
         alarms: data.alarms.map(_alarmFromApi).toList(),
         announcements: data.announcements.map(_announcementFromApi).toList(),
+        programItems: data.programItems.map(_programItemFromApi).toList(),
       );
     },
     accessToken: () async {
@@ -496,6 +514,20 @@ Stream<Announcement> _buildMonitorAnnouncementCreated(Ref ref) {
   return client.liveAnnouncementCreated;
 }
 
+/// Mirrors `programItemsProvider` in `providers.dart` (ADR 0025): without
+/// this override the monitor scope's un-overridden `programItemsProvider`
+/// would resolve against the root container's `realtimeClientProvider`
+/// (never built for the monitor session) instead of the monitor's own
+/// `RealtimeClient` -- the same gap that `announcementsProvider` had
+/// before ADR 0024's fix.
+Stream<List<ProgramItem>> _buildMonitorProgramItems(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ProgramItem>[]);
+  }
+  return client.states.map((state) => state.programItems);
+}
+
 /// The provider overrides that wire the `/monitor` `ProviderScope` to its
 /// own session, own `Dio`/`RealtimeClient`, and keep the admin web session
 /// out of the picture entirely -- so `VehicleStatusBar`
@@ -544,5 +576,6 @@ List<Override> monitorProviderOverrides({
     liveAlarmTriggeredProvider.overrideWith(_buildMonitorLiveAlarmTriggered),
     announcementsProvider.overrideWith(_buildMonitorAnnouncements),
     announcementCreatedProvider.overrideWith(_buildMonitorAnnouncementCreated),
+    programItemsProvider.overrideWith(_buildMonitorProgramItems),
   ];
 }

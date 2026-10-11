@@ -17,7 +17,7 @@ Zielgerät: Laptop bzw. Desktop-Browser. Was sichtbar ist, hängt von der Berech
 | Anstehende Einsätze | Einsatzvorbereitung | Countdown bis zur geplanten Alarmierung, Drehbuch, Button „Bereitmeldung“ | später |
 | Einsatzberichte | Leitstelle | eingereichte Berichte, Vergleich mit Drehbuch, freigeben/zurückgeben | später |
 | Durchsage (`/admin/durchsagen`) | Leitstelle, Administrator | Formular: Text (max. 500 Zeichen, Zähler), Ziel „Alle“ oder Schicht des laufenden BF-Tags, „Senden“; Liste der Durchsagen des Tags (neueste zuerst, Uhrzeit, Ziel, Text), Löschen mit Rückfrage; ohne laufenden BF-Tag Hinweis „Kein laufender BF-Tag“ und deaktiviertes Formular | MVP |
-| Tagesablauf | Leitstelle | Programmpunkte | später |
+| Tagesablauf (`/admin/tagesablauf`) | Leitstelle, Administrator | BF-Tag-Auswahl (Standard: laufend, sonst nächster geplanter, sonst letzter) wie bei Schichten; Liste der Programmpunkte nach Zeit (`HH:mm–HH:mm`, Typ-Icon + Label, Titel); Anlegen/Bearbeiten (Titel 1–80 Zeichen, Typ, Start/Ende)/Löschen mit Rückfrage; bei beendetem BF-Tag nur lesend | MVP |
 | BF-Tage | Administrator | anlegen, Zeitraum, Teilnahmen, Anonymisierung | MVP |
 | Personen | Administrator | Personentyp, Berechtigung, Feuerwehr, Geräte, QR-Codes drucken | MVP |
 | Fahrzeuge | Administrator | Stammdaten, Sortierung | MVP |
@@ -52,7 +52,12 @@ Im **Standby**:
   sofort bei Löschung), danach Panel „Letzte Durchsage“ mit der neuesten Durchsage des Tags
   (Uhrzeit + Text) aus `snapshot.announcements`, leer wenn keine vorhanden; läuft ein Einsatz
   (Einsatzansicht), hat diese immer Vorrang – Banner und Panel werden dann nicht angezeigt
-- später: aktueller bzw. nächster Programmpunkt
+- MVP: Block „Jetzt“ / „Danach“ (ADR 0025) aus `snapshot.program_items` bzw. `program.changed`,
+  Anzeige über `currentAndNext(programItems, now)` (`now` aus `monitorClockProvider`, rein
+  zeitgesteuert – kein Event nötig, um von einem Programmpunkt zum nächsten zu wechseln); je
+  Zeile `HH:mm–HH:mm  Titel` (Lokalzeit), fehlt „Jetzt“ oder „Danach“ wird die Zeile weggelassen;
+  ohne Programmpunkte ist der Block ganz unsichtbar; eine laufende Einsatzansicht hat weiterhin
+  Vorrang (der Block erscheint nur im Standby)
 
 Technik: Gong bzw. Alarmton bei `alarm.triggered` (der Browser verlangt einmal „Zum Aktivieren
 tippen“), Screen Wake Lock, rotes Banner bei Verbindungsverlust, Rotation bei mehreren laufenden

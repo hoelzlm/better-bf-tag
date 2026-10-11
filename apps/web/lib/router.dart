@@ -13,6 +13,7 @@ import 'screens/login_screen.dart';
 import 'screens/monitor_screen.dart';
 import 'screens/monitors_screen.dart';
 import 'screens/persons_screen.dart';
+import 'screens/program_screen.dart';
 import 'screens/shifts_screen.dart';
 import 'screens/slides_screen.dart';
 import 'screens/vehicles_screen.dart';
@@ -101,6 +102,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               person.permission != Permission.dispatch) {
             return '/admin';
           }
+          final isTagesablaufRoute =
+              state.matchedLocation == '/admin/tagesablauf';
+          if (isTagesablaufRoute &&
+              person.permission != Permission.admin &&
+              person.permission != Permission.dispatch) {
+            return '/admin';
+          }
           final isEinsaetzeRoute = state.matchedLocation == '/admin/einsaetze';
           if (isEinsaetzeRoute && person.permission == Permission.crew) {
             return '/admin';
@@ -156,6 +164,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/durchsagen',
         builder: (context, state) =>
             const _SessionGate(child: AnnouncementsScreen()),
+      ),
+      GoRoute(
+        path: '/admin/tagesablauf',
+        builder: (context, state) =>
+            const _SessionGate(child: ProgramScreen()),
       ),
       GoRoute(
         path: '/admin/einsaetze',
