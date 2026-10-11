@@ -182,6 +182,7 @@ Class | Method | HTTP request | Description
  - [GetSnapshot200ResponseShiftsInnerCrewInner](doc/GetSnapshot200ResponseShiftsInnerCrewInner.md)
  - [GetSnapshot200ResponseSlidesInner](doc/GetSnapshot200ResponseSlidesInner.md)
  - [GetSnapshot200ResponseSlidesInnerImage](doc/GetSnapshot200ResponseSlidesInnerImage.md)
+ - [GetSnapshot200ResponseStation](doc/GetSnapshot200ResponseStation.md)
  - [GetVehicleStatusHistory200ResponseInner](doc/GetVehicleStatusHistory200ResponseInner.md)
  - [ListBfDays200ResponseInner](doc/ListBfDays200ResponseInner.md)
  - [ListMonitors200ResponseInner](doc/ListMonitors200ResponseInner.md)

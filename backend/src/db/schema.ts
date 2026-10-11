@@ -14,6 +14,7 @@ import {
   bigint,
   primaryKey,
   customType,
+  doublePrecision,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql, desc } from 'drizzle-orm';
@@ -290,6 +291,11 @@ export const incident = pgTable(
     report: text('report').notNull().default(''),
     script: text('script').notNull().default(''),
     state: incidentStateEnum('state').notNull().default('draft'),
+    // Einsatzort (ADR 0026): nullable, nur gemeinsam gesetzt (Check unten).
+    // Gehört zum Meldebild, kein Personenbezug -> bleibt bei der
+    // Anonymisierung unverändert.
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
     closedAt: timestamp('closed_at', { withTimezone: true }),
@@ -297,6 +303,12 @@ export const incident = pgTable(
   table => [
     uniqueIndex('incident_bf_day_number_unique').on(table.bfDayId, table.number),
     index('incident_bf_day_state_idx').on(table.bfDayId, table.state),
+    check(
+      'incident_coordinates_pair',
+      sql`(${table.latitude} is null) = (${table.longitude} is null)`
+    ),
+    check('incident_latitude_range', sql`${table.latitude} between -90 and 90`),
+    check('incident_longitude_range', sql`${table.longitude} between -180 and 180`),
   ]
 );
 

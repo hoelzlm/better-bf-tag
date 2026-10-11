@@ -57,4 +57,36 @@ describe('database constraints', () => {
       )
     ).resolves.toBeDefined();
   });
+
+  it('rejects an incident row with exactly one of latitude/longitude set (ADR 0026)', async () => {
+    const dayResult = await pool.query<{ id: string }>(
+      `insert into bf_day (name, starts_at, ends_at, created_at)
+       values ('Coords', now(), now() + interval '1 day', now()) returning id`
+    );
+    const bfDayId = dayResult.rows[0]!.id;
+
+    await expect(
+      pool.query(
+        `insert into incident (bf_day_id, number, keyword, address, latitude, longitude, created_at, updated_at)
+         values ($1, 1, 'x', 'y', 48.1, null, now(), now())`,
+        [bfDayId]
+      )
+    ).rejects.toMatchObject({ code: '23514' });
+
+    await expect(
+      pool.query(
+        `insert into incident (bf_day_id, number, keyword, address, latitude, longitude, created_at, updated_at)
+         values ($1, 2, 'x', 'y', null, 11.5, now(), now())`,
+        [bfDayId]
+      )
+    ).rejects.toMatchObject({ code: '23514' });
+
+    await expect(
+      pool.query(
+        `insert into incident (bf_day_id, number, keyword, address, latitude, longitude, created_at, updated_at)
+         values ($1, 3, 'x', 'y', 48.1, 11.5, now(), now())`,
+        [bfDayId]
+      )
+    ).resolves.toBeDefined();
+  });
 });

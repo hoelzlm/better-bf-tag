@@ -57,6 +57,7 @@ Serializers _$serializers =
           ..add(GetSnapshot200ResponseShiftsInnerCrewInner.serializer)
           ..add(GetSnapshot200ResponseSlidesInner.serializer)
           ..add(GetSnapshot200ResponseSlidesInnerImage.serializer)
+          ..add(GetSnapshot200ResponseStation.serializer)
           ..add(GetVehicleStatusHistory200ResponseInner.serializer)
           ..add(GetVehicleStatusHistory200ResponseInnerSource_Enum.serializer)
           ..add(ListBfDays200ResponseInner.serializer)

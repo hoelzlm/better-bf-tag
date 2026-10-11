@@ -62,6 +62,7 @@ export 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner
 export 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner_image.dart';
+export 'package:bftag_api_client/src/model/get_snapshot200_response_station.dart';
 export 'package:bftag_api_client/src/model/get_vehicle_status_history200_response_inner.dart';
 export 'package:bftag_api_client/src/model/list_bf_days200_response_inner.dart';
 export 'package:bftag_api_client/src/model/list_monitors200_response_inner.dart';

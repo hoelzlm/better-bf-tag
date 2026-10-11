@@ -51,6 +51,7 @@ import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner_image.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_station.dart';
 import 'package:bftag_api_client/src/model/get_vehicle_status_history200_response_inner.dart';
 import 'package:bftag_api_client/src/model/list_bf_days200_response_inner.dart';
 import 'package:bftag_api_client/src/model/list_monitors200_response_inner.dart';
@@ -128,6 +129,7 @@ part 'serializers.g.dart';
   GetSnapshot200ResponseShiftsInnerCrewInner,
   GetSnapshot200ResponseSlidesInner,
   GetSnapshot200ResponseSlidesInnerImage,
+  GetSnapshot200ResponseStation,
   GetVehicleStatusHistory200ResponseInner,
   ListBfDays200ResponseInner,
   ListMonitors200ResponseInner,
