@@ -127,9 +127,12 @@ end-to-end: Stammdaten, Berechtigungen, BF-Tag, Schicht/Besatzung, Geräte- und
 Monitor-Kopplung, Alarmierung (sofort, geplant, zeitgesteuert), Quittierung,
 Fahrzeugstatus, Durchsagen (Erstellen/Löschen inkl. WebSocket-Events
 `announcement.created`/`announcement.deleted` und 409 `bf_day_not_running` auf
-einem nicht laufenden BF-Tag), WebSocket-Events sowie den Web-UI-Login und alle
-Admin-Seiten im Browser (Chrome headless). Räumt per `trap … EXIT` immer mit
-`down -v --remove-orphans` ab.
+einem nicht laufenden BF-Tag), Tagesablauf (Programmpunkt anlegen/auflisten/
+ändern/löschen, 400 `validation_error` bei `ends_at <= starts_at`, 403 für
+nicht-dispatch/admin-Personen, im Snapshot des laufenden BF-Tags enthalten),
+WebSocket-Events sowie den Web-UI-Login und alle Admin-Seiten im Browser
+(Chrome headless). Räumt per `trap … EXIT` immer mit `down -v --remove-orphans`
+ab.
 
 Umgebungsvariablen:
 

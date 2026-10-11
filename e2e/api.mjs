@@ -166,6 +166,58 @@ async function main() {
   const annListAfter = (await must('GET', `/bf-days/${day.id}/announcements`, { token: dispTok })).json;
   ok(!annListAfter.some((a) => a.id === ann.id), 'deleted announcement no longer in GET list', annListAfter);
 
+  // --- tagesablauf (ADR 0025)
+  const piStart = iso(10);
+  const piEnd = iso(40);
+  const piCreate = await must(
+    'POST',
+    `/bf-days/${day.id}/program-items`,
+    { token: dispTok, body: { title: `Essen ${tag}`, type: 'meal', starts_at: piStart, ends_at: piEnd } },
+    201
+  );
+  const pi = piCreate.json;
+  ok(!!pi?.id && pi.type === 'meal' && pi.bf_day_id === day.id, 'program item created', pi);
+  const piList = (await must('GET', `/bf-days/${day.id}/program-items`, { token: dispTok })).json;
+  ok(
+    Array.isArray(piList) &&
+      piList.some((p) => p.id === pi.id) &&
+      piList.every((p, i) => i === 0 || p.starts_at >= piList[i - 1].starts_at),
+    'GET program-items contains new one, sorted by starts_at',
+    piList
+  );
+  const piPatch = await must(
+    'PATCH',
+    `/program-items/${pi.id}`,
+    { token: dispTok, body: { title: `Essen ${tag} (geändert)` } },
+    200
+  );
+  ok(piPatch.json?.title === `Essen ${tag} (geändert)`, 'program item title patched', piPatch.json);
+  await expectErr(
+    'POST',
+    `/bf-days/${day.id}/program-items`,
+    { token: dispTok, body: { title: 'ungueltig', type: 'meal', starts_at: piEnd, ends_at: piStart } },
+    400,
+    'validation_error',
+    'program item ends_at <= starts_at rejected'
+  );
+  await expectErr(
+    'POST',
+    `/bf-days/${day.id}/program-items`,
+    { token: aTok2, body: { title: 'kein zugriff', type: 'meal', starts_at: piStart, ends_at: piEnd } },
+    403,
+    'forbidden',
+    'crew cannot create program items'
+  );
+  const snapDisp = (await must('GET', '/snapshot', { token: dispTok })).json;
+  ok(
+    Array.isArray(snapDisp.program_items) && snapDisp.program_items.some((p) => p.id === pi.id),
+    'snapshot contains program item (BF-Tag running)',
+    snapDisp.program_items
+  );
+  await must('DELETE', `/program-items/${pi.id}`, { token: dispTok }, 204);
+  const piListAfter = (await must('GET', `/bf-days/${day.id}/program-items`, { token: dispTok })).json;
+  ok(!piListAfter.some((p) => p.id === pi.id), 'deleted program item no longer in GET list', piListAfter);
+
   // scheduled follow-up alarm, then discard
   const planned = await must('POST', `/incidents/${inc.id}/alarms`, { token: dispTok, body: { vehicle_ids: [rtw.id], offset_minutes: 30 } }, 201);
   ok(planned.json?.alarm?.state === 'planned', 'relative alarm planned', planned.json);
