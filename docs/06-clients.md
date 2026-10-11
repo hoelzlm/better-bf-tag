@@ -16,7 +16,7 @@ Zielgerät: Laptop bzw. Desktop-Browser. Was sichtbar ist, hängt von der Berech
 | Schichten | Leitstelle | Schichten des BF-Tags, Besatzung per Drag & Drop (Person → Fahrzeug + Funktion), Warnung bei Doppelbesetzung | MVP |
 | Anstehende Einsätze | Einsatzvorbereitung | Countdown bis zur geplanten Alarmierung, Drehbuch, Button „Bereitmeldung“ | später |
 | Einsatzberichte | Leitstelle | eingereichte Berichte, Vergleich mit Drehbuch, freigeben/zurückgeben | später |
-| Durchsage | Leitstelle | Text an alle oder an eine Schicht | später |
+| Durchsage (`/admin/durchsagen`) | Leitstelle, Administrator | Formular: Text (max. 500 Zeichen, Zähler), Ziel „Alle“ oder Schicht des laufenden BF-Tags, „Senden“; Liste der Durchsagen des Tags (neueste zuerst, Uhrzeit, Ziel, Text), Löschen mit Rückfrage; ohne laufenden BF-Tag Hinweis „Kein laufender BF-Tag“ und deaktiviertes Formular | MVP |
 | Tagesablauf | Leitstelle | Programmpunkte | später |
 | BF-Tage | Administrator | anlegen, Zeitraum, Teilnahmen, Anonymisierung | MVP |
 | Personen | Administrator | Personentyp, Berechtigung, Feuerwehr, Geräte, QR-Codes drucken | MVP |
@@ -48,7 +48,11 @@ Bei einem **laufenden Einsatz**:
 Im **Standby**:
 - MVP: große Uhr, Fahrzeugstatus-Leiste, **aktuelle Schicht mit Besatzungen** (wer sitzt auf
   welchem Fahrzeug), rotierende Folien
-- später: aktueller bzw. nächster Programmpunkt, letzte Durchsage
+- MVP: Banner bei neuer Durchsage (`announcement.created`, 60 s, zeigt den Text; verschwindet
+  sofort bei Löschung), danach Panel „Letzte Durchsage“ mit der neuesten Durchsage des Tags
+  (Uhrzeit + Text) aus `snapshot.announcements`, leer wenn keine vorhanden; läuft ein Einsatz
+  (Einsatzansicht), hat diese immer Vorrang – Banner und Panel werden dann nicht angezeigt
+- später: aktueller bzw. nächster Programmpunkt
 
 Technik: Gong bzw. Alarmton bei `alarm.triggered` (der Browser verlangt einmal „Zum Aktivieren
 tippen“), Screen Wake Lock, rotes Banner bei Verbindungsverlust, Rotation bei mehreren laufenden

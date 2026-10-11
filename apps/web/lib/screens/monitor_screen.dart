@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../monitor/alarm_sound.dart';
+import '../monitor/announcement_banner.dart';
 import '../monitor/monitor_platform.dart';
 import '../monitor/monitor_session.dart';
 import 'monitor_incident_screen.dart';
@@ -33,6 +34,8 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
   bool _activated = false;
   Timer? _rotationTimer;
   String? _shownIncidentId;
+  Announcement? _bannerAnnouncement;
+  Timer? _bannerTimer;
 
   @override
   void initState() {
@@ -47,6 +50,7 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _rotationTimer?.cancel();
+    _bannerTimer?.cancel();
     super.dispose();
   }
 
@@ -136,11 +140,49 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
     final alarms = ref.watch(alarmsProvider).valueOrNull ?? const <Alarm>[];
     final candidates = _incidentsWithAlarms(incidents, alarms);
 
+    // A live `announcement.created` (never snapshot content, ADR 0024)
+    // starts/replaces the standby banner timer -- but only while the
+    // Einsatzansicht has no candidates to show: an Einsatz always has
+    // Vorrang, and a Durchsage received while one is running is never
+    // caught up on later.
+    ref.listen(announcementCreatedProvider, (previous, next) {
+      final announcement = next.valueOrNull;
+      if (announcement == null) return;
+      if (candidates.isNotEmpty) return;
+      _bannerTimer?.cancel();
+      setState(() => _bannerAnnouncement = announcement);
+      _bannerTimer = Timer(announcementBannerDuration, () {
+        if (!mounted) return;
+        setState(() => _bannerAnnouncement = null);
+      });
+    });
+
+    // A deleted Durchsage (ADR 0024) hides the banner immediately, even
+    // mid-timer, if it's the one currently shown.
+    ref.listen(announcementsProvider, (previous, next) {
+      final list = next.valueOrNull;
+      final current = _bannerAnnouncement;
+      if (list == null || current == null) return;
+      if (!list.any((a) => a.id == current.id)) {
+        _bannerTimer?.cancel();
+        _bannerTimer = null;
+        setState(() => _bannerAnnouncement = null);
+      }
+    });
+
     if (candidates.isEmpty) {
       _shownIncidentId = null;
       _rotationTimer?.cancel();
       _rotationTimer = null;
-      return const MonitorStandbyScreen();
+      return MonitorStandbyScreen(liveBanner: _bannerAnnouncement);
+    }
+
+    // The Einsatzansicht has Vorrang: drop any pending banner state so it
+    // doesn't reappear once the Einsatz ends.
+    if (_bannerAnnouncement != null || _bannerTimer != null) {
+      _bannerTimer?.cancel();
+      _bannerTimer = null;
+      _bannerAnnouncement = null;
     }
 
     final stillValid = candidates.any((i) => i.id == _shownIncidentId);

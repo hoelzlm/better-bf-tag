@@ -342,6 +342,23 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
   );
 }
 
+/// Mirrors `_announcementFromApi` in `providers.dart` (ADR 0024): wires
+/// the monitor's own snapshot loader to the same wire shape as the admin
+/// one, so the monitor's "Letzte Durchsage" panel and banner get
+/// `snapshot.announcements` too.
+Announcement _announcementFromApi(
+  GetSnapshot200ResponseAnnouncementsInner a,
+) {
+  return Announcement(
+    id: a.id,
+    bfDayId: a.bfDayId,
+    shiftId: a.shiftId,
+    text: a.text,
+    createdBy: a.createdBy,
+    createdAt: DateTime.parse(a.createdAt),
+  );
+}
+
 /// The [WebSocketConnector] used by the monitor's [RealtimeClient].
 /// Production uses the real [connectWebSocket]; tests override this with a
 /// fake connector instead of hitting the network.
@@ -376,6 +393,7 @@ RealtimeClient? _buildMonitorRealtimeClient(Ref ref) {
         currentShiftId: data.currentShiftId,
         incidents: data.incidents.map(_incidentFromApi).toList(),
         alarms: data.alarms.map(_alarmFromApi).toList(),
+        announcements: data.announcements.map(_announcementFromApi).toList(),
       );
     },
     accessToken: () async {
@@ -462,6 +480,22 @@ Stream<Alarm> _buildMonitorLiveAlarmTriggered(Ref ref) {
   return client.liveAlarmTriggered;
 }
 
+Stream<List<Announcement>> _buildMonitorAnnouncements(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <Announcement>[]);
+  }
+  return client.states.map((state) => state.announcements);
+}
+
+Stream<Announcement> _buildMonitorAnnouncementCreated(Ref ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return const Stream<Announcement>.empty();
+  }
+  return client.liveAnnouncementCreated;
+}
+
 /// The provider overrides that wire the `/monitor` `ProviderScope` to its
 /// own session, own `Dio`/`RealtimeClient`, and keep the admin web session
 /// out of the picture entirely -- so `VehicleStatusBar`
@@ -508,5 +542,7 @@ List<Override> monitorProviderOverrides({
     incidentsProvider.overrideWith(_buildMonitorIncidents),
     alarmsProvider.overrideWith(_buildMonitorAlarms),
     liveAlarmTriggeredProvider.overrideWith(_buildMonitorLiveAlarmTriggered),
+    announcementsProvider.overrideWith(_buildMonitorAnnouncements),
+    announcementCreatedProvider.overrideWith(_buildMonitorAnnouncementCreated),
   ];
 }
