@@ -67,7 +67,8 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
 | Einsatzdetail | Meldebild, Alarmierungen, Quittierungen; Drehbuch nur bei Berechtigung | MVP |
 | Einsatzbericht | für die Funktion GF nach Status 1/2: Lage, Maßnahmen, Vorkommnisse; Zeiten automatisch | später |
 | Vorwarnung / Bereitmeldung | für Einsatzvorbereitung | später |
-| Tagesablauf, Durchsagen | | später |
+| Durchsagen (`/durchsagen`) | Liste aus `snapshot.announcements`, neueste zuerst; dritter Eintrag der Navigationsleiste | MVP |
+| Tagesablauf | | später |
 | Einstellungen | Gerät abmelden, Testalarm, Hinweise zu Akku und Ton | MVP |
 
 ### Technik
@@ -76,6 +77,20 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
 - `flutter_local_notifications` für Channel-Setup und Anzeige im Vordergrund
 - `flutter_secure_storage` für Tokens, `mobile_scanner` für den QR-Code
 - Deep Link aus der Notification auf den Alarm-Screen
+
+### Durchsagen (ADR 0024)
+
+- Android-Notification-Channel `announcement` ("Durchsagen"), `IMPORTANCE_DEFAULT`, Standard-Ton,
+  **kein** `setBypassDnd` -- angelegt in `MainActivity.kt` neben dem bestehenden `alarm`-Channel.
+- App im Vordergrund: ein live empfangenes `announcement.created` (nie aus dem Snapshot, siehe
+  `pairedAnnouncementCreatedProvider`) zeigt eine SnackBar "Durchsage: …" mit Aktion "Anzeigen",
+  die zu `/durchsagen` navigiert. Der Listener (`AnnouncementSnackbarListener`) sitzt app-weit neben
+  `AlarmNavigationListener`.
+- Tippen auf eine Durchsage-Push-Benachrichtigung öffnet `/durchsagen`, sowohl bei laufender App
+  (`PushService.onAnnouncementOpened`) als auch beim Kaltstart aus der Benachrichtigung (FCM
+  `getInitialMessage`). Auf iOS ist dieser Stream vorerst ein No-op (TODO, natives APNs-Channel-
+  Wiring fehlt noch). Alarm- und Durchsage-Pushes schließen sich gegenseitig aus:
+  `PushService.onAlarmOpened` ignoriert `type: 'announcement.created'`.
 
 ## Gemeinsamer Code (`packages/core`)
 

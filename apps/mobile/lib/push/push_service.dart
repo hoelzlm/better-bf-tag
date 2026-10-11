@@ -33,6 +33,15 @@ abstract class PushService {
   /// callers only use this to show a "Testalarm empfangen" notice and
   /// (on Android) play the alarm sound once.
   Stream<void> get onTestAlarmReceived;
+
+  /// Emits whenever the user taps an `announcement.created` push (ADR
+  /// 0024), both while the app was already running and when it was
+  /// cold-started by the tap -- unlike [onAlarmOpened]/[initialAlarmId],
+  /// which are split into a stream and a one-shot future, this single
+  /// stream covers both cases. Callers navigate to `/durchsagen`. Must
+  /// never fire for an Alarmierung push, and [onAlarmOpened] must never
+  /// fire for a Durchsage push.
+  Stream<void> get onAnnouncementOpened;
 }
 
 /// No-op [PushService] for platforms/builds without push credentials
@@ -58,6 +67,9 @@ class NoopPushService implements PushService {
 
   @override
   Stream<void> get onTestAlarmReceived => const Stream<void>.empty();
+
+  @override
+  Stream<void> get onAnnouncementOpened => const Stream<void>.empty();
 }
 
 const _fcmApiKey = String.fromEnvironment('FCM_API_KEY');

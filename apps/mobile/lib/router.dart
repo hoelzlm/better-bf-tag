@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'onboarding/onboarding_store.dart';
 import 'screens/alarm_screen.dart';
+import 'screens/announcements_screen.dart';
 import 'screens/incident_detail_screen.dart';
 import 'screens/incidents_screen.dart';
 import 'screens/my_vehicle_screen.dart';
@@ -128,6 +129,11 @@ final mobileGoRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => _SessionGate(
           child: IncidentDetailScreen(incidentId: state.pathParameters['id']!),
         ),
+      ),
+      GoRoute(
+        path: '/durchsagen',
+        builder: (context, state) =>
+            const _SessionGate(child: AnnouncementsScreen()),
       ),
       GoRoute(
         path: '/alarm/:alarmId',

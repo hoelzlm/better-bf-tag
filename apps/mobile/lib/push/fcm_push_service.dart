@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -47,8 +49,13 @@ class FcmPushService implements PushService {
     return message?.data['alarm_id'] as String?;
   }
 
+  // Excludes Durchsage pushes (ADR 0024) explicitly, on top of the
+  // implicit exclusion from the `alarm_id`/`where` filter below -- a
+  // Durchsage payload never carries `alarm_id`, but this keeps the
+  // split between the two push kinds obvious at the call site.
   @override
   Stream<String> get onAlarmOpened => FirebaseMessaging.onMessageOpenedApp
+      .where((message) => message.data['type'] != 'announcement.created')
       .map((message) => message.data['alarm_id'] as String?)
       .where((alarmId) => alarmId != null)
       .cast<String>();
@@ -60,4 +67,27 @@ class FcmPushService implements PushService {
   Stream<void> get onTestAlarmReceived => FirebaseMessaging.onMessage
       .where((message) => message.data['type'] == 'test_alarm')
       .map((_) {});
+
+  // Covers both cases in one stream (ADR 0024, "Clients"): a tap while
+  // the app is already running (`onMessageOpenedApp`) and a cold start
+  // from the tap (`getInitialMessage`, checked once when this getter is
+  // first read). `onAlarmOpened` above excludes `type ==
+  // 'announcement.created'`, so the two streams never both fire for the
+  // same push.
+  @override
+  Stream<void> get onAnnouncementOpened {
+    final controller = StreamController<void>.broadcast();
+    unawaited(
+      FirebaseMessaging.instance.getInitialMessage().then((message) {
+        if (message?.data['type'] == 'announcement.created') {
+          controller.add(null);
+        }
+      }),
+    );
+    final subscription = FirebaseMessaging.onMessageOpenedApp
+        .where((message) => message.data['type'] == 'announcement.created')
+        .listen((_) => controller.add(null));
+    controller.onCancel = subscription.cancel;
+    return controller.stream;
+  }
 }

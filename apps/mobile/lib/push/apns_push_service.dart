@@ -63,4 +63,12 @@ class ApnsPushService implements PushService {
     _ensureHandler();
     return _testAlarmReceivedController.stream;
   }
+
+  // TODO(ADR 0024): wire a real `onAnnouncementOpened` once the native
+  // `de.bftag/push` side (AppDelegate.swift) forwards an
+  // `announcementOpened` call like it already does for `onAlarmOpened`
+  // -- out of scope for this change (apps/mobile Dart-only), so Durchsage
+  // push-tap navigation is inert on iOS until that native wiring lands.
+  @override
+  Stream<void> get onAnnouncementOpened => const Stream<void>.empty();
 }
