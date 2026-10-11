@@ -10,6 +10,7 @@ import 'package:bftag_api_client/src/model/get_snapshot200_response_scheduled_al
 import 'package:bftag_api_client/src/model/list_vehicles200_response_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_announcements_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_slides_inner.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_program_items_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_shifts_inner.dart';
 import 'package:built_value/built_value.dart';
@@ -31,6 +32,7 @@ part 'get_snapshot200_response.g.dart';
 /// * [closeSuggestedIncidentIds] 
 /// * [scheduledAlarms] 
 /// * [announcements] 
+/// * [programItems] 
 @BuiltValue()
 abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, GetSnapshot200ResponseBuilder> {
   @BuiltValueField(wireName: r'seq')
@@ -65,6 +67,9 @@ abstract class GetSnapshot200Response implements Built<GetSnapshot200Response, G
 
   @BuiltValueField(wireName: r'announcements')
   BuiltList<GetSnapshot200ResponseAnnouncementsInner> get announcements;
+
+  @BuiltValueField(wireName: r'program_items')
+  BuiltList<GetSnapshot200ResponseProgramItemsInner> get programItems;
 
   GetSnapshot200Response._();
 
@@ -143,6 +148,11 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
     yield serializers.serialize(
       object.announcements,
       specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAnnouncementsInner)]),
+    );
+    yield r'program_items';
+    yield serializers.serialize(
+      object.programItems,
+      specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseProgramItemsInner)]),
     );
   }
 
@@ -245,6 +255,13 @@ class _$GetSnapshot200ResponseSerializer implements PrimitiveSerializer<GetSnaps
             specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseAnnouncementsInner)]),
           ) as BuiltList<GetSnapshot200ResponseAnnouncementsInner>;
           result.announcements.replace(valueDes);
+          break;
+        case r'program_items':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(GetSnapshot200ResponseProgramItemsInner)]),
+          ) as BuiltList<GetSnapshot200ResponseProgramItemsInner>;
+          result.programItems.replace(valueDes);
           break;
         default:
           unhandled.add(key);

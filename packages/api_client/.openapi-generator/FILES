@@ -11,6 +11,7 @@ lib/src/api/health_api.dart
 lib/src/api/incidents_api.dart
 lib/src/api/monitors_api.dart
 lib/src/api/persons_api.dart
+lib/src/api/program_items_api.dart
 lib/src/api/shifts_api.dart
 lib/src/api/slides_api.dart
 lib/src/api/snapshot_api.dart
@@ -37,6 +38,7 @@ lib/src/model/create_pairing_code201_response.dart
 lib/src/model/create_pairing_codes201_response.dart
 lib/src/model/create_pairing_codes_request.dart
 lib/src/model/create_person_request.dart
+lib/src/model/create_program_item_request.dart
 lib/src/model/create_slide_request.dart
 lib/src/model/create_vehicle_request.dart
 lib/src/model/date.dart
@@ -53,6 +55,7 @@ lib/src/model/get_snapshot200_response_alarms_inner_recipients_inner.dart
 lib/src/model/get_snapshot200_response_announcements_inner.dart
 lib/src/model/get_snapshot200_response_bf_day.dart
 lib/src/model/get_snapshot200_response_incidents_inner.dart
+lib/src/model/get_snapshot200_response_program_items_inner.dart
 lib/src/model/get_snapshot200_response_scheduled_alarms_inner.dart
 lib/src/model/get_snapshot200_response_shifts_inner.dart
 lib/src/model/get_snapshot200_response_shifts_inner_crew_inner.dart
@@ -90,6 +93,7 @@ lib/src/model/update_alarm_request.dart
 lib/src/model/update_bf_day_request.dart
 lib/src/model/update_incident_request.dart
 lib/src/model/update_person_request.dart
+lib/src/model/update_program_item_request.dart
 lib/src/model/update_push_token_request.dart
 lib/src/model/update_slide_request.dart
 lib/src/model/update_vehicle_request.dart

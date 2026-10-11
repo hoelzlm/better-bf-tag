@@ -43,6 +43,7 @@ Das JWT enthält `sub` (Person- oder Monitor-ID); bei Personen zusätzlich `perm
 | Einsatzbericht prüfen (später) | | | ✓ | ✓ |
 | Anonymisierung auslösen | | | ✓ | ✓ |
 | Durchsagen anlegen/löschen ([ADR 0024](adr/0024-durchsage.md)) | | | ✓ | ✓ |
+| Programmpunkte anlegen/bearbeiten/löschen ([ADR 0025](adr/0025-tagesablauf.md)) | | | ✓ | ✓ |
 | Personen, Fahrzeuge, Feuerwehren, Monitore, BF-Tage, Folien verwalten | | | | ✓ |
 
 Die Spalten sind getrennte Rechte und keine Hierarchie, nur der Administrator darf alles.
@@ -97,6 +98,26 @@ Schicht zum jetzigen Zeitpunkt, sowie Einsatzvorbereitung/Leitstelle/Admin/Monit
 `announcement.deleted` mit demselben Publikum wie die ursprüngliche `announcement.created` aus,
 bevor die Zeile gelöscht wird. Löschen einer Schicht löscht ihre Durchsagen mit (`on delete
 cascade`) und löst für jede zuvor `announcement.deleted` aus.
+
+#### Tagesablauf, Programmpunkte ([ADR 0025](adr/0025-tagesablauf.md))
+
+| Methode | Pfad | Berechtigung |
+|---------|------|--------------|
+| GET | `/bf-days/{day}/program-items` | alle |
+| POST | `/bf-days/{day}/program-items` | Leitstelle, Admin |
+| PATCH | `/program-items/{id}` | Leitstelle, Admin |
+| DELETE | `/program-items/{id}` | Leitstelle, Admin |
+
+`POST`/`PATCH` Body `{ title: string (1–80), type: 'meal'|'training'|'maintenance'|'rest'|'other',
+starts_at, ends_at }` (bei `PATCH` alle Felder optional, Merge mit dem bestehenden Programmpunkt).
+`ends_at` muss nach `starts_at` liegen und beide müssen vollständig im Zeitraum des BF-Tags liegen,
+sonst 400 `validation_error`. Erlaubt während `planning` und `running`, sonst (BF-Tag `ended`) 409
+`bf_day_ended` für POST/PATCH/DELETE. `GET` liefert alle Programmpunkte des BF-Tags sortiert nach
+`starts_at`, `ends_at`, `id` (auch für Monitore). Jede Änderung löst `program.changed` mit der
+vollständigen sortierten Liste aus (kein `.created`/`.updated`/`.deleted`, analog zu den Folien).
+Verschiebt ein `PATCH /bf-days/{id}` den Zeitraum des BF-Tags so, dass ein Programmpunkt nicht mehr
+vollständig darin liegt, antwortet die Route mit 409 `program_item_outside_bf_day`, ohne etwas zu
+ändern (Programmpunkte werden dabei nicht automatisch verschoben, anders als Schichten).
 
 ### Fahrzeugstatus
 
@@ -274,7 +295,6 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | GET/PUT | `/incidents/{id}/reports/{vehicle_id}` | Einsatzbericht (GF der Besatzung) |
 | POST | `/incidents/{id}/reports/{vehicle_id}/approve` bzw. `/return` | Prüfung |
 | POST | `/vehicles/{id}/talk-request` | Sprechaufforderung |
-| GET/POST/PATCH/DELETE | `/bf-days/{day}/program-items[/{id}]` | Tagesablauf |
 
 ### Eigenes Gerät und Snapshot
 
@@ -283,7 +303,7 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | GET | `/me` | Person, `crew_assignments` (aktuelle Besatzungen: `{ shift_id, vehicle_id, function }`, immer vorhanden, ggf. leer) |
 | PUT | `/me/device/push-token` | Push-Token aktualisieren ([ADR 0018](adr/0018-push-alarm-zustellung.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ token: string (1–4096) }` → 204. Setzt `device.push_token` des eigenen Geräts; trägt ein anderes Gerät dasselbe Token, wird es dort auf `null` gesetzt |
 | POST | `/me/device/test-alarm` | Testalarm auslösen ([ADR 0021](adr/0021-onboarding-testalarm.md)): nur Geräte-Sitzungen (sonst 403 `forbidden`). Body `{ delay_seconds?: integer 0–30 }`. Ohne Push-Token → 409 `no_push_token`. Läuft bereits ein Timer oder war der letzte Versand vor < 10 s → 429 `test_alarm_cooldown`. `delay_seconds` 0 (Default): sendet sofort, 200 `{ outcome: "delivered" \| "rejected" \| "invalid_token" }`. `delay_seconds` > 0: 202 `{ scheduled: true }`, Versand erfolgt verzögert auf demselben Gerät; weder Einsatz/Alarm/Event noch `seq`-Änderung |
-| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `announcements` (die letzten 20 für den Aufrufer sichtbaren Durchsagen des laufenden BF-Tags, neueste zuerst, [ADR 0024](adr/0024-durchsage.md); `[]` ohne laufenden BF-Tag), `seq` |
+| GET | `/snapshot` | laufender BF-Tag, aktive Einsätze (`incidents`, Zustand `running`, sortiert nach `number`, Drehbuch nur mit Berechtigung, ohne `alarms`), `alarms` (alle `triggered` Alarmierungen der `running` Einsätze des laufenden BF-Tags, sortiert nach `triggered_at`; `[]` ohne laufenden BF-Tag), `close_suggested_incident_ids` ([ADR 0019](adr/0019-nachalarmierung-abschluss.md) „Abschlussvorschlag“: IDs der abschlussreifen `running` Einsätze, nur für Leitstelle/Admin berechnet, sonst immer `[]`), Fahrzeuge mit Status, aktuelle Schicht mit Besatzungen, Folien, `announcements` (die letzten 20 für den Aufrufer sichtbaren Durchsagen des laufenden BF-Tags, neueste zuerst, [ADR 0024](adr/0024-durchsage.md); `[]` ohne laufenden BF-Tag), `program_items` (alle Programmpunkte des laufenden BF-Tags, sortiert wie `GET /bf-days/{day}/program-items`, [ADR 0025](adr/0025-tagesablauf.md); `[]` ohne laufenden BF-Tag), `seq` |
 
 ## WebSocket `/ws`
 
@@ -322,6 +342,7 @@ aktiven Ansicht, Quittieren einer seiner Alarmierungen antwortet danach 409 `ala
 | `slides.changed` | `{ slides }` = alle aktiven Folien (ADR 0014) | alle |
 | `session.revoked` | – | betroffenes Gerät (kein `seq`, Verbindung wird danach mit Close-Code **4403** geschlossen) |
 | `announcement.created` / `announcement.deleted` ([ADR 0024](adr/0024-durchsage.md)) | `Announcement` bzw. `{ id }` | Broadcast (`shift_id = null`): alle; Schicht-Durchsage: Besatzung dieser Schicht zum jetzigen Zeitpunkt, sowie Einsatzvorbereitung, Leitstelle, Admin, Monitor |
+| `program.changed` ([ADR 0025](adr/0025-tagesablauf.md)) | `{ bf_day_id, items }` = alle Programmpunkte dieses BF-Tags, sortiert wie `GET /bf-days/{day}/program-items` | alle |
 | später: `incident.ready`, `vehicle.talk_request`, `report.submitted` | | |
 
 ## Fehlerformat

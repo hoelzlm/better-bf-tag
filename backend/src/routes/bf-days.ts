@@ -1,7 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import { bfDay, participation, shift, crewAssignment, person } from '../db/schema.js';
+import { bfDay, participation, shift, crewAssignment, person, programItem } from '../db/schema.js';
 import { requireAuth, requirePermission } from '../access/authenticate.js';
 import { errorResponseSchema } from '../access/schemas.js';
 import {
@@ -265,6 +265,26 @@ export const bfDayRoutes: FastifyPluginAsyncZod = async fastify => {
               .update(shift)
               .set({ startsAt: update.startsAt, endsAt: update.endsAt })
               .where(eq(shift.id, update.id));
+          }
+
+          // Programmpunkte werden nicht verschoben (ADR 0025): liegt einer
+          // danach nicht mehr vollständig im neuen Zeitraum -> 409
+          // program_item_outside_bf_day, nothing is changed.
+          const programItems = await tx
+            .select()
+            .from(programItem)
+            .where(eq(programItem.bfDayId, existing.id));
+          for (const row of programItems) {
+            const fitsInPeriod =
+              row.startsAt.getTime() >= nextStartsAt.getTime() &&
+              row.endsAt.getTime() <= nextEndsAt.getTime();
+            if (!fitsInPeriod) {
+              throw new ApiError(
+                409,
+                'program_item_outside_bf_day',
+                'Programmpunkt liegt nicht mehr vollständig im Zeitraum des BF-Tags.'
+              );
+            }
           }
         }
 

@@ -117,6 +117,10 @@ Class | Method | HTTP request | Description
 [*PersonsApi*](doc/PersonsApi.md) | [**removeWebAccess**](doc/PersonsApi.md#removewebaccess) | **DELETE** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**setWebAccess**](doc/PersonsApi.md#setwebaccess) | **PUT** /api/v1/persons/{id}/web-access | 
 [*PersonsApi*](doc/PersonsApi.md) | [**updatePerson**](doc/PersonsApi.md#updateperson) | **PATCH** /api/v1/persons/{id} | 
+[*ProgramItemsApi*](doc/ProgramItemsApi.md) | [**createProgramItem**](doc/ProgramItemsApi.md#createprogramitem) | **POST** /api/v1/bf-days/{day}/program-items | 
+[*ProgramItemsApi*](doc/ProgramItemsApi.md) | [**deleteProgramItem**](doc/ProgramItemsApi.md#deleteprogramitem) | **DELETE** /api/v1/program-items/{id} | 
+[*ProgramItemsApi*](doc/ProgramItemsApi.md) | [**listProgramItems**](doc/ProgramItemsApi.md#listprogramitems) | **GET** /api/v1/bf-days/{day}/program-items | 
+[*ProgramItemsApi*](doc/ProgramItemsApi.md) | [**updateProgramItem**](doc/ProgramItemsApi.md#updateprogramitem) | **PATCH** /api/v1/program-items/{id} | 
 [*ShiftsApi*](doc/ShiftsApi.md) | [**createShift**](doc/ShiftsApi.md#createshift) | **POST** /api/v1/bf-days/{day}/shifts | 
 [*ShiftsApi*](doc/ShiftsApi.md) | [**deleteShift**](doc/ShiftsApi.md#deleteshift) | **DELETE** /api/v1/bf-days/{day}/shifts/{id} | 
 [*ShiftsApi*](doc/ShiftsApi.md) | [**listShifts**](doc/ShiftsApi.md#listshifts) | **GET** /api/v1/bf-days/{day}/shifts | 
@@ -156,6 +160,7 @@ Class | Method | HTTP request | Description
  - [CreatePairingCodes201Response](doc/CreatePairingCodes201Response.md)
  - [CreatePairingCodesRequest](doc/CreatePairingCodesRequest.md)
  - [CreatePersonRequest](doc/CreatePersonRequest.md)
+ - [CreateProgramItemRequest](doc/CreateProgramItemRequest.md)
  - [CreateSlideRequest](doc/CreateSlideRequest.md)
  - [CreateVehicleRequest](doc/CreateVehicleRequest.md)
  - [DeviceRefreshRequest](doc/DeviceRefreshRequest.md)
@@ -171,6 +176,7 @@ Class | Method | HTTP request | Description
  - [GetSnapshot200ResponseAnnouncementsInner](doc/GetSnapshot200ResponseAnnouncementsInner.md)
  - [GetSnapshot200ResponseBfDay](doc/GetSnapshot200ResponseBfDay.md)
  - [GetSnapshot200ResponseIncidentsInner](doc/GetSnapshot200ResponseIncidentsInner.md)
+ - [GetSnapshot200ResponseProgramItemsInner](doc/GetSnapshot200ResponseProgramItemsInner.md)
  - [GetSnapshot200ResponseScheduledAlarmsInner](doc/GetSnapshot200ResponseScheduledAlarmsInner.md)
  - [GetSnapshot200ResponseShiftsInner](doc/GetSnapshot200ResponseShiftsInner.md)
  - [GetSnapshot200ResponseShiftsInnerCrewInner](doc/GetSnapshot200ResponseShiftsInnerCrewInner.md)
@@ -208,6 +214,7 @@ Class | Method | HTTP request | Description
  - [UpdateBfDayRequest](doc/UpdateBfDayRequest.md)
  - [UpdateIncidentRequest](doc/UpdateIncidentRequest.md)
  - [UpdatePersonRequest](doc/UpdatePersonRequest.md)
+ - [UpdateProgramItemRequest](doc/UpdateProgramItemRequest.md)
  - [UpdatePushTokenRequest](doc/UpdatePushTokenRequest.md)
  - [UpdateSlideRequest](doc/UpdateSlideRequest.md)
  - [UpdateVehicleRequest](doc/UpdateVehicleRequest.md)
