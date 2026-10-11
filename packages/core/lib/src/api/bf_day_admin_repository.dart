@@ -128,8 +128,8 @@ class ApiBfDayAdminRepository implements BfDayAdminRepository {
       createBfDayRequest: CreateBfDayRequest(
         (b) => b
           ..name = name
-          ..startsAt = startsAt
-          ..endsAt = endsAt,
+          ..startsAt = startsAt.toUtc()
+          ..endsAt = endsAt.toUtc(),
       ),
     );
     final data = response.data;
@@ -151,8 +151,8 @@ class ApiBfDayAdminRepository implements BfDayAdminRepository {
       updateBfDayRequest: UpdateBfDayRequest(
         (b) => b
           ..name = name
-          ..startsAt = startsAt
-          ..endsAt = endsAt,
+          ..startsAt = startsAt?.toUtc()
+          ..endsAt = endsAt?.toUtc(),
       ),
     );
     final data = response.data;
