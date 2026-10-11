@@ -13,6 +13,7 @@ import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
 import '../domain/my_crew.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -155,6 +156,19 @@ Announcement _announcementFromApi(
   );
 }
 
+ProgramItem _programItemFromApi(
+  GetSnapshot200ResponseProgramItemsInner p,
+) {
+  return ProgramItem(
+    id: p.id,
+    bfDayId: p.bfDayId,
+    title: p.title,
+    type: ProgramItemType.fromWire(p.type.name),
+    startsAt: DateTime.parse(p.startsAt),
+    endsAt: DateTime.parse(p.endsAt),
+  );
+}
+
 Snapshot _snapshotFromApi(GetSnapshot200Response data) {
   return Snapshot(
     seq: data.seq,
@@ -168,6 +182,7 @@ Snapshot _snapshotFromApi(GetSnapshot200Response data) {
     closeSuggestedIncidentIds: data.closeSuggestedIncidentIds.toSet(),
     scheduledAlarms: data.scheduledAlarms.map(_scheduledAlarmFromApi).toList(),
     announcements: data.announcements.map(_announcementFromApi).toList(),
+    programItems: data.programItems.map(_programItemFromApi).toList(),
   );
 }
 
@@ -368,6 +383,17 @@ final announcementCreatedProvider = StreamProvider<Announcement>((ref) {
     return const Stream<Announcement>.empty();
   }
   return client.liveAnnouncementCreated;
+});
+
+/// Die sortierten Programmpunkte des laufenden BF-Tags (ADR 0025) -- empty
+/// while signed out, before the first snapshot has loaded, or when no
+/// BF-Tag is running.
+final programItemsProvider = StreamProvider<List<ProgramItem>>((ref) {
+  final client = ref.watch(realtimeClientProvider);
+  if (client == null) {
+    return Stream.value(const <ProgramItem>[]);
+  }
+  return client.states.map((state) => state.programItems);
 });
 
 /// The [RealtimeClient] for the current paired device session (mobile app,
