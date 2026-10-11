@@ -70,6 +70,9 @@ Class | Method | HTTP request | Description
 [*AlarmsApi*](doc/AlarmsApi.md) | [**discardAlarm**](doc/AlarmsApi.md#discardalarm) | **POST** /api/v1/alarms/{id}/discard | 
 [*AlarmsApi*](doc/AlarmsApi.md) | [**triggerAlarm**](doc/AlarmsApi.md#triggeralarm) | **POST** /api/v1/alarms/{id}/trigger | 
 [*AlarmsApi*](doc/AlarmsApi.md) | [**updateAlarm**](doc/AlarmsApi.md#updatealarm) | **PATCH** /api/v1/alarms/{id} | 
+[*AnnouncementsApi*](doc/AnnouncementsApi.md) | [**createAnnouncement**](doc/AnnouncementsApi.md#createannouncement) | **POST** /api/v1/bf-days/{day}/announcements | 
+[*AnnouncementsApi*](doc/AnnouncementsApi.md) | [**deleteAnnouncement**](doc/AnnouncementsApi.md#deleteannouncement) | **DELETE** /api/v1/announcements/{id} | 
+[*AnnouncementsApi*](doc/AnnouncementsApi.md) | [**listAnnouncements**](doc/AnnouncementsApi.md#listannouncements) | **GET** /api/v1/bf-days/{day}/announcements | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceLogout**](doc/AuthApi.md#devicelogout) | **POST** /api/v1/auth/device/logout | 
 [*AuthApi*](doc/AuthApi.md) | [**deviceRefresh**](doc/AuthApi.md#devicerefresh) | **POST** /api/v1/auth/device/refresh | 
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /api/v1/me | 
@@ -144,6 +147,7 @@ Class | Method | HTTP request | Description
  - [CreateAlarm200Response](doc/CreateAlarm200Response.md)
  - [CreateAlarm200ResponseDoubleCrewedInner](doc/CreateAlarm200ResponseDoubleCrewedInner.md)
  - [CreateAlarmRequest](doc/CreateAlarmRequest.md)
+ - [CreateAnnouncementRequest](doc/CreateAnnouncementRequest.md)
  - [CreateBfDayRequest](doc/CreateBfDayRequest.md)
  - [CreateIncidentRequest](doc/CreateIncidentRequest.md)
  - [CreateMonitorPairingCode201Response](doc/CreateMonitorPairingCode201Response.md)
@@ -164,6 +168,7 @@ Class | Method | HTTP request | Description
  - [GetSnapshot200Response](doc/GetSnapshot200Response.md)
  - [GetSnapshot200ResponseAlarmsInner](doc/GetSnapshot200ResponseAlarmsInner.md)
  - [GetSnapshot200ResponseAlarmsInnerRecipientsInner](doc/GetSnapshot200ResponseAlarmsInnerRecipientsInner.md)
+ - [GetSnapshot200ResponseAnnouncementsInner](doc/GetSnapshot200ResponseAnnouncementsInner.md)
  - [GetSnapshot200ResponseBfDay](doc/GetSnapshot200ResponseBfDay.md)
  - [GetSnapshot200ResponseIncidentsInner](doc/GetSnapshot200ResponseIncidentsInner.md)
  - [GetSnapshot200ResponseScheduledAlarmsInner](doc/GetSnapshot200ResponseScheduledAlarmsInner.md)

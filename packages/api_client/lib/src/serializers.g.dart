@@ -14,6 +14,7 @@ Serializers _$serializers =
           ..add(CreateAlarm200Response.serializer)
           ..add(CreateAlarm200ResponseDoubleCrewedInner.serializer)
           ..add(CreateAlarmRequest.serializer)
+          ..add(CreateAnnouncementRequest.serializer)
           ..add(CreateBfDayRequest.serializer)
           ..add(CreateIncidentRequest.serializer)
           ..add(CreateMonitorPairingCode201Response.serializer)
@@ -42,6 +43,7 @@ Serializers _$serializers =
           ..add(GetSnapshot200ResponseAlarmsInner.serializer)
           ..add(GetSnapshot200ResponseAlarmsInnerRecipientsInner.serializer)
           ..add(GetSnapshot200ResponseAlarmsInnerStateEnum.serializer)
+          ..add(GetSnapshot200ResponseAnnouncementsInner.serializer)
           ..add(GetSnapshot200ResponseBfDay.serializer)
           ..add(GetSnapshot200ResponseBfDayStateEnum.serializer)
           ..add(GetSnapshot200ResponseIncidentsInner.serializer)
@@ -168,6 +170,12 @@ Serializers _$serializers =
               const FullType(GetSnapshot200ResponseScheduledAlarmsInner),
             ]),
             () => ListBuilder<GetSnapshot200ResponseScheduledAlarmsInner>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [
+              const FullType(GetSnapshot200ResponseAnnouncementsInner),
+            ]),
+            () => ListBuilder<GetSnapshot200ResponseAnnouncementsInner>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

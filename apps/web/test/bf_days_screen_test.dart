@@ -165,6 +165,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
           alarmRecipients: 0,
           statusEvents: 0,
           personsDeleted: 0,
+          announcements: 0,
         );
   }
 
@@ -498,6 +499,7 @@ void main() {
         alarmRecipients: 5,
         statusEvents: 7,
         personsDeleted: 1,
+        announcements: 0,
       );
 
       await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));

@@ -2,8 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastif
 import type { WebSocket } from 'ws';
 import { verifyAccessToken } from '../access/tokens.js';
 import { resolvePrincipal } from '../access/authenticate.js';
-import type { Permission } from '../access/types.js';
-import type { RealtimeEvent, RealtimeSubscriber } from './realtime.js';
+import type { RealtimeEvent, RealtimeSubscriber, Viewer } from './realtime.js';
 
 /** Revokes matching live `/ws` connections (ADR 0010/0012 `session.revoked`). */
 export interface WsHub {
@@ -121,7 +120,7 @@ async function handleConnection(
   // `/ws` is an opt-in monitor route (ADR 0012): both Person and Monitor
   // tokens are accepted here, with the same DB re-check requireAuth does
   // on every HTTP request ("Prüfung bei jeder Anfrage").
-  let permission: Permission;
+  let viewer: Viewer;
   let personId: string | undefined;
   let deviceId: string | undefined;
   let monitorId: string | undefined;
@@ -131,14 +130,14 @@ async function handleConnection(
 
     if (principal.kind === 'monitor') {
       monitorId = principal.monitorId;
-      // Monitors see what Mannschaft sees (ADR 0012); reusing the
-      // permission-based audience filter below with 'crew' is exact as
-      // long as no event restricts audience below crew.
-      permission = 'crew';
+      // Monitors are an explicit Viewer kind (ADR 0024), not disguised as
+      // crew; `permission: 'crew'` keeps permission-based audiences exact
+      // as long as no event restricts audience below crew.
+      viewer = { kind: 'monitor', permission: 'crew' };
     } else {
       personId = principal.personId;
       deviceId = principal.deviceId;
-      permission = principal.permission;
+      viewer = { kind: 'person', personId: principal.personId, permission: principal.permission };
     }
   } catch {
     socket.close(4401, 'unauthorized');
@@ -154,19 +153,18 @@ async function handleConnection(
   });
 
   // Delivers every event to this connection in `seq` order. Events whose
-  // `audience` excludes this connection's permission become a `skip`
-  // message instead, so `seq` stays gap-free without leaking the event's
-  // data (ADR 0009). No route in this ticket sets `audience` — every event
-  // goes to everyone — so the skip path has no HTTP-level test; it is only
-  // exercised by code review here.
+  // `audience` excludes this connection's viewer become a `skip` message
+  // instead, so `seq` stays gap-free without leaking the event's data
+  // (ADR 0009, extended by ADR 0024 for person-specific Besatzung
+  // visibility).
   const subscriber: RealtimeSubscriber = {
     send(event: RealtimeEvent) {
       if (socket.readyState !== socket.OPEN) return;
-      if (event.audience && !event.audience(permission)) {
+      if (event.audience && !event.audience(viewer)) {
         socket.send(JSON.stringify({ seq: event.seq, type: 'skip' }));
         return;
       }
-      const data = event.project ? event.project(permission) : event.data;
+      const data = event.project ? event.project(viewer) : event.data;
       socket.send(JSON.stringify({ seq: event.seq, type: event.type, at: event.at, data }));
     },
   };

@@ -20,6 +20,7 @@ import 'package:bftag_api_client/src/model/close_incident200_response.dart';
 import 'package:bftag_api_client/src/model/create_alarm200_response.dart';
 import 'package:bftag_api_client/src/model/create_alarm200_response_double_crewed_inner.dart';
 import 'package:bftag_api_client/src/model/create_alarm_request.dart';
+import 'package:bftag_api_client/src/model/create_announcement_request.dart';
 import 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 import 'package:bftag_api_client/src/model/create_incident_request.dart';
 import 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
@@ -40,6 +41,7 @@ import 'package:bftag_api_client/src/model/get_me200_response_crew_assignments_i
 import 'package:bftag_api_client/src/model/get_snapshot200_response.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner_recipients_inner.dart';
+import 'package:bftag_api_client/src/model/get_snapshot200_response_announcements_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
 import 'package:bftag_api_client/src/model/get_snapshot200_response_scheduled_alarms_inner.dart';
@@ -92,6 +94,7 @@ part 'serializers.g.dart';
   CreateAlarm200Response,
   CreateAlarm200ResponseDoubleCrewedInner,
   CreateAlarmRequest,
+  CreateAnnouncementRequest,
   CreateBfDayRequest,
   CreateIncidentRequest,
   CreateMonitorPairingCode201Response,
@@ -112,6 +115,7 @@ part 'serializers.g.dart';
   GetSnapshot200Response,
   GetSnapshot200ResponseAlarmsInner,
   GetSnapshot200ResponseAlarmsInnerRecipientsInner,
+  GetSnapshot200ResponseAnnouncementsInner,
   GetSnapshot200ResponseBfDay,
   GetSnapshot200ResponseIncidentsInner,
   GetSnapshot200ResponseScheduledAlarmsInner,
@@ -183,6 +187,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListVehicles200ResponseInner)]),
         () => ListBuilder<ListVehicles200ResponseInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GetSnapshot200ResponseAnnouncementsInner)]),
+        () => ListBuilder<GetSnapshot200ResponseAnnouncementsInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GetSnapshot200ResponseShiftsInner)]),

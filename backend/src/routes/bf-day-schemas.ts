@@ -78,6 +78,7 @@ export const anonymizationSummaryJsonSchema = z.object({
   alarm_recipients: z.number().int().nonnegative(),
   status_events: z.number().int().nonnegative(),
   persons_deleted: z.number().int().nonnegative(),
+  announcements: z.number().int().nonnegative(),
 });
 
 export type AnonymizationSummaryJson = z.infer<typeof anonymizationSummaryJsonSchema>;
@@ -93,6 +94,7 @@ export function toAnonymizationSummaryJson(summary: {
   alarmRecipients: number;
   statusEvents: number;
   personsDeleted: number;
+  announcements: number;
 }): AnonymizationSummaryJson {
   return {
     participations: summary.participations,
@@ -100,5 +102,6 @@ export function toAnonymizationSummaryJson(summary: {
     alarm_recipients: summary.alarmRecipients,
     status_events: summary.statusEvents,
     persons_deleted: summary.personsDeleted,
+    announcements: summary.announcements,
   };
 }

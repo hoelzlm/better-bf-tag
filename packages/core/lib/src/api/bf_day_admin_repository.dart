@@ -30,6 +30,7 @@ AnonymizationSummary _anonymizationSummaryFromApi(
     alarmRecipients: s.alarmRecipients,
     statusEvents: s.statusEvents,
     personsDeleted: s.personsDeleted,
+    announcements: s.announcements,
   );
 }
 

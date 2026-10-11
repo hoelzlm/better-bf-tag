@@ -1,7 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { and, asc, eq, inArray } from 'drizzle-orm';
-import { vehicle, slide, slideImage, bfDay, shift, incident } from '../db/schema.js';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { vehicle, slide, slideImage, bfDay, shift, incident, announcement } from '../db/schema.js';
 import { requireAuth } from '../access/authenticate.js';
 import { vehicleSchema, toVehicleJson } from './vehicle-schemas.js';
 import { slideSchema, toSlideJson, type SlideRow } from './slide-schemas.js';
@@ -13,6 +13,11 @@ import { canSeeScript } from '../incidents/visibility.js';
 import { currentShift } from '../shifts/current-shift.js';
 import { computeCloseSuggested } from '../incidents/close-suggestion.js';
 import { closeSuggestedAudience } from '../incidents/visibility.js';
+import { announcementSchema, toAnnouncementJson } from '../announcements/announcement-json.js';
+import { announcementVisibleTo, loadShiftCrewPersonIds } from '../announcements/visibility.js';
+import type { Viewer } from '../realtime/realtime.js';
+
+const SNAPSHOT_ANNOUNCEMENT_LIMIT = 20;
 
 const snapshotResponseSchema = z.object({
   seq: z.number().int(),
@@ -25,6 +30,7 @@ const snapshotResponseSchema = z.object({
   alarms: z.array(alarmJsonSchema),
   close_suggested_incident_ids: z.array(z.string()),
   scheduled_alarms: z.array(z.object({ incident: incidentJsonSchema, alarm: alarmJsonSchema })),
+  announcements: z.array(announcementSchema),
 });
 
 export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
@@ -87,6 +93,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             incident: ReturnType<typeof toIncidentJson>;
             alarm: Awaited<ReturnType<typeof loadAlarms>>[number];
           }> = [];
+          let announcementsJson: ReturnType<typeof toAnnouncementJson>[] = [];
 
           if (runningBfDay) {
             const shiftRows = await tx
@@ -133,7 +140,12 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             }
 
             const canSeeCloseSuggested = request.auth
-              ? request.auth.kind === 'person' && closeSuggestedAudience(request.auth.permission)
+              ? request.auth.kind === 'person' &&
+                closeSuggestedAudience({
+                  kind: 'person',
+                  personId: request.auth.personId,
+                  permission: request.auth.permission,
+                })
               : false;
             if (canSeeCloseSuggested && incidentRows.length > 0) {
               const suggested = await computeCloseSuggested(
@@ -178,6 +190,43 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
                   }));
               }
             }
+
+            // Letzte 20 sichtbare Durchsagen, neueste zuerst (ADR 0024).
+            const viewer: Viewer = request.auth
+              ? request.auth.kind === 'monitor'
+                ? { kind: 'monitor', permission: 'crew' }
+                : {
+                    kind: 'person',
+                    personId: request.auth.personId,
+                    permission: request.auth.permission,
+                  }
+              : { kind: 'monitor', permission: 'crew' };
+
+            const announcementRows = await tx
+              .select()
+              .from(announcement)
+              .where(eq(announcement.bfDayId, runningBfDay.id))
+              .orderBy(desc(announcement.createdAt));
+
+            const crewCacheByShift = new Map<string, Set<string>>();
+            const visibleAnnouncements = [];
+            for (const row of announcementRows) {
+              let crewPersonIds = new Set<string>();
+              if (row.shiftId !== null) {
+                const cached = crewCacheByShift.get(row.shiftId);
+                if (cached) {
+                  crewPersonIds = cached;
+                } else {
+                  crewPersonIds = await loadShiftCrewPersonIds(tx, row.shiftId);
+                  crewCacheByShift.set(row.shiftId, crewPersonIds);
+                }
+              }
+              if (announcementVisibleTo(viewer, { shiftId: row.shiftId }, crewPersonIds)) {
+                visibleAnnouncements.push(row);
+                if (visibleAnnouncements.length >= SNAPSHOT_ANNOUNCEMENT_LIMIT) break;
+              }
+            }
+            announcementsJson = visibleAnnouncements.map(toAnnouncementJson);
           }
 
           return {
@@ -191,6 +240,7 @@ export const snapshotRoutes: FastifyPluginAsyncZod = async fastify => {
             alarms: alarmsJson,
             close_suggested_incident_ids: closeSuggestedIncidentIds,
             scheduled_alarms: scheduledAlarmsJson,
+            announcements: announcementsJson,
           };
         },
         { isolationLevel: 'repeatable read' }

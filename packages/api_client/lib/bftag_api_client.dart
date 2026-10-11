@@ -11,6 +11,7 @@ export 'package:bftag_api_client/src/serializers.dart';
 export 'package:bftag_api_client/src/model/date.dart';
 
 export 'package:bftag_api_client/src/api/alarms_api.dart';
+export 'package:bftag_api_client/src/api/announcements_api.dart';
 export 'package:bftag_api_client/src/api/auth_api.dart';
 export 'package:bftag_api_client/src/api/bf_days_api.dart';
 export 'package:bftag_api_client/src/api/devices_api.dart';
@@ -29,6 +30,7 @@ export 'package:bftag_api_client/src/model/close_incident200_response.dart';
 export 'package:bftag_api_client/src/model/create_alarm200_response.dart';
 export 'package:bftag_api_client/src/model/create_alarm200_response_double_crewed_inner.dart';
 export 'package:bftag_api_client/src/model/create_alarm_request.dart';
+export 'package:bftag_api_client/src/model/create_announcement_request.dart';
 export 'package:bftag_api_client/src/model/create_bf_day_request.dart';
 export 'package:bftag_api_client/src/model/create_incident_request.dart';
 export 'package:bftag_api_client/src/model/create_monitor_pairing_code201_response.dart';
@@ -49,6 +51,7 @@ export 'package:bftag_api_client/src/model/get_me200_response_crew_assignments_i
 export 'package:bftag_api_client/src/model/get_snapshot200_response.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_alarms_inner_recipients_inner.dart';
+export 'package:bftag_api_client/src/model/get_snapshot200_response_announcements_inner.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_bf_day.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_incidents_inner.dart';
 export 'package:bftag_api_client/src/model/get_snapshot200_response_scheduled_alarms_inner.dart';

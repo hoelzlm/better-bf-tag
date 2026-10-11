@@ -8,6 +8,7 @@ class AnonymizationSummary {
     required this.alarmRecipients,
     required this.statusEvents,
     required this.personsDeleted,
+    required this.announcements,
   });
 
   /// Anzahl gelöschter Teilnahmen.
@@ -25,6 +26,9 @@ class AnonymizationSummary {
   /// Anzahl gelöschter Personen anderer Feuerwehren.
   final int personsDeleted;
 
+  /// Anzahl gelöschter Durchsagen (ADR 0024).
+  final int announcements;
+
   @override
   bool operator ==(Object other) =>
       other is AnonymizationSummary &&
@@ -32,7 +36,8 @@ class AnonymizationSummary {
       other.crewAssignments == crewAssignments &&
       other.alarmRecipients == alarmRecipients &&
       other.statusEvents == statusEvents &&
-      other.personsDeleted == personsDeleted;
+      other.personsDeleted == personsDeleted &&
+      other.announcements == announcements;
 
   @override
   int get hashCode => Object.hash(
@@ -41,11 +46,13 @@ class AnonymizationSummary {
         alarmRecipients,
         statusEvents,
         personsDeleted,
+        announcements,
       );
 
   @override
   String toString() =>
       'AnonymizationSummary(participations: $participations, '
       'crewAssignments: $crewAssignments, alarmRecipients: $alarmRecipients, '
-      'statusEvents: $statusEvents, personsDeleted: $personsDeleted)';
+      'statusEvents: $statusEvents, personsDeleted: $personsDeleted, '
+      'announcements: $announcements)';
 }
