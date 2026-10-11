@@ -218,6 +218,65 @@ async function main() {
   const piListAfter = (await must('GET', `/bf-days/${day.id}/program-items`, { token: dispTok })).json;
   ok(!piListAfter.some((p) => p.id === pi.id), 'deleted program item no longer in GET list', piListAfter);
 
+  // --- karte (ADR 0026)
+  const mapInc = (
+    await must(
+      'POST',
+      `/bf-days/${day.id}/incidents`,
+      { token: prepTok, body: { keyword: 'B1 Kleinbrand', address: 'Nebenstr. 2', latitude: 48.14, longitude: 11.58 } },
+      201
+    )
+  ).json;
+  ok(mapInc.latitude === 48.14 && mapInc.longitude === 11.58, 'incident created with pin has coords', mapInc);
+  await expectErr(
+    'POST',
+    `/bf-days/${day.id}/incidents`,
+    { token: prepTok, body: { keyword: 'x', address: 'y', latitude: 48.14 } },
+    400,
+    'validation_error',
+    'incident with only latitude set rejected'
+  );
+  await expectErr(
+    'POST',
+    `/bf-days/${day.id}/incidents`,
+    { token: prepTok, body: { keyword: 'x', address: 'y', latitude: 91, longitude: 11.58 } },
+    400,
+    'validation_error',
+    'incident with latitude out of range rejected'
+  );
+  const mapIncRemoved = (
+    await must('PATCH', `/incidents/${mapInc.id}`, { token: prepTok, body: { latitude: null, longitude: null } }, 200)
+  ).json;
+  ok(mapIncRemoved.latitude === null && mapIncRemoved.longitude === null, 'PATCH removes pin (both null)', mapIncRemoved);
+  const mapIncSet = (
+    await must('PATCH', `/incidents/${mapInc.id}`, { token: prepTok, body: { latitude: 48.15, longitude: 11.59 } }, 200)
+  ).json;
+  ok(mapIncSet.latitude === 48.15 && mapIncSet.longitude === 11.59, 'PATCH sets pin again', mapIncSet);
+  await must('POST', `/incidents/${mapInc.id}/alarms`, { token: dispTok, body: { vehicle_ids: [hlf.id] } }, 201);
+  const crewMapView = (await must('GET', `/incidents/${mapInc.id}`, { token: aTok2 })).json;
+  ok(
+    crewMapView.latitude === 48.15 && crewMapView.longitude === 11.59 && !('script' in crewMapView),
+    'crew sees coords but no script',
+    crewMapView
+  );
+  const geoDisp = await must('GET', `/geocode?q=${encodeURIComponent('Hauptstraße')}`, { token: dispTok }, 200);
+  ok(Array.isArray(geoDisp.json?.results) && geoDisp.json.results.length === 0, '/geocode as dispatch -> 200 empty results (disabled)', geoDisp.json);
+  await expectErr(
+    'GET',
+    `/geocode?q=${encodeURIComponent('Hauptstraße')}`,
+    { token: aTok2 },
+    403,
+    'forbidden',
+    'crew cannot use geocode'
+  );
+  const snapStation = (await must('GET', '/snapshot', { token: dispTok })).json;
+  ok(
+    snapStation.station?.latitude === 48.137 && snapStation.station?.longitude === 11.575,
+    'snapshot contains station coords',
+    snapStation.station
+  );
+  await must('POST', `/incidents/${mapInc.id}/close`, { token: dispTok }, 200);
+
   // scheduled follow-up alarm, then discard
   const planned = await must('POST', `/incidents/${inc.id}/alarms`, { token: dispTok, body: { vehicle_ids: [rtw.id], offset_minutes: 30 } }, 201);
   ok(planned.json?.alarm?.state === 'planned', 'relative alarm planned', planned.json);
@@ -242,7 +301,7 @@ async function main() {
 
   // draft discard path
   const inc2 = (await must('POST', `/bf-days/${day.id}/incidents`, { token: prepTok, body: { keyword: 'TH1', address: 'Weg 2' } }, 201)).json;
-  ok(inc2.number === inc.number + 1, 'incident numbers sequential');
+  ok(inc2.number === mapInc.number + 1, 'incident numbers sequential');
   await must('POST', `/incidents/${inc2.id}/discard`, { token: prepTok }, 200);
 
   // seq gap-free per connection
