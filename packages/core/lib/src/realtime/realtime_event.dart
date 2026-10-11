@@ -3,6 +3,7 @@ import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/fms_status.dart';
 import '../domain/incident.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -181,6 +182,17 @@ sealed class RealtimeEvent {
           seq: seq,
           at: at,
           id: map['id'] as String,
+        );
+      case 'program.changed':
+        final map = data as Map<String, dynamic>;
+        final itemsJson = map['items'] as List<dynamic>;
+        return ProgramChanged(
+          seq: seq,
+          at: at,
+          bfDayId: map['bf_day_id'] as String,
+          items: itemsJson
+              .map((e) => ProgramItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
         );
       default:
         return UnknownEvent(seq: seq, at: at, type: type);
@@ -453,6 +465,22 @@ class AnnouncementDeleted extends RealtimeEvent {
   });
 
   final String id;
+}
+
+/// `program.changed` (ADR 0025): a Programmpunkt was created, edited, or
+/// deleted, for one BF-Tag (not necessarily the running one). Carries the
+/// full, sorted, replacement list of that BF-Tag's Programmpunkte --
+/// clients apply it only when [bfDayId] matches the running BF-Tag.
+class ProgramChanged extends RealtimeEvent {
+  const ProgramChanged({
+    required super.seq,
+    required super.at,
+    required this.bfDayId,
+    required this.items,
+  });
+
+  final String bfDayId;
+  final List<ProgramItem> items;
 }
 
 /// Any event type this build doesn't know about yet (including `skip`).

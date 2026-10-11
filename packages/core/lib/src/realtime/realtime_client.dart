@@ -6,6 +6,7 @@ import '../domain/alarm.dart';
 import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -38,6 +39,7 @@ class RealtimeState {
     this.closeSuggestedIncidentIds = const <String>{},
     this.scheduledAlarms = const <ScheduledAlarm>[],
     this.announcements = const <Announcement>[],
+    this.programItems = const <ProgramItem>[],
   });
 
   final int seq;
@@ -59,6 +61,10 @@ class RealtimeState {
 
   /// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst.
   final List<Announcement> announcements;
+
+  /// Die sortierten Programmpunkte des laufenden BF-Tags (ADR 0025), sonst
+  /// leer.
+  final List<ProgramItem> programItems;
 }
 
 /// Computes the delay before reconnect attempt number [attempt] (0-based):
@@ -154,6 +160,7 @@ class RealtimeClient {
   final Map<String, ScheduledAlarm> _scheduledAlarmsById =
       <String, ScheduledAlarm>{};
   List<Announcement> _announcements = <Announcement>[];
+  List<ProgramItem> _programItems = <ProgramItem>[];
   ConnectionStatus _status = ConnectionStatus.connecting;
 
   /// true until the (initial or a reload-triggered) snapshot has loaded;
@@ -260,6 +267,7 @@ class RealtimeClient {
           snapshot.scheduledAlarms.map((sa) => MapEntry(sa.alarm.id, sa)),
         );
       _announcements = List.of(snapshot.announcements);
+      _programItems = List.of(snapshot.programItems);
       _awaitingSnapshot = false;
       _reconnectAttempt = 0;
       _status = ConnectionStatus.live;
@@ -400,6 +408,13 @@ class RealtimeClient {
         _liveAnnouncementCreatedController.add(announcement);
       case AnnouncementDeleted(:final id):
         _announcements.removeWhere((a) => a.id == id);
+      case ProgramChanged(:final bfDayId, :final items):
+        // Replace the list only if it belongs to the currently running
+        // BF-Tag (ADR 0025, "Echtzeit") -- planned days' changes are
+        // discarded.
+        if (_bfDay != null && bfDayId == _bfDay!.id) {
+          _programItems = List.of(items);
+        }
       case UnknownEvent():
         // Forward-compatible no-op: seq already advanced above.
         break;
@@ -578,6 +593,7 @@ class RealtimeClient {
         closeSuggestedIncidentIds: Set.of(_closeSuggestedIncidentIds),
         scheduledAlarms: _sortedScheduledAlarms,
         announcements: List.of(_announcements),
+        programItems: List.of(_programItems),
       ),
     );
   }

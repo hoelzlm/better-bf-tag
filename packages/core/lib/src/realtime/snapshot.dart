@@ -2,6 +2,7 @@ import '../domain/alarm.dart';
 import '../domain/announcement.dart';
 import '../domain/bf_day.dart';
 import '../domain/incident.dart';
+import '../domain/program_item.dart';
 import '../domain/shift.dart';
 import '../domain/slide.dart';
 import '../domain/vehicle.dart';
@@ -29,7 +30,10 @@ import '../domain/vehicle.dart';
 /// the backend doesn't send it (older servers/tests). [announcements]
 /// (ADR 0024) holds the last 20 sichtbaren Durchsagen of the running
 /// BF-Tag, newest first, defaulting to empty when the backend doesn't
-/// send it (older servers/tests) or no BF-Tag is running.
+/// send it (older servers/tests) or no BF-Tag is running. [programItems]
+/// (ADR 0025) holds the sorted Programmpunkte of the running BF-Tag,
+/// defaulting to empty when the backend doesn't send it or no BF-Tag is
+/// running.
 class Snapshot {
   const Snapshot({
     required this.seq,
@@ -43,6 +47,7 @@ class Snapshot {
     this.closeSuggestedIncidentIds = const <String>{},
     this.scheduledAlarms = const <ScheduledAlarm>[],
     this.announcements = const <Announcement>[],
+    this.programItems = const <ProgramItem>[],
   });
 
   final int seq;
@@ -64,6 +69,10 @@ class Snapshot {
   /// Die letzten 20 sichtbaren Durchsagen (ADR 0024), neueste zuerst.
   final List<Announcement> announcements;
 
+  /// Die sortierten Programmpunkte des laufenden BF-Tags (ADR 0025), sonst
+  /// leer.
+  final List<ProgramItem> programItems;
+
   /// Returns a copy with the given fields replaced.
   Snapshot copyWith({
     int? seq,
@@ -77,6 +86,7 @@ class Snapshot {
     Set<String>? closeSuggestedIncidentIds,
     List<ScheduledAlarm>? scheduledAlarms,
     List<Announcement>? announcements,
+    List<ProgramItem>? programItems,
   }) {
     return Snapshot(
       seq: seq ?? this.seq,
@@ -91,6 +101,7 @@ class Snapshot {
           closeSuggestedIncidentIds ?? this.closeSuggestedIncidentIds,
       scheduledAlarms: scheduledAlarms ?? this.scheduledAlarms,
       announcements: announcements ?? this.announcements,
+      programItems: programItems ?? this.programItems,
     );
   }
 }

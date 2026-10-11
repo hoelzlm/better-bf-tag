@@ -83,4 +83,48 @@ void main() {
       expect(updated.announcements, [announcement]);
     });
   });
+
+  group('Snapshot.programItems (ADR 0025)', () {
+    test('defaults to empty when not set (older servers/tests)', () {
+      final snapshot = Snapshot(seq: 1, vehicles: const []);
+      expect(snapshot.programItems, isEmpty);
+    });
+
+    test('can be set with Programmpunkte', () {
+      final item = ProgramItem(
+        id: 'pi1',
+        bfDayId: 'day1',
+        title: 'Mittagessen',
+        type: ProgramItemType.meal,
+        startsAt: DateTime.parse('2026-10-11T11:00:00Z'),
+        endsAt: DateTime.parse('2026-10-11T12:00:00Z'),
+      );
+
+      final snapshot = Snapshot(
+        seq: 1,
+        vehicles: const [],
+        programItems: [item],
+      );
+
+      expect(snapshot.programItems, [item]);
+    });
+
+    test('copyWith replaces only the given fields', () {
+      final item = ProgramItem(
+        id: 'pi1',
+        bfDayId: 'day1',
+        title: 'Mittagessen',
+        type: ProgramItemType.meal,
+        startsAt: DateTime.parse('2026-10-11T11:00:00Z'),
+        endsAt: DateTime.parse('2026-10-11T12:00:00Z'),
+      );
+      const original = Snapshot(seq: 1, vehicles: []);
+
+      final updated = original.copyWith(programItems: [item]);
+
+      expect(updated.seq, original.seq);
+      expect(updated.vehicles, original.vehicles);
+      expect(updated.programItems, [item]);
+    });
+  });
 }
