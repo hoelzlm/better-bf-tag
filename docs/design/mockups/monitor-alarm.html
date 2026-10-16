@@ -14,7 +14,9 @@
   html,body{margin:0;padding:0;width:1920px;height:1080px;background:var(--alarm);color:var(--on-alarm);font-family:'Inter',sans-serif;overflow:hidden;}
   .wrap{display:flex;flex-direction:column;height:1080px;padding:64px 96px;}
   .top{display:flex;justify-content:space-between;align-items:flex-start;}
-  .badge{background:var(--on-alarm);color:var(--alarm);font-size:32px;font-weight:700;letter-spacing:2px;padding:10px 24px;border-radius:999px;}
+  .badge{background:rgba(26,0,0,.24);color:var(--on-alarm);font-size:32px;font-weight:700;letter-spacing:2px;padding:10px 24px;
+    border-radius:999px;display:inline-flex;align-items:center;gap:12px;}
+  .badge .pulse{width:16px;height:16px;border-radius:999px;background:var(--on-alarm);}
   .clock{font-size:64px;font-weight:600;}
   .keyword{font-size:96px;font-weight:700;line-height:1.05;margin:32px 0 16px 0;}
   .address{font-size:64px;font-weight:600;margin-bottom:8px;}
@@ -29,10 +31,10 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="badge">ERSTALARM</div>
+    <div class="badge"><span class="pulse"></span>ERSTALARM</div>
     <div class="clock">08:34:40</div>
   </div>
-  <div class="keyword">B3 Großbrand Lagerhalle</div>
+  <div class="keyword">B3 GROSSBRAND LAGERHALLE</div>
   <div class="address">Industriestraße 7</div>
   <div class="report">Starke Rauchentwicklung aus dem Dach.</div>
   <div class="vehicles">
@@ -40,7 +42,7 @@
     <div class="vehicle-chip">RTW-1<span class="sub">alarmiert</span></div>
   </div>
   <div class="spacer"></div>
-  <div class="bottom">seit 00:01 · Quittiert: 0/3</div>
+  <div class="bottom">seit 00:08 · 0/3 quittiert</div>
 </div>
 </body>
 </html>

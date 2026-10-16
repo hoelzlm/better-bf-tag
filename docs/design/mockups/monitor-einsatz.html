@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>BF-Tag – Monitor Einsatzansicht</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
+  :root{
+    --surface:#14181C; --surface-variant:#1C2126; --surface-container:#242A30;
+    --outline:#3A4147; --on-surface:#EDEFF1; --on-surface-variant:#AAB2B8;
+    --primary:#4FB8C9; --on-primary:#06262B; --primary-container:#0E3A42;
+    --alarm:#FF5449;
+    --fms2:#43A047; --fms3:#F2A900; --fms4:#7A3FC2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:1920px;height:1080px;background:var(--surface);color:var(--on-surface);font-family:'Inter',sans-serif;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;line-height:1;display:inline-block;}
+  .grid{display:grid;grid-template-columns:960px 960px;grid-template-rows:140px 620px 320px;height:1080px;}
+
+  .header{grid-column:1/3;display:flex;align-items:center;justify-content:space-between;padding:0 48px;
+    border-bottom:1px solid var(--outline);}
+  .header .title{font-size:40px;font-weight:600;}
+  .header .title .kw{color:var(--alarm);margin-left:12px;}
+  .header .addr{font-size:28px;color:var(--on-surface-variant);margin-top:4px;}
+  .header .right{text-align:right;}
+  .header .clock{font-size:64px;font-weight:600;}
+  .header .meta{font-size:22px;color:var(--on-surface-variant);margin-top:4px;display:flex;gap:16px;justify-content:flex-end;}
+  .chip{background:var(--primary-container);color:var(--on-surface);padding:6px 16px;border-radius:999px;font-weight:600;}
+
+  .left{padding:32px 48px;display:flex;flex-direction:column;gap:24px;border-right:1px solid var(--outline);}
+  .block h2{font-size:28px;font-weight:600;margin:0 0 12px 0;color:var(--on-surface-variant);}
+  .report{font-size:28px;line-height:1.4;}
+  .ack-card{background:var(--surface-variant);border-radius:16px;padding:24px;flex:1;}
+  .ack-progress{font-size:40px;font-weight:600;margin-bottom:16px;}
+  .ack-list{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:26px;}
+  .ack-row{display:flex;align-items:center;gap:8px;}
+  .ack-row .msym{font-size:22px;}
+  .ack-row.ok{color:var(--on-surface);}
+  .ack-row.pending{color:var(--on-surface-variant);}
+
+  .map{position:relative;background:#0c3d2e;overflow:hidden;}
+  .map .fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:12px;background:var(--surface-variant);color:var(--on-surface-variant);font-size:26px;}
+  .map .fallback .msym{font-size:48px;}
+  .map .pin{position:absolute;left:46%;top:38%;color:var(--alarm);font-size:56px;}
+
+  .vehicles{grid-column:1/3;padding:24px 48px;display:flex;gap:24px;flex-wrap:wrap;align-content:flex-start;
+    border-top:1px solid var(--outline);background:var(--surface-container);}
+  .vcard{background:var(--surface-variant);border-radius:16px;padding:16px 24px;display:flex;align-items:center;gap:20px;}
+  .vcard .name{font-size:40px;font-weight:600;}
+  .fms{width:56px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+    font-size:28px;font-weight:700;border:1px solid rgba(237,239,241,0.24);}
+  .fms.s2{background:var(--fms2);color:#0B1F0D;}
+  .fms.s3{background:var(--fms3);color:#1B1300;}
+  .fms.s4{background:var(--fms4);color:#fff;}
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="header">
+    <div>
+      <div class="title">EINSATZ 3 <span class="kw">B2 KELLERBRAND</span></div>
+      <div class="addr">Hauptstraße 1</div>
+    </div>
+    <div class="right">
+      <div class="clock">08:34:40</div>
+      <div class="meta"><span>seit 00:42</span><span class="chip">2/5 quittiert</span></div>
+    </div>
+  </div>
+  <div class="left">
+    <div class="block">
+      <h2>Meldebild</h2>
+      <div class="report">Rauch aus dem Keller. Zugang über die Hofseite, Bewohner sind im Garten in Sicherheit.</div>
+    </div>
+    <div class="ack-card">
+      <div class="ack-progress">2/5 quittiert</div>
+      <div class="ack-list">
+        <div class="ack-row ok"><span class="msym">check</span>Anna Jugend</div>
+        <div class="ack-row pending"><span class="msym">more_horiz</span>Ben Jugend</div>
+        <div class="ack-row ok"><span class="msym">check</span>Clara Betreuer</div>
+        <div class="ack-row pending"><span class="msym">remove</span>Max Mustermann</div>
+        <div class="ack-row pending"><span class="msym">more_horiz</span>Erika Musterfrau</div>
+      </div>
+    </div>
+  </div>
+  <div class="map">
+    <div class="fallback"><span class="msym">location_off</span>Karte nicht verfügbar</div>
+  </div>
+  <div class="vehicles">
+    <div class="vcard"><div class="name">HLF-1</div><div class="fms s4">4</div></div>
+    <div class="vcard"><div class="name">RTW-1</div><div class="fms s3">3</div></div>
+    <div class="vcard"><div class="name">DLK-1</div><div class="fms s2">2</div></div>
+  </div>
+</div>
+</body>
+</html>
