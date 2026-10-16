@@ -19,6 +19,7 @@ Future<bool> _confirm(
   required String message,
   String confirmLabel = 'Ja',
 }) async {
+  final alarmColors = Theme.of(context).extension<BftagAlarmColors>();
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -31,6 +32,12 @@ Future<bool> _confirm(
         ),
         FilledButton(
           key: const Key('confirm-dialog-confirm'),
+          style: alarmColors == null
+              ? null
+              : ButtonStyle(
+                  backgroundColor: WidgetStatePropertyAll(alarmColors.alarm),
+                  foregroundColor: WidgetStatePropertyAll(alarmColors.onAlarm),
+                ),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(confirmLabel),
         ),
@@ -76,10 +83,25 @@ String? _detectImageContentType(Uint8List bytes) {
   return null;
 }
 
+/// First non-empty line of [body] with common Markdown syntax characters
+/// stripped (Konzept §3: Textvorschau in der Liste) -- a lightweight,
+/// presentation-only transform, not a Markdown parser; good enough for a
+/// one-line preview.
+String _plainTextPreview(String body) {
+  final line = body.split('\n').firstWhere(
+        (l) => l.trim().isNotEmpty,
+        orElse: () => '',
+      );
+  return line
+      .replaceAll(RegExp(r'[#*_`>~]'), '')
+      .replaceAllMapped(RegExp(r'\[(.*?)\]\(.*?\)'), (m) => m.group(1) ?? '')
+      .trim();
+}
+
 /// Folien admin screen (`/admin/slides`, Berechtigung Administrator):
 /// Liste mit Ziehen zum Sortieren, Schalter aktiv/inaktiv, Anlegen und
 /// Bearbeiten im Dialog, Bild hochladen/entfernen, Löschen mit Rückfrage
-/// (ADR 0014).
+/// (ADR 0014, Konzept `docs/design/screens/web-folien.md`).
 ///
 /// Loads `GET /slides` once on entry and after every mutation -- there is
 /// no realtime subscription here (same pattern as VehiclesScreen).
@@ -213,64 +235,256 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final slides = _slides;
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     return Scaffold(
-      appBar: AppBar(title: const Text('Folien')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('create-slide'),
-        onPressed: _openCreateDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Folie anlegen'),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Text('Folien'),
+            SizedBox(width: spacing.lg),
+            Expanded(
+              child: Text(
+                'Reihenfolge bestimmt die Monitor-Rotation',
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: spacing.lg),
+            child: FilledButton.icon(
+              key: const Key('create-slide'),
+              onPressed: _openCreateDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Folie anlegen'),
+            ),
+          ),
+        ],
       ),
-      body: slides == null
-          ? Center(
-              child: _loadError != null
-                  ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
-            )
-          : ReorderableListView.builder(
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    final slides = _slides;
+    if (slides == null) {
+      final loadError = _loadError;
+      if (loadError != null) {
+        return BftagStateView.error(message: loadError, onRetry: _reload);
+      }
+      return const BftagStateView.loading();
+    }
+    if (slides.isEmpty) {
+      return BftagStateView.empty(
+        icon: Icons.image,
+        title: 'Noch keine Folien angelegt.',
+        action: FilledButton.icon(
+          key: const Key('slides-empty-create'),
+          onPressed: _openCreateDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('Folie anlegen'),
+        ),
+      );
+    }
+
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Padding(
+          padding: EdgeInsets.all(spacing.lg),
+          child: Card(
+            margin: EdgeInsets.zero,
+            color: theme.colorScheme.surfaceContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radii.large),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ReorderableListView.builder(
               key: const Key('slides-list'),
-              padding: const EdgeInsets.only(bottom: 88),
+              padding: EdgeInsets.zero,
               itemCount: slides.length,
               onReorderItem: _reorder,
               itemBuilder: (context, index) {
                 final slide = slides[index];
-                return ListTile(
+                return _SlideRow(
                   key: ValueKey(slide.id),
-                  leading: slide.image != null
-                      ? SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: _SlideThumbnail(
-                            slideId: slide.id,
-                            version: slide.image!.version,
-                          ),
-                        )
-                      : const Icon(Icons.image_not_supported_outlined),
-                  title: Text(slide.title),
-                  subtitle: Text('${slide.durationSeconds} s'),
+                  slide: slide,
+                  index: index,
+                  isLast: index == slides.length - 1,
                   onTap: () => _openEditDialog(slide),
-                  trailing: Wrap(
-                    spacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Switch(
-                        key: Key('active-switch-${slide.id}'),
-                        value: slide.active,
-                        onChanged: (value) => _toggleActive(slide, value),
-                      ),
-                      IconButton(
-                        key: Key('delete-slide-${slide.id}'),
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Löschen',
-                        onPressed: () => _delete(slide),
-                      ),
-                    ],
-                  ),
+                  onToggleActive: (value) => _toggleActive(slide, value),
+                  onDelete: () => _delete(slide),
                 );
               },
             ),
+          ),
+        ),
+      ),
     );
+  }
+}
+
+class _SlideRow extends StatelessWidget {
+  const _SlideRow({
+    super.key,
+    required this.slide,
+    required this.index,
+    required this.isLast,
+    required this.onTap,
+    required this.onToggleActive,
+    required this.onDelete,
+  });
+
+  final Slide slide;
+  final int index;
+  final bool isLast;
+  final VoidCallback onTap;
+  final ValueChanged<bool> onToggleActive;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
+    final isActive = slide.active;
+    final preview = _plainTextPreview(slide.body);
+    final content = Opacity(
+      opacity: isActive ? 1 : 0.6,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: spacing.lg,
+                vertical: spacing.sm,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 32,
+                    child: Semantics(
+                      container: true,
+                      label: 'Ziehen zum Sortieren: ${slide.title}',
+                      child: ReorderableDragStartListener(
+                        index: index,
+                        child: Icon(
+                          Icons.drag_indicator,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: spacing.sm),
+                  SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: slide.image != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              radii.medium,
+                            ),
+                            child: _SlideThumbnail(
+                              slideId: slide.id,
+                              version: slide.image!.version,
+                            ),
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(
+                                radii.medium,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.image_outlined,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                  ),
+                  SizedBox(width: spacing.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(child: Text(slide.title)),
+                            if (!isActive) ...[
+                              SizedBox(width: spacing.sm),
+                              Text(
+                                '(inaktiv)',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (preview.isNotEmpty) ...[
+                          SizedBox(height: spacing.xs),
+                          Text(
+                            preview,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: spacing.lg),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: spacing.sm,
+                      vertical: spacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(radii.small),
+                    ),
+                    child: Text(
+                      '${slide.durationSeconds} s',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: spacing.sm),
+                  Switch(
+                    key: Key('active-switch-${slide.id}'),
+                    value: slide.active,
+                    onChanged: onToggleActive,
+                  ),
+                  SizedBox(width: spacing.sm),
+                  IconButton(
+                    key: Key('delete-slide-${slide.id}'),
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Löschen',
+                    onPressed: onDelete,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!isLast) Divider(height: 1, color: theme.colorScheme.outline),
+        ],
+      ),
+    );
+    return content;
   }
 }
 
