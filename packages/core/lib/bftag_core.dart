@@ -50,3 +50,6 @@ export 'src/realtime/realtime_event.dart';
 export 'src/realtime/snapshot.dart';
 export 'src/realtime/web_socket_connection.dart';
 export 'src/theme.dart';
+export 'src/widgets/bftag_state_view.dart';
+export 'src/widgets/connection_banner.dart';
+export 'src/widgets/fms_badge.dart';
