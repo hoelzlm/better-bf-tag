@@ -49,7 +49,7 @@ eigene, abgesetzte Karte (`onAlarm`-bei-12%-Fläche, nicht transparent) direkt U
 (vor „Alarmierte Fahrzeuge"), damit er auch bei langem Lagebericht nicht wegscrollt.
 
 Icon neben dem Sequenz-Label (Designsystem 5.11: Unterscheidung NIE über Rotton, nur Label+Icon), alle drei
-Zustände aus der Mein Fahrzeug Nachalarmierungs-Logik (`alarmSequenceLabel`, siehe Abschnitt 4) bekommen ein
+Zustände aus der Domänenfunktion (`alarmSequenceLabel`, siehe Abschnitt 4) bekommen ein
 festes, eigenes Material-Icon aus der bereits gebündelten `Material Icons Outlined`-Schrift (keine neue
 Icon-Familie, kein Warndreieck — das würde mit der `warning`-Token-Semantik kollidieren):
 
@@ -186,7 +186,7 @@ das ist das entscheidende Akzeptanzkriterium, nicht "alles passt ohne Scroll".
 
 Aus `screens/alarm_screen.dart` (keine `Semantics`/`tooltip` im Quellcode):
 
-- `Key('alarm-sequence-label')` — Text „ERSTALARM"/„NACHALARMIERT".
+- `Key('alarm-sequence-label')` — Text = Rückgabewert von `alarmSequenceLabel(...)` („Erstalarm"/„<n>. Nachalarmierung"/„Alarmierung"), nur visuell in Großbuchstaben.
 - `Key('acknowledge-button')` — der Quittieren-Button.
 - (von `IncidentLocationCard` wiederverwendet, falls Koordinaten vorhanden: `Key('start-navigation')`, siehe
   `app-einsatzdetail.md`.)
