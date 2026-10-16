@@ -102,7 +102,10 @@ Future<void> _pump(
           (ref) => Stream.value(const <ScheduledAlarm>[]),
         ),
       ],
-      child: MaterialApp.router(routerConfig: _router(session)),
+      child: MaterialApp.router(
+        theme: bftagLightTheme(),
+        routerConfig: _router(session),
+      ),
     ),
   );
   await tester.pumpAndSettle();

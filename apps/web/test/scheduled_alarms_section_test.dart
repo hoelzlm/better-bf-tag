@@ -165,8 +165,9 @@ Future<_FakeAlarmRepository> _pump(
           (ref) => Stream.value(DateTime.now()),
         ),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: ScheduledAlarmsSection()),
+      child: MaterialApp(
+        theme: bftagLightTheme(),
+        home: const Scaffold(body: ScheduledAlarmsSection()),
       ),
     ),
   );

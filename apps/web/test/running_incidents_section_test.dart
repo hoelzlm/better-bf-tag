@@ -159,8 +159,9 @@ Future<void> _pump(
         if (incidentRepository != null)
           incidentRepositoryProvider.overrideWithValue(incidentRepository),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: RunningIncidentsSection()),
+      child: MaterialApp(
+        theme: bftagLightTheme(),
+        home: const Scaffold(body: RunningIncidentsSection()),
       ),
     ),
   );
@@ -168,10 +169,12 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('empty state shows "Keine laufenden Einsätze"', (tester) async {
+  testWidgets('empty state shows an icon and "Keine laufenden Einsätze"',
+      (tester) async {
     await _pump(tester, incidents: const [], alarms: const []);
 
     expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
+    expect(find.byIcon(Icons.local_fire_department_outlined), findsOneWidget);
   });
 
   testWidgets(
@@ -289,8 +292,9 @@ void main() {
             (ref) => Stream.value(const <ScheduledAlarm>[]),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: RunningIncidentsSection()),
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const Scaffold(body: RunningIncidentsSection()),
         ),
       ),
     );
@@ -370,8 +374,9 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: RunningIncidentsSection()),
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const Scaffold(body: RunningIncidentsSection()),
         ),
       ),
     );
