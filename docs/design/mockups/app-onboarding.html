@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>App – Onboarding</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
+  :root{
+    --surface:#FFFFFF; --surface-variant:#F1F3F5; --surface-container:#E8EAED;
+    --outline:#C9CED3; --on-surface:#1B1F23; --on-surface-variant:#4C555C;
+    --primary:#0B5E6B; --on-primary:#FFFFFF; --primary-container:#D3EEF2; --on-primary-container:#0E3A42;
+    --warning:#8A5A00; --warning-container:#FFE8B8; --on-warning-container:#5C3C00;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:390px;height:844px;background:var(--surface);color:var(--on-surface);font-family:'Inter',sans-serif;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;font-size:18px;
+    line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;vertical-align:middle;}
+  .wrap{display:flex;flex-direction:column;height:844px;}
+  .appbar{padding:52px 20px 12px 20px;font-size:20px;font-weight:600;}
+  .progress{display:flex;align-items:center;gap:6px;padding:0 20px 16px 20px;border-bottom:1px solid var(--outline);}
+  .progress .dot{width:8px;height:8px;border-radius:50%;background:var(--outline);}
+  .progress .dot.done{background:var(--primary);}
+  .progress .dot.active{background:var(--primary);width:10px;height:10px;}
+  .progress .label{margin-left:auto;font-size:12px;color:var(--on-surface-variant);}
+  .content{padding:24px 20px;flex:1;}
+  .step-title{font-size:22px;font-weight:700;margin-bottom:16px;}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:14px;font-weight:600;
+    background:var(--warning-container);color:var(--on-warning-container);margin-bottom:20px;}
+  .body-text{font-size:15px;line-height:1.5;color:var(--on-surface-variant);margin-bottom:24px;}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .btn{height:48px;border-radius:12px;padding:0 20px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;}
+  .btn.primary{background:var(--primary);color:var(--on-primary);}
+  .btn.secondary{background:transparent;border:1.5px solid var(--outline);color:var(--on-surface);}
+  .spacer{flex:1;}
+  .footer{padding:16px 20px 32px 20px;display:flex;justify-content:flex-end;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="appbar">Einrichtung</div>
+  <div class="progress">
+    <div class="dot done"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="label">Schritt 2 von 5</div>
+  </div>
+  <div class="content">
+    <div class="step-title">Benachrichtigungen erlauben</div>
+    <div class="chip"><span class="msym">warning</span>Noch nicht eingerichtet</div>
+    <div class="body-text">Ohne Benachrichtigungen kann dich die App nicht alarmieren.</div>
+    <div class="btn-row">
+      <div class="btn primary">Erlauben</div>
+      <div class="btn secondary">Einstellungen öffnen</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="footer"><div class="btn primary">Weiter →</div></div>
+</div>
+</body>
+</html>
