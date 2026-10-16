@@ -134,42 +134,217 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vehicles = _vehicles;
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     return Scaffold(
-      appBar: AppBar(title: const Text('Fahrzeuge')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('create-vehicle'),
-        onPressed: _openCreateDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Fahrzeug anlegen'),
-      ),
-      body: vehicles == null
-          ? Center(
-              child: _loadError != null
-                  ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
-            )
-          : ReorderableListView.builder(
-              key: const Key('vehicles-list'),
-              padding: const EdgeInsets.only(bottom: 88),
-              itemCount: vehicles.length,
-              onReorderItem: _reorder,
-              itemBuilder: (context, index) {
-                final vehicle = vehicles[index];
-                return ListTile(
-                  key: ValueKey(vehicle.id),
-                  title: Text('${vehicle.callSign} (${vehicle.shortName})'),
-                  subtitle: Text(vehicle.type),
-                  onTap: () => _openEditDialog(vehicle),
-                  trailing: Switch(
-                    key: Key('active-switch-${vehicle.id}'),
-                    value: vehicle.active,
-                    onChanged: (value) => _toggleActive(vehicle, value),
-                  ),
-                );
-              },
+      appBar: AppBar(
+        title: const Text('Fahrzeuge'),
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: spacing.lg),
+            child: FilledButton.icon(
+              key: const Key('create-vehicle'),
+              onPressed: _openCreateDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Fahrzeug anlegen'),
             ),
+          ),
+        ],
+      ),
+      body: _buildBody(context),
     );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    final vehicles = _vehicles;
+    if (vehicles == null) {
+      final loadError = _loadError;
+      if (loadError != null) {
+        return BftagStateView.error(message: loadError, onRetry: _reload);
+      }
+      return const BftagStateView.loading();
+    }
+    if (vehicles.isEmpty) {
+      return BftagStateView.empty(
+        icon: Icons.local_shipping_outlined,
+        title: 'Noch keine Fahrzeuge angelegt.',
+        action: FilledButton.icon(
+          key: const Key('vehicles-empty-create'),
+          onPressed: _openCreateDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('Fahrzeug anlegen'),
+        ),
+      );
+    }
+
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Padding(
+          padding: EdgeInsets.all(spacing.lg),
+          child: Card(
+            margin: EdgeInsets.zero,
+            color: theme.colorScheme.surfaceContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radii.large),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                Container(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: spacing.lg,
+                    vertical: spacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 40),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'Funkrufname',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Kurzname',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text('Typ', style: theme.textTheme.titleMedium),
+                      ),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          'Aktiv',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ReorderableListView.builder(
+                    key: const Key('vehicles-list'),
+                    padding: EdgeInsets.zero,
+                    itemCount: vehicles.length,
+                    onReorderItem: _reorder,
+                    itemBuilder: (context, index) {
+                      final vehicle = vehicles[index];
+                      return _VehicleRow(
+                        key: ValueKey(vehicle.id),
+                        vehicle: vehicle,
+                        index: index,
+                        isLast: index == vehicles.length - 1,
+                        onTap: () => _openEditDialog(vehicle),
+                        onToggleActive: (value) =>
+                            _toggleActive(vehicle, value),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VehicleRow extends StatelessWidget {
+  const _VehicleRow({
+    super.key,
+    required this.vehicle,
+    required this.index,
+    required this.isLast,
+    required this.onTap,
+    required this.onToggleActive,
+  });
+
+  final Vehicle vehicle;
+  final int index;
+  final bool isLast;
+  final VoidCallback onTap;
+  final ValueChanged<bool> onToggleActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final isActive = vehicle.active;
+    final content = Opacity(
+      opacity: isActive ? 1 : 0.6,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: spacing.lg,
+                vertical: spacing.sm,
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 40,
+                    child: Semantics(
+                      container: true,
+                      label: 'Ziehen zum Sortieren: ${vehicle.callSign}',
+                      child: ReorderableDragStartListener(
+                        index: index,
+                        child: Icon(
+                          Icons.drag_indicator,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(child: Text(vehicle.callSign)),
+                        if (!isActive) ...[
+                          SizedBox(width: spacing.sm),
+                          Text(
+                            'inaktiv',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Expanded(flex: 2, child: Text(vehicle.shortName)),
+                  Expanded(flex: 2, child: Text(vehicle.type)),
+                  SizedBox(
+                    width: 80,
+                    child: Switch(
+                      key: Key('active-switch-${vehicle.id}'),
+                      value: vehicle.active,
+                      onChanged: onToggleActive,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!isLast) Divider(height: 1, color: theme.colorScheme.outline),
+        ],
+      ),
+    );
+    return content;
   }
 }
 
@@ -198,6 +373,9 @@ class _VehicleFormDialogState extends State<_VehicleFormDialog> {
   late final TextEditingController _callSignController;
   late final TextEditingController _shortNameController;
   late final TextEditingController _typeController;
+  String? _callSignError;
+  String? _shortNameError;
+  String? _typeError;
 
   @override
   void initState() {
@@ -220,42 +398,71 @@ class _VehicleFormDialogState extends State<_VehicleFormDialog> {
   }
 
   void _submit() {
+    final callSign = _callSignController.text.trim();
+    final shortName = _shortNameController.text.trim();
+    final type = _typeController.text.trim();
+    setState(() {
+      _callSignError = callSign.isEmpty ? 'Pflichtfeld' : null;
+      _shortNameError = shortName.isEmpty ? 'Pflichtfeld' : null;
+      _typeError = type.isEmpty ? 'Pflichtfeld' : null;
+    });
+    if (callSign.isEmpty || shortName.isEmpty || type.isEmpty) return;
     Navigator.of(context).pop(
       _VehicleFormResult(
-        callSign: _callSignController.text.trim(),
-        shortName: _shortNameController.text.trim(),
-        type: _typeController.text.trim(),
+        callSign: callSign,
+        shortName: shortName,
+        type: type,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     final isEdit = widget.initial != null;
     return AlertDialog(
       title: Text(isEdit ? 'Fahrzeug bearbeiten' : 'Fahrzeug anlegen'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
               key: const Key('vehicle-form-call-sign'),
               controller: _callSignController,
-              decoration: const InputDecoration(labelText: 'Funkrufname'),
+              decoration: InputDecoration(
+                labelText: 'Funkrufname',
+                errorText: _callSignError,
+              ),
             ),
             TextField(
               key: const Key('vehicle-form-short-name'),
               controller: _shortNameController,
-              decoration: const InputDecoration(labelText: 'Kurzname'),
+              decoration: InputDecoration(
+                labelText: 'Kurzname',
+                errorText: _shortNameError,
+              ),
             ),
             TextField(
               key: const Key('vehicle-form-type'),
               controller: _typeController,
-              decoration: const InputDecoration(labelText: 'Typ'),
+              decoration: InputDecoration(
+                labelText: 'Typ',
+                errorText: _typeError,
+              ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: spacing.sm),
+            Text(
+              'Vorschläge',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SizedBox(height: spacing.xs),
             Wrap(
-              spacing: 4,
+              spacing: spacing.sm,
+              runSpacing: spacing.sm,
               children: [
                 for (final suggestion in _typeSuggestions)
                   ActionChip(
