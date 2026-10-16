@@ -65,6 +65,13 @@ class _FakeWsConnection implements WebSocketConnection {
   void emit(Map<String, dynamic> message) {
     _controller.add(message);
   }
+
+  /// Simulates the socket dropping (e.g. network/connection loss): the
+  /// stream ends without a `session.revoked`/close message, which is what
+  /// [RealtimeClient] sees on a real connection loss.
+  void disconnect() {
+    _controller.close();
+  }
 }
 
 class _FakeWsSink implements WebSocketConnectionSink {
@@ -514,6 +521,76 @@ void main() {
       expect(find.text('EINSATZ 7'), findsNothing);
       expect(find.text('EINSATZ 8'), findsOneWidget);
       expect(find.byKey(const Key('monitor-clock-time')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a live alarm.acknowledged event updates the recipient ack icon on '
+    'the Einsatzansicht',
+    (tester) async {
+      final env = _Env();
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'incidents': [_incidentJson()],
+        'alarms': [
+          _alarmJson(
+            recipients: [
+              _recipientJson(personId: 'p1', displayName: 'Max M.'),
+            ],
+          ),
+        ],
+      };
+      await _pumpMonitor(tester, env);
+      await _activateAndPair(tester, env);
+
+      expect(find.byKey(const Key('incident-ack-icon-p1')), findsOneWidget);
+
+      env.connector.connections.single.emit({
+        'seq': 2,
+        'type': 'alarm.acknowledged',
+        'at': '2026-10-09T08:01:00Z',
+        'data': {
+          'alarm_id': 'a1',
+          'incident_id': 'i1',
+          'person_id': 'p1',
+          'display_name': 'Max M.',
+          'acknowledged_at': '2026-10-09T08:01:00Z',
+        },
+      });
+      await tester.pumpAndSettle();
+
+      final icon = tester.widget<Icon>(
+        find.byKey(const Key('incident-ack-icon-p1')),
+      );
+      expect(icon.icon, Icons.check);
+    },
+  );
+
+  testWidgets(
+    'connection loss (reconnecting) while the Einsatzansicht is shown '
+    'does not drop the Einsatz; live hides the reconnecting banner again',
+    (tester) async {
+      final env = _Env();
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'incidents': [_incidentJson()],
+        'alarms': [_alarmJson()],
+      };
+      await _pumpMonitor(tester, env);
+      await _activateAndPair(tester, env);
+
+      expect(find.text('EINSATZ 7'), findsOneWidget);
+
+      // Simulate the WebSocket dropping: close the connection without any
+      // further messages -- the Einsatzansicht must keep showing the last
+      // known state (ADR 0012: never fall back to the Kopplungsbildschirm
+      // on a mere connection loss).
+      env.connector.connections.single.disconnect();
+      await tester.pumpAndSettle();
+
+      expect(find.text('EINSATZ 7'), findsOneWidget);
     },
   );
 }
