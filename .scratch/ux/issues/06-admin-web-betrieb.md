@@ -8,25 +8,25 @@ bleiben erhalten.
 
 **Owner:** Architekt (zerlegt in Coder-Karten), Coder, Reviewer, Tester
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Umgesetzt nach den Konzepten (Layout, alle Zustände, Interaktionen, Akzeptanzkriterien):
+- [x] Umgesetzt nach den Konzepten (Layout, alle Zustände, Interaktionen, Akzeptanzkriterien):
       `docs/design/screens/web-einsaetze.md`, `web-durchsagen.md`, `web-tagesablauf.md`, `web-folien.md`,
       `web-monitore.md`
-- [ ] Referenz-Mockups: `docs/design/mockups/web-einsaetze.png`, `web-einsaetze-alarm.png`,
+- [x] Referenz-Mockups: `docs/design/mockups/web-einsaetze.png`, `web-einsaetze-alarm.png`,
       `web-einsaetze-laufend.png`, `web-folien.png`
-- [ ] Jedes Akzeptanzkriterium der Konzepte ist durch einen Widget-/E2E-Test oder (rein visuell) durch die
+- [x] Jedes Akzeptanzkriterium der Konzepte ist durch einen Widget-/E2E-Test oder (rein visuell) durch die
       Nachher-Screenshots belegt; der kritische Pfad (Einsatz anlegen → alarmieren) läuft in `just e2e`
-- [ ] Bestehende Widget-`Key`s und Semantics-Labels bleiben erhalten (Abschnitt „Zu erhaltende Keys“ der
+- [x] Bestehende Widget-`Key`s und Semantics-Labels bleiben erhalten (Abschnitt „Zu erhaltende Keys“ der
       Konzepte); kein Verhaltenstest gelöscht oder abgeschwächt, Anpassungen nur bei laut Konzept geändertem
       Text/Layout
-- [ ] Keine neuen Funktionen, keine Backend-/API-Änderungen; keine Funktion fällt weg (Abgleich mit
+- [x] Keine neuen Funktionen, keine Backend-/API-Änderungen; keine Funktion fällt weg (Abgleich mit
       `docs/testing/regression-inventory.md` und dem Regressions-Abschnitt der Konzepte)
-- [ ] Farben, Abstände, Radien und Schrift nur aus dem Theme (ux-03); keine harten Farbwerte in den
+- [x] Farben, Abstände, Radien und Schrift nur aus dem Theme (ux-03); keine harten Farbwerte in den
       betroffenen Dateien
-- [ ] `just screenshots after` erzeugt die Nachher-PNGs des Bereichs (committet); sie entsprechen sichtbar
+- [x] `just screenshots after` erzeugt die Nachher-PNGs des Bereichs (committet); sie entsprechen sichtbar
       Konzept und Mockups
-- [ ] `just test`, `just analyze`, `just e2e` grün; CI auf GitHub grün
-- [ ] Tester-Verifikation abgeschlossen
+- [x] `just test`, `just analyze`, `just e2e` grün; CI auf GitHub grün
+- [x] Tester-Verifikation abgeschlossen
 
 Spec: `.scratch/ux/spec.md` · Designsystem: `docs/design/design-system.md` · ADR: `docs/adr/0027-designsystem-umsetzung.md` · Glossar: `CONTEXT.md`
