@@ -126,4 +126,34 @@ void main() {
 
     expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
   });
+
+  testWidgets(
+    'AC5 (web-login.md): the login screen renders no sidebar/nav-* keys',
+    (tester) async {
+      await _pumpApp(tester);
+
+      // Login form itself is present...
+      expect(find.byKey(const Key('login-username')), findsOneWidget);
+      // ...but none of the AdminShell sidebar's nav-* keys (web-navigation.md
+      // §7) are rendered on this route, since AdminShell only wraps
+      // signed-in /admin/* routes (router.dart's ShellRoute excludes
+      // /admin/login).
+      for (final key in [
+        'nav-lage',
+        'nav-einsaetze',
+        'nav-schichten',
+        'nav-durchsagen',
+        'nav-tagesablauf',
+        'nav-bf-tage',
+        'nav-fahrzeuge',
+        'nav-persons',
+        'nav-monitors',
+        'nav-slides',
+      ]) {
+        expect(find.byKey(Key(key)), findsNothing);
+      }
+      // 'logout' lives in the sidebar footer only; absent on /admin/login.
+      expect(find.byKey(const Key('logout')), findsNothing);
+    },
+  );
 }
