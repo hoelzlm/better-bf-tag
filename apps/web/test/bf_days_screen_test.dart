@@ -54,9 +54,18 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
   final List<String> anonymizationPreviewCalls = [];
   final List<String> anonymizeCalls = [];
   Object? anonymizeError;
+  Object? listError;
+  int listCalls = 0;
 
   @override
-  Future<List<BfDay>> list() async => List.of(days);
+  Future<List<BfDay>> list() async {
+    listCalls++;
+    final error = listError;
+    if (error != null) {
+      throw error;
+    }
+    return List.of(days);
+  }
 
   @override
   Future<BfDay> create({
@@ -281,7 +290,7 @@ Future<_FakeBfDayAdminRepository> _pump(
           ),
         ),
       ],
-      child: const MaterialApp(home: BfDaysScreen()),
+      child: MaterialApp(theme: bftagLightTheme(), home: const BfDaysScreen()),
     ),
   );
   await tester.pumpAndSettle();
@@ -420,7 +429,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: BfDaysScreen()),
+        child: MaterialApp(theme: bftagLightTheme(), home: const BfDaysScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -594,5 +603,142 @@ void main() {
         expect(find.byKey(const Key('bf-day-anonymize-d2')), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'confirm button (anonymize-dialog-confirm) uses BftagAlarmColors, '
+      'not ColorScheme.error',
+      (tester) async {
+        await _pump(
+          tester,
+          days: [_bfDay(id: 'd1', state: BfDayState.ended)],
+        );
+
+        await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));
+        await tester.pumpAndSettle();
+
+        final buttonFinder = find.byKey(
+          const Key('anonymize-dialog-confirm'),
+        );
+        final button = tester.widget<FilledButton>(buttonFinder);
+        final context = tester.element(buttonFinder);
+        final alarmColors = Theme.of(context).extension<BftagAlarmColors>()!;
+        final resolvedBackground = button.style?.backgroundColor?.resolve({});
+        final resolvedForeground = button.style?.foregroundColor?.resolve({});
+
+        expect(resolvedBackground, alarmColors.alarm);
+        expect(resolvedForeground, alarmColors.onAlarm);
+        expect(resolvedBackground, isNot(Theme.of(context).colorScheme.error));
+      },
+    );
   });
+
+  testWidgets('empty list shows "Noch keine BF-Tage" and a working create action',
+      (tester) async {
+    final repository = await _pump(tester, days: []);
+
+    expect(find.textContaining('Noch keine BF-Tage'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bf-days-empty-create')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('bf-day-form-name')),
+      'Erster BF-Tag',
+    );
+    await tester.tap(find.byKey(const Key('bf-day-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(repository.createCalls, hasLength(1));
+    expect(repository.createCalls.single.$1, 'Erster BF-Tag');
+  });
+
+  testWidgets(
+    'load error shows a retry button; retry calls the same load path',
+    (tester) async {
+      final repository = _FakeBfDayAdminRepository(days: []);
+      repository.listError = Exception('boom');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bfDayAdminRepositoryProvider.overrideWithValue(repository),
+            personAdminRepositoryProvider.overrideWithValue(
+              _FakePersonAdminRepository([]),
+            ),
+            sessionControllerProvider.overrideWith(
+              () => _FakeSessionController(
+                SessionSignedIn(
+                  _person(permission: Permission.admin),
+                  'access-token',
+                ),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            theme: bftagLightTheme(),
+            home: const BfDaysScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('BF-Tage konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+      expect(find.text('Erneut versuchen'), findsOneWidget);
+      expect(repository.listCalls, 1);
+
+      await tester.tap(find.text('Erneut versuchen'));
+      await tester.pumpAndSettle();
+
+      expect(repository.listCalls, 2);
+      expect(
+        find.text('BF-Tage konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'planning/running/ended Zustand chips use distinct, fixed colors',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [
+          _bfDay(id: 'd1', state: BfDayState.planning),
+          _bfDay(id: 'd2', state: BfDayState.running),
+          _bfDay(id: 'd3', state: BfDayState.ended),
+        ],
+      );
+
+      Color colorOf(String id) {
+        final container = tester.widget<Container>(
+          find
+              .descendant(
+                of: find.byKey(Key('bf-day-state-$id')),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final decoration = container.decoration as BoxDecoration;
+        return decoration.color ?? Colors.transparent;
+      }
+
+      final planningColor = colorOf('d1');
+      final runningColor = colorOf('d2');
+      final endedColor = colorOf('d3');
+
+      expect(planningColor, isNot(runningColor));
+      expect(runningColor, isNot(endedColor));
+      expect(planningColor, isNot(endedColor));
+      // Running has its own filled dot icon as an additional non-color cue.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('bf-day-state-d2')),
+          matching: find.byIcon(Icons.circle),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }
