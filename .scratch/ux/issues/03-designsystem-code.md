@@ -8,28 +8,28 @@ neuen System aus (Farben, Schrift); die Screens selbst werden erst ab ux-04 umge
 
 **Owner:** Architekt (zerlegt in Coder-Karten), Coder, Reviewer, Tester
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `packages/core`: `bftagTheme(BftagThemeMode)`, `bftagLightTheme()`, `bftagDarkTheme()`,
+- [x] `packages/core`: `bftagTheme(BftagThemeMode)`, `bftagLightTheme()`, `bftagDarkTheme()`,
       `bftagMonitorTheme()` und die Extensions `BftagStatusColors`, `BftagAlarmColors`, `BftagSpacing`,
       `BftagRadii`, `BftagMonitorTextStyles` exakt nach Designsystem §2–§5 und §10 (explizites `ColorScheme`
       aus Tabelle 2.1, `error` = `warning`, Alarmrot nur in `BftagAlarmColors`, Komponenten-`*ThemeData`
       nach §5, Fokusring nach §8); exportiert über `bftag_core.dart`
-- [ ] Inter (400/500/600/700) + `OFL.txt` als Font-Asset in `packages/core`, im Theme gesetzt; kein
+- [x] Inter (400/500/600/700) + `OFL.txt` als Font-Asset in `packages/core`, im Theme gesetzt; kein
       Laufzeit-Laden von Schriften (kein `google_fonts`)
-- [ ] Web: `MaterialApp` nutzt `bftagLightTheme()`; Monitor-Routen in `Theme(data: bftagMonitorTheme())`
-- [ ] App: `theme: bftagLightTheme(), darkTheme: bftagDarkTheme(), themeMode: ThemeMode.system`; das eigene
+- [x] Web: `MaterialApp` nutzt `bftagLightTheme()`; Monitor-Routen in `Theme(data: bftagMonitorTheme())`
+- [x] App: `theme: bftagLightTheme(), darkTheme: bftagDarkTheme(), themeMode: ThemeMode.system`; das eigene
       `ThemeData` in `apps/mobile/lib/main.dart` ist entfernt
-- [ ] Gemeinsame Widgets in `packages/core/lib/src/widgets/`: `FmsBadge`, `BftagStateView`
+- [x] Gemeinsame Widgets in `packages/core/lib/src/widgets/`: `FmsBadge`, `BftagStateView`
       (`.loading/.empty/.error`), `ConnectionBanner` (Designsystem 5.5, 5.10) mit Widget-Tests
-- [ ] Theme-Tests: alle drei Modi liefern alle Extensions; `colorScheme.error != BftagAlarmColors.alarm`;
+- [x] Theme-Tests: alle drei Modi liefern alle Extensions; `colorScheme.error != BftagAlarmColors.alarm`;
       Stichproben-Kontraste aus Tabelle 2.3 per Berechnung (≥ 4,5 : 1)
-- [ ] App-Icon/Favicon aus `docs/design/icon/`: Web (`favicon.png`, `favicon.svg`, `icons/Icon-*.png`,
+- [x] App-Icon/Favicon aus `docs/design/icon/`: Web (`favicon.png`, `favicon.svg`, `icons/Icon-*.png`,
       `manifest.json`-Farben), Android (Launcher inkl. adaptive + monochrom), iOS (AppIcon-Set)
-- [ ] Screenshot-Harness der App lädt Inter (keine Ahem-Blöcke); `just screenshots after` läuft durch
-- [ ] Bestehende Widget-`Key`s und Semantics-Labels bleiben erhalten; kein Verhaltenstest gelöscht oder
+- [x] Screenshot-Harness der App lädt Inter (keine Ahem-Blöcke); `just screenshots after` läuft durch
+- [x] Bestehende Widget-`Key`s und Semantics-Labels bleiben erhalten; kein Verhaltenstest gelöscht oder
       abgeschwächt
-- [ ] `just test`, `just analyze`, `just e2e` grün; CI auf GitHub grün
-- [ ] Tester-Verifikation abgeschlossen
+- [x] `just test`, `just analyze`, `just e2e` grün; CI auf GitHub grün
+- [x] Tester-Verifikation abgeschlossen
 
 Spec: `.scratch/ux/spec.md` · Designsystem: `docs/design/design-system.md` · ADR: `docs/adr/0027-designsystem-umsetzung.md` · Glossar: `CONTEXT.md`
