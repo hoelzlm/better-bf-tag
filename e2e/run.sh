@@ -2,6 +2,12 @@
 # e2e/run.sh — builds the production images from infra/ and runs the real
 # compose stack locally, then runs the API (and later UI) e2e scenario
 # against it. Always tears the stack down (trap EXIT), regardless of result.
+#
+# Mode switch:
+#   E2E_MODE=api-ui (default)  runs api.mjs then ui.mjs (unchanged behavior)
+#   E2E_MODE=screenshots       runs screenshots.mjs instead, writing PNGs to
+#                              SCREENSHOT_DIR/{web,monitor} (see screenshots.mjs
+#                              for the app/ part, which is NOT run from here).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -83,6 +89,17 @@ export E2E_ADMIN_PASS="$BOOTSTRAP_ADMIN_PASSWORD"
 export NODE_TLS_REJECT_UNAUTHORIZED=0
 
 PHASE_START=$SECONDS
+E2E_MODE="${E2E_MODE:-api-ui}"
+if [ "$E2E_MODE" = "screenshots" ]; then
+  export SCREENSHOT_DIR="${SCREENSHOT_DIR:-$REPO_ROOT/docs/design/screenshots/before}"
+  mkdir -p "$SCREENSHOT_DIR/web" "$SCREENSHOT_DIR/monitor"
+  if ! node e2e/screenshots.mjs; then
+    OVERALL_STATUS=1
+  fi
+  echo "TIMING: screenshots phase took $((SECONDS - PHASE_START))s"
+  exit "$OVERALL_STATUS"
+fi
+
 if ! node e2e/api.mjs; then
   OVERALL_STATUS=1
 fi
