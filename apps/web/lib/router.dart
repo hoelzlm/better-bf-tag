@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'admin_shell.dart';
 import 'monitor/local_storage_token_store.dart';
 import 'monitor/monitor_session.dart';
 import 'screens/announcements_screen.dart';
@@ -120,49 +121,52 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/login',
         builder: (context, state) => const _SessionGate(child: LoginScreen()),
       ),
-      GoRoute(
-        path: '/admin',
-        builder: (context, state) => const _SessionGate(child: LageScreen()),
-      ),
-      GoRoute(
-        path: '/admin/fahrzeuge',
-        builder: (context, state) =>
-            const _SessionGate(child: VehiclesScreen()),
-      ),
-      GoRoute(
-        path: '/admin/persons',
-        builder: (context, state) => const _SessionGate(child: PersonsScreen()),
-      ),
-      GoRoute(
-        path: '/admin/monitors',
-        builder: (context, state) =>
-            const _SessionGate(child: MonitorsScreen()),
-      ),
-      GoRoute(
-        path: '/admin/bf-tage',
-        builder: (context, state) => const _SessionGate(child: BfDaysScreen()),
-      ),
-      GoRoute(
-        path: '/admin/slides',
-        builder: (context, state) => const _SessionGate(child: SlidesScreen()),
-      ),
-      GoRoute(
-        path: '/admin/schichten',
-        builder: (context, state) => const _SessionGate(child: ShiftsScreen()),
-      ),
-      GoRoute(
-        path: '/admin/durchsagen',
-        builder: (context, state) =>
-            const _SessionGate(child: AnnouncementsScreen()),
-      ),
-      GoRoute(
-        path: '/admin/tagesablauf',
-        builder: (context, state) => const _SessionGate(child: ProgramScreen()),
-      ),
-      GoRoute(
-        path: '/admin/einsaetze',
-        builder: (context, state) =>
-            const _SessionGate(child: IncidentsScreen()),
+      ShellRoute(
+        builder: (context, state, child) => _SessionGate(
+          child: AdminShell(location: state.matchedLocation, child: child),
+        ),
+        routes: [
+          GoRoute(
+            path: '/admin',
+            builder: (context, state) => const LageScreen(),
+          ),
+          GoRoute(
+            path: '/admin/fahrzeuge',
+            builder: (context, state) => const VehiclesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/persons',
+            builder: (context, state) => const PersonsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/monitors',
+            builder: (context, state) => const MonitorsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/bf-tage',
+            builder: (context, state) => const BfDaysScreen(),
+          ),
+          GoRoute(
+            path: '/admin/slides',
+            builder: (context, state) => const SlidesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/schichten',
+            builder: (context, state) => const ShiftsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/durchsagen',
+            builder: (context, state) => const AnnouncementsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/tagesablauf',
+            builder: (context, state) => const ProgramScreen(),
+          ),
+          GoRoute(
+            path: '/admin/einsaetze',
+            builder: (context, state) => const IncidentsScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: '/monitor',

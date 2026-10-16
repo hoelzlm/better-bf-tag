@@ -1,4 +1,5 @@
 import 'package:bftag_core/bftag_core.dart';
+import 'package:bftag_web/admin_shell.dart';
 import 'package:bftag_web/screens/lage_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,8 @@ GoRouter _router(SessionState session) {
     routes: [
       GoRoute(
         path: '/admin',
-        builder: (context, state) => const LageScreen(),
+        builder: (context, state) =>
+            const AdminShell(location: '/admin', child: LageScreen()),
       ),
       GoRoute(
         path: '/admin/einsaetze',
