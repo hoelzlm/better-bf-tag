@@ -203,6 +203,7 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
     final visible = persons
         ?.where((p) => _showInactive || p.active)
         .toList(growable: false);
+    final spacing = Theme.of(context).extension<BftagSpacing>()!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Personen'),
@@ -217,67 +218,219 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
               ),
             ],
           ),
-          IconButton(
-            key: const Key('print-pairing-codes'),
-            icon: const Icon(Icons.print),
-            tooltip: 'Kopplungscodes drucken',
-            onPressed: _printPairingCodes,
+          Padding(
+            padding: EdgeInsets.only(right: spacing.sm),
+            child: Tooltip(
+              message: 'Kopplungscodes drucken',
+              child: OutlinedButton.icon(
+                key: const Key('print-pairing-codes'),
+                onPressed: _printPairingCodes,
+                icon: const Icon(Icons.print),
+                label: const Text('Codes drucken'),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(right: spacing.lg),
+            child: FilledButton.icon(
+              key: const Key('create-person'),
+              onPressed: _openCreateDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Person anlegen'),
+            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('create-person'),
-        onPressed: _openCreateDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Person anlegen'),
+      body: _buildBody(context, visible),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, List<Person>? visible) {
+    if (visible == null) {
+      final loadError = _loadError;
+      if (loadError != null) {
+        return BftagStateView.error(message: loadError, onRetry: _reload);
+      }
+      return const BftagStateView.loading();
+    }
+    if (visible.isEmpty) {
+      return BftagStateView.empty(
+        icon: Icons.people_outline,
+        title: 'Noch keine Personen angelegt.',
+        action: FilledButton.icon(
+          key: const Key('persons-empty-create'),
+          onPressed: _openCreateDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('Person anlegen'),
+        ),
+      );
+    }
+    final spacing = Theme.of(context).extension<BftagSpacing>()!;
+    return ListView.separated(
+      key: const Key('persons-list'),
+      padding: EdgeInsets.only(bottom: spacing.xxxl + spacing.xl),
+      itemCount: visible.length,
+      separatorBuilder: (context, index) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final person = visible[index];
+        return _PersonRow(
+          person: person,
+          onEdit: () => _openEditDialog(person),
+          onWebAccess: () => _openWebAccessDialog(person),
+          onDevices: () => _openDevicesDialog(person),
+          onToggleActive: () => _toggleActive(person),
+        );
+      },
+    );
+  }
+}
+
+/// Personentyp-/Berechtigungs-Chip (design-system 5.3): `surfaceContainerHigh`
+/// standardmäßig, `primaryContainer` für die Berechtigung „Administrator“
+/// (hebt die mächtigste Rolle optisch ab, Abschnitt 3).
+class _PersonChip extends StatelessWidget {
+  const _PersonChip({required this.label, this.emphasize = false});
+
+  final String label;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>()!;
+    final radii = theme.extension<BftagRadii>()!;
+    final background = emphasize
+        ? theme.colorScheme.primaryContainer
+        : theme.colorScheme.surfaceContainerHigh;
+    final foreground = emphasize
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.sm,
+        vertical: spacing.xs / 2,
       ),
-      body: visible == null
-          ? Center(
-              child: _loadError != null
-                  ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
-            )
-          : ListView.builder(
-              key: const Key('persons-list'),
-              padding: const EdgeInsets.only(bottom: 88),
-              itemCount: visible.length,
-              itemBuilder: (context, index) {
-                final person = visible[index];
-                return ListTile(
-                  key: Key('person-${person.id}'),
-                  title: Text(person.displayName),
-                  subtitle: Text(
-                    '${person.personType.label} · ${person.permission.label}'
-                    ' · ${person.hasWebAccess ? person.username ?? '' : '–'}'
-                    '${person.active ? '' : ' · deaktiviert'}',
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(radii.small),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelMedium?.copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+/// Personenzeile (design-system 5.3 Tabellenstil): Name + Chips oben,
+/// Benutzername (falls Web-Zugang) sowie Aktionen (Web-Zugang, Geräte,
+/// Aktiv-Switch) darunter.
+class _PersonRow extends StatelessWidget {
+  const _PersonRow({
+    required this.person,
+    required this.onEdit,
+    required this.onWebAccess,
+    required this.onDevices,
+    required this.onToggleActive,
+  });
+
+  final Person person;
+  final VoidCallback onEdit;
+  final VoidCallback onWebAccess;
+  final VoidCallback onDevices;
+  final VoidCallback onToggleActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>()!;
+    final username = person.hasWebAccess ? person.username : null;
+    return InkWell(
+      key: Key('person-${person.id}'),
+      onTap: onEdit,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: spacing.lg,
+          vertical: spacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Tooltip(
+                    message: person.displayName,
+                    child: Text(
+                      person.displayName,
+                      style: theme.textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  onTap: () => _openEditDialog(person),
-                  trailing: Wrap(
-                    spacing: 4,
-                    children: [
-                      if (person.permission != Permission.crew)
-                        IconButton(
-                          key: Key('web-access-${person.id}'),
-                          icon: const Icon(Icons.lock_open),
-                          tooltip: 'Web-Zugang',
-                          onPressed: () => _openWebAccessDialog(person),
-                        ),
-                      IconButton(
-                        key: Key('devices-${person.id}'),
-                        icon: const Icon(Icons.devices),
-                        tooltip: 'Geräte',
-                        onPressed: () => _openDevicesDialog(person),
-                      ),
-                      Switch(
-                        key: Key('active-switch-${person.id}'),
-                        value: person.active,
-                        onChanged: (_) => _toggleActive(person),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                ),
+                SizedBox(width: spacing.sm),
+                Wrap(
+                  spacing: spacing.xs,
+                  children: [
+                    _PersonChip(label: person.personType.label),
+                    _PersonChip(
+                      label: person.permission.label,
+                      emphasize: person.permission == Permission.admin,
+                    ),
+                  ],
+                ),
+              ],
             ),
+            SizedBox(height: spacing.xs),
+            Row(
+              children: [
+                Expanded(
+                  child: username != null
+                      ? Text(
+                          username,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                if (person.permission != Permission.crew)
+                  Tooltip(
+                    message: 'Web-Zugang',
+                    child: TextButton.icon(
+                      key: Key('web-access-${person.id}'),
+                      onPressed: onWebAccess,
+                      icon: const Icon(Icons.lock_open),
+                      label: const Text('Web-Zugang'),
+                    ),
+                  ),
+                Tooltip(
+                  message: 'Geräte',
+                  child: TextButton.icon(
+                    key: Key('devices-${person.id}'),
+                    onPressed: onDevices,
+                    icon: const Icon(Icons.devices),
+                    label: const Text('Geräte'),
+                  ),
+                ),
+                SizedBox(width: spacing.sm),
+                Text(
+                  person.active ? 'aktiv' : 'deaktiviert',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Switch(
+                  key: Key('active-switch-${person.id}'),
+                  value: person.active,
+                  onChanged: (_) => onToggleActive(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
