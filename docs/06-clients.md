@@ -7,22 +7,22 @@ Fachbegriffe: [CONTEXT.md](../CONTEXT.md). Welche Berechtigung was darf: [04 –
 
 Zielgerät: Laptop bzw. Desktop-Browser. Was sichtbar ist, hängt von der Berechtigung ab.
 
-| Screen | Berechtigung | Inhalt | Phase |
-|--------|--------------|--------|-------|
-| Login | – | Benutzername, Passwort | MVP |
-| Lage (Startseite Leitstelle) | Leitstelle | laufende Einsätze, Fahrzeugstatus-Leiste, nächste geplante Alarmierungen, Quittierungen live (quittiert / ausstehend / kein Gerät), verpasste Alarmierungen, Abschlussvorschläge | MVP |
-| Einsätze | Einsatzvorbereitung, Leitstelle | Liste je BF-Tag, Filter Entwurf/laufend/abgeschlossen | MVP |
-| Einsatz bearbeiten | Einsatzvorbereitung, Leitstelle | Meldebild, Drehbuch (deutlich als „geheim“ markiert), Alarmierungen anlegen: Fahrzeuge + „sofort“ oder Zeitpunkt; Nachalarmierungen relativ zum Erstalarm planen; Karte mit Einsatz-Pin ([ADR 0026](adr/0026-karte.md), siehe unten) | MVP |
-| Schichten | Leitstelle | Schichten des BF-Tags, Besatzung per Drag & Drop (Person → Fahrzeug + Funktion), Warnung bei Doppelbesetzung | MVP |
-| Anstehende Einsätze | Einsatzvorbereitung | Countdown bis zur geplanten Alarmierung, Drehbuch, Button „Bereitmeldung“ | später |
-| Einsatzberichte | Leitstelle | eingereichte Berichte, Vergleich mit Drehbuch, freigeben/zurückgeben | später |
-| Durchsage (`/admin/durchsagen`) | Leitstelle, Administrator | Formular: Text (max. 500 Zeichen, Zähler), Ziel „Alle“ oder Schicht des laufenden BF-Tags, „Senden“; Liste der Durchsagen des Tags (neueste zuerst, Uhrzeit, Ziel, Text), Löschen mit Rückfrage; ohne laufenden BF-Tag Hinweis „Kein laufender BF-Tag“ und deaktiviertes Formular | MVP |
-| Tagesablauf (`/admin/tagesablauf`) | Leitstelle, Administrator | BF-Tag-Auswahl (Standard: laufend, sonst nächster geplanter, sonst letzter) wie bei Schichten; Liste der Programmpunkte nach Zeit (`HH:mm–HH:mm`, Typ-Icon + Label, Titel); Anlegen/Bearbeiten (Titel 1–80 Zeichen, Typ, Start/Ende)/Löschen mit Rückfrage; bei beendetem BF-Tag nur lesend | MVP |
-| BF-Tage | Administrator | anlegen, Zeitraum, Teilnahmen, Anonymisierung | MVP |
-| Personen | Administrator | Personentyp, Berechtigung, Feuerwehr, Geräte, QR-Codes drucken | MVP |
-| Fahrzeuge | Administrator | Stammdaten, Sortierung | MVP |
-| Feuerwehren | Administrator | weitere Feuerwehren | später |
-| Monitore, Folien | Administrator | Kopplung, Standby-Folien | MVP |
+| Screen                             | Berechtigung                    | Inhalt                                                                                                                                                                                                                                                                                                                                                                                                                                   | Phase  |
+| ---------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Login                              | –                               | Benutzername, Passwort                                                                                                                                                                                                                                                                                                                                                                                                                   | MVP    |
+| Lage (Startseite Leitstelle)       | Leitstelle                      | laufende Einsätze, Fahrzeugstatus-Leiste, nächste geplante Alarmierungen, Quittierungen live (quittiert / ausstehend / kein Gerät), verpasste Alarmierungen, Abschlussvorschläge                                                                                                                                                                                                                                                         | MVP    |
+| Einsätze                           | Einsatzvorbereitung, Leitstelle | Liste je BF-Tag, Filter Entwurf/laufend/abgeschlossen                                                                                                                                                                                                                                                                                                                                                                                    | MVP    |
+| Einsatz bearbeiten                 | Einsatzvorbereitung, Leitstelle | Meldebild, Drehbuch (deutlich als „geheim“ markiert), Alarmierungen anlegen: Fahrzeuge + „sofort“ oder Zeitpunkt; Nachalarmierungen relativ zum Erstalarm planen; Karte mit Einsatz-Pin ([ADR 0026](adr/0026-karte.md), siehe unten)                                                                                                                                                                                                     | MVP    |
+| Schichten                          | Leitstelle                      | Schichten des BF-Tags, Besatzung per Drag & Drop (Person → Fahrzeug + Funktion), Warnung bei Doppelbesetzung                                                                                                                                                                                                                                                                                                                             | MVP    |
+| Anstehende Einsätze                | Einsatzvorbereitung             | Countdown bis zur geplanten Alarmierung, Drehbuch, Button „Bereitmeldung“                                                                                                                                                                                                                                                                                                                                                                | später |
+| Einsatzberichte                    | Leitstelle                      | eingereichte Berichte, Vergleich mit Drehbuch, freigeben/zurückgeben                                                                                                                                                                                                                                                                                                                                                                     | später |
+| Durchsage (`/admin/durchsagen`)    | Leitstelle, Administrator       | Formular: Text (max. 500 Zeichen, Zähler), Ziel „Alle“ oder Schicht des laufenden BF-Tags, „Senden“ (primary, Megafon-Icon); Liste der Durchsagen des Tags (neueste zuerst, Uhrzeit, Ziel, Text; leer: „Noch keine Durchsagen.“), Löschen mit Rückfrage; ohne laufenden BF-Tag Hinweis-Banner und deaktiviertes Formular                                                                                                                 | MVP    |
+| Tagesablauf (`/admin/tagesablauf`) | Leitstelle, Administrator       | Topbar: BF-Tag-Auswahl (Standard: laufend, sonst nächster geplanter, sonst letzter) wie bei Schichten, „Programmpunkt anlegen“ (primary); Liste der Programmpunkte nach Zeit (`HH:mm–HH:mm`, Typ-Icon in farbiger Kachel + Label, Titel); Anlegen/Bearbeiten (Titel 1–80 Zeichen, Typ, Start/Ende, Ende muss nach Start liegen)/Löschen mit Rückfrage; bei beendetem BF-Tag nur lesend (Schloss-Hinweis im Topbar, Formular deaktiviert) | MVP    |
+| BF-Tage                            | Administrator                   | anlegen, Zeitraum, Teilnahmen, Anonymisierung                                                                                                                                                                                                                                                                                                                                                                                            | MVP    |
+| Personen                           | Administrator                   | Personentyp, Berechtigung, Feuerwehr, Geräte, QR-Codes drucken                                                                                                                                                                                                                                                                                                                                                                           | MVP    |
+| Fahrzeuge                          | Administrator                   | Stammdaten, Sortierung                                                                                                                                                                                                                                                                                                                                                                                                                   | MVP    |
+| Feuerwehren                        | Administrator                   | weitere Feuerwehren                                                                                                                                                                                                                                                                                                                                                                                                                      | später |
+| Monitore, Folien                   | Administrator                   | Kopplung, Standby-Folien                                                                                                                                                                                                                                                                                                                                                                                                                 | MVP    |
 
 ## Monitor (`apps/web`, Route `/monitor`)
 
@@ -46,6 +46,7 @@ Bei einem **laufenden Einsatz**:
 ```
 
 Im **Standby**:
+
 - MVP: große Uhr, Fahrzeugstatus-Leiste, **aktuelle Schicht mit Besatzungen** (wer sitzt auf
   welchem Fahrzeug), rotierende Folien
 - MVP: Banner bei neuer Durchsage (`announcement.created`, 60 s, zeigt den Text; verschwindet
@@ -67,18 +68,18 @@ Einsätzen.
 
 Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nach Berechtigung.
 
-| Screen | Inhalt | Phase |
-|--------|--------|-------|
-| Onboarding | QR-Code scannen → Berechtigungen (Push, Nicht-stören, Akku) → Testalarm | MVP |
-| Alarm (Vollbild) | Stichwort, Adresse, Meldebild, alarmierte Fahrzeuge, großer Button **„Quittieren“** | MVP |
-| Mein Fahrzeug | aktuelle Besatzung und Funktion, FMS-Tasten 1–8 (Funkgerät-Optik) | MVP |
-| Einsätze | laufende und vergangene Einsätze des BF-Tags | MVP |
-| Einsatzdetail | Meldebild, Alarmierungen, Quittierungen; Drehbuch nur bei Berechtigung | MVP |
-| Einsatzbericht | für die Funktion GF nach Status 1/2: Lage, Maßnahmen, Vorkommnisse; Zeiten automatisch | später |
-| Vorwarnung / Bereitmeldung | für Einsatzvorbereitung | später |
-| Durchsagen (`/durchsagen`) | Liste aus `snapshot.announcements`, neueste zuerst; dritter Eintrag der Navigationsleiste | MVP |
-| Tagesablauf (`/tagesablauf`) | Liste aus `snapshot.program_items` (laufender BF-Tag), aktuelle Punkte hervorgehoben, vergangene ausgegraut; vierter Eintrag der Navigationsleiste | MVP |
-| Einstellungen | Gerät abmelden, Testalarm, Hinweise zu Akku und Ton | MVP |
+| Screen                       | Inhalt                                                                                                                                             | Phase  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Onboarding                   | QR-Code scannen → Berechtigungen (Push, Nicht-stören, Akku) → Testalarm                                                                            | MVP    |
+| Alarm (Vollbild)             | Stichwort, Adresse, Meldebild, alarmierte Fahrzeuge, großer Button **„Quittieren“**                                                                | MVP    |
+| Mein Fahrzeug                | aktuelle Besatzung und Funktion, FMS-Tasten 1–8 (Funkgerät-Optik)                                                                                  | MVP    |
+| Einsätze                     | laufende und vergangene Einsätze des BF-Tags                                                                                                       | MVP    |
+| Einsatzdetail                | Meldebild, Alarmierungen, Quittierungen; Drehbuch nur bei Berechtigung                                                                             | MVP    |
+| Einsatzbericht               | für die Funktion GF nach Status 1/2: Lage, Maßnahmen, Vorkommnisse; Zeiten automatisch                                                             | später |
+| Vorwarnung / Bereitmeldung   | für Einsatzvorbereitung                                                                                                                            | später |
+| Durchsagen (`/durchsagen`)   | Liste aus `snapshot.announcements`, neueste zuerst; dritter Eintrag der Navigationsleiste                                                          | MVP    |
+| Tagesablauf (`/tagesablauf`) | Liste aus `snapshot.program_items` (laufender BF-Tag), aktuelle Punkte hervorgehoben, vergangene ausgegraut; vierter Eintrag der Navigationsleiste | MVP    |
+| Einstellungen                | Gerät abmelden, Testalarm, Hinweise zu Akku und Ton                                                                                                | MVP    |
 
 ### Technik
 

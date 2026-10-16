@@ -97,6 +97,11 @@ Future<bool> _confirm(
 /// oder Administrator, ADR 0025): BF-Tag-Auswahl wie die Schichten-Seite,
 /// Liste der Programmpunkte nach Zeit, Anlegen/Bearbeiten/Löschen per
 /// Dialog. BF-Tag `ended` -> nur lesend.
+///
+/// Concept: `docs/design/screens/web-tagesablauf.md`. "Programmpunkt
+/// anlegen" ist `primary` (korrigiert die frühere `alarm`-Farbverletzung)
+/// und wandert in den AppBar-Topbar neben die BF-Tag-Auswahl; Typ-Icon
+/// sitzt in einer `primaryContainer`-Kachel statt nacktem Icon.
 class ProgramScreen extends ConsumerStatefulWidget {
   const ProgramScreen({super.key});
 
@@ -169,9 +174,8 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateDialog() async {
@@ -186,7 +190,9 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(programItemRepositoryProvider).create(
+      await ref
+          .read(programItemRepositoryProvider)
+          .create(
             day.id,
             title: result.title,
             type: result.type,
@@ -213,7 +219,9 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(programItemRepositoryProvider).update(
+      await ref
+          .read(programItemRepositoryProvider)
+          .update(
             item.id,
             title: result.title,
             type: result.type,
@@ -246,108 +254,206 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     final days = _days;
     final day = _selectedDay;
     final items = _items ?? const <ProgramItem>[];
     final dayEnded = day?.state == BfDayState.ended;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tagesablauf')),
+      appBar: AppBar(
+        title: const Text('Tagesablauf'),
+        actions: [
+          if (days != null && days.isNotEmpty) ...[
+            if (dayEnded) ...[
+              Icon(
+                Icons.lock_outline,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              SizedBox(width: spacing.xs),
+              Padding(
+                padding: EdgeInsets.only(right: spacing.md),
+                child: Text(
+                  'Dieser BF-Tag ist beendet — nur lesend',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+            Text(
+              'BF-Tag:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SizedBox(width: spacing.sm),
+            DropdownButton<String>(
+              key: const Key('bf-day-dropdown'),
+              value: _selectedDayId,
+              items: [
+                for (final d in days)
+                  DropdownMenuItem(value: d.id, child: Text(d.name)),
+              ],
+              onChanged: (value) {
+                if (value != null) _selectDay(value);
+              },
+            ),
+            SizedBox(width: spacing.md),
+            if (day != null)
+              Padding(
+                padding: EdgeInsets.only(right: spacing.lg),
+                child: FilledButton.icon(
+                  key: const Key('program-add'),
+                  onPressed: dayEnded ? null : _openCreateDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Programmpunkt anlegen'),
+                ),
+              ),
+          ],
+        ],
+      ),
       body: days == null
           ? Center(
               child: _loadError != null
                   ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
+                  : CircularProgressIndicator(color: theme.colorScheme.primary),
             )
           : days.isEmpty
-              ? const Center(child: Text('Keine BF-Tage angelegt.'))
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DropdownButton<String>(
-                        key: const Key('bf-day-dropdown'),
-                        value: _selectedDayId,
-                        items: [
-                          for (final d in days)
-                            DropdownMenuItem(value: d.id, child: Text(d.name)),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) _selectDay(value);
-                        },
+          ? const BftagStateView.empty(
+              title: 'Keine BF-Tage angelegt.',
+              icon: Icons.event_busy_outlined,
+            )
+          : day == null
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: EdgeInsets.all(spacing.lg),
+              child: _items == null
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: theme.colorScheme.primary,
                       ),
-                      const SizedBox(height: 12),
-                      if (day != null) ...[
-                        Row(
-                          children: [
-                            FilledButton.icon(
-                              key: const Key('program-add'),
-                              onPressed: dayEnded ? null : _openCreateDialog,
+                    )
+                  : items.isEmpty
+                  ? BftagStateView.empty(
+                      title: 'Keine Programmpunkte vorhanden.',
+                      icon: Icons.event_note,
+                      action: dayEnded
+                          ? null
+                          : FilledButton.icon(
+                              key: const Key('program-empty-create'),
+                              onPressed: _openCreateDialog,
                               icon: const Icon(Icons.add),
                               label: const Text('Programmpunkt anlegen'),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        if (_items == null)
-                          const Expanded(
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        else if (items.isEmpty)
-                          const Expanded(
-                            child: Center(
-                              child: Text('Keine Programmpunkte vorhanden.'),
-                            ),
-                          )
-                        else
-                          Expanded(
-                            child: ListView.builder(
-                              key: const Key('program-list'),
-                              itemCount: items.length,
-                              itemBuilder: (context, index) {
-                                final item = items[index];
-                                return ListTile(
-                                  key: Key('program-item-${item.id}'),
-                                  leading: Icon(_iconFor(item.type)),
-                                  title: Text(item.title),
-                                  subtitle: Text(
-                                    '${_formatTimeRange(item.startsAt, item.endsAt)} · '
-                                    '${item.type.label}',
-                                  ),
-                                  trailing: dayEnded
-                                      ? null
-                                      : Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              key: Key(
-                                                'program-edit-${item.id}',
-                                              ),
-                                              icon: const Icon(Icons.edit),
-                                              tooltip: 'Bearbeiten',
-                                              onPressed: () =>
-                                                  _openEditDialog(item),
-                                            ),
-                                            IconButton(
-                                              key: Key(
-                                                'program-delete-${item.id}',
-                                              ),
-                                              icon: const Icon(Icons.delete),
-                                              tooltip: 'Löschen',
-                                              onPressed: () =>
-                                                  _deleteItem(item),
-                                            ),
-                                          ],
-                                        ),
-                                );
-                              },
-                            ),
-                          ),
-                      ],
-                    ],
+                    )
+                  : ListView.separated(
+                      key: const Key('program-list'),
+                      itemCount: items.length,
+                      separatorBuilder: (context, index) =>
+                          Divider(height: 1, color: theme.colorScheme.outline),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return _ProgramRow(
+                          item: item,
+                          readOnly: dayEnded,
+                          onEdit: () => _openEditDialog(item),
+                          onDelete: () => _deleteItem(item),
+                        );
+                      },
+                    ),
+            ),
+    );
+  }
+}
+
+/// Programmpunkt-Zeile (web-tagesablauf.md §3): feste Zeitspalte links,
+/// Typ-Icon in einer farbigen `primaryContainer`-Kachel statt nacktem
+/// Icon, Bearbeiten-/Löschen-Icons mit 8 dp Abstand und ≥ 40 dp
+/// Klickfläche.
+class _ProgramRow extends StatelessWidget {
+  const _ProgramRow({
+    required this.item,
+    required this.readOnly,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final ProgramItem item;
+  final bool readOnly;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
+    return Padding(
+      key: Key('program-item-${item.id}'),
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.sm,
+        vertical: spacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              _formatTimeRange(item.startsAt, item.endsAt),
+              style: theme.textTheme.bodyLarge,
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.all(spacing.sm),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(radii.small),
+            ),
+            child: Icon(_iconFor(item.type), color: theme.colorScheme.primary),
+          ),
+          SizedBox(width: spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: theme.textTheme.titleMedium),
+                Text(
+                  item.type.label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
+              ],
+            ),
+          ),
+          if (!readOnly) ...[
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                key: Key('program-edit-${item.id}'),
+                icon: const Icon(Icons.edit),
+                tooltip: 'Bearbeiten',
+                onPressed: onEdit,
+              ),
+            ),
+            SizedBox(width: spacing.sm),
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                key: Key('program-delete-${item.id}'),
+                icon: const Icon(Icons.delete),
+                tooltip: 'Löschen',
+                onPressed: onDelete,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -380,8 +486,7 @@ class _ProgramItemFormDialog extends StatefulWidget {
   final DateTime initialEnd;
 
   @override
-  State<_ProgramItemFormDialog> createState() =>
-      _ProgramItemFormDialogState();
+  State<_ProgramItemFormDialog> createState() => _ProgramItemFormDialogState();
 }
 
 class _ProgramItemFormDialogState extends State<_ProgramItemFormDialog> {
@@ -389,6 +494,7 @@ class _ProgramItemFormDialogState extends State<_ProgramItemFormDialog> {
   late ProgramItemType _type;
   late DateTime _startsAt;
   late DateTime _endsAt;
+  String? _rangeError;
 
   @override
   void initState() {
@@ -418,6 +524,10 @@ class _ProgramItemFormDialogState extends State<_ProgramItemFormDialog> {
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty || title.length > 80) return;
+    if (!_endsAt.isAfter(_startsAt)) {
+      setState(() => _rangeError = 'Ende muss nach Start liegen.');
+      return;
+    }
     Navigator.of(context).pop(
       _ProgramItemFormResult(
         title: title,
@@ -430,9 +540,12 @@ class _ProgramItemFormDialogState extends State<_ProgramItemFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isEdit = widget.title != null;
     return AlertDialog(
-      title: Text(isEdit ? 'Programmpunkt bearbeiten' : 'Programmpunkt anlegen'),
+      title: Text(
+        isEdit ? 'Programmpunkt bearbeiten' : 'Programmpunkt anlegen',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -473,6 +586,16 @@ class _ProgramItemFormDialogState extends State<_ProgramItemFormDialog> {
               trailing: const Icon(Icons.edit_calendar),
               onTap: _pickEnd,
             ),
+            if (_rangeError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _rangeError!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
