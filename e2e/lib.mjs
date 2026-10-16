@@ -8,6 +8,10 @@ import WebSocket from 'ws';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import net from 'node:net';
 
 const E2E_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -107,6 +111,165 @@ export class WsClient {
   close() {
     this.ws.close();
   }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// --- shared CDP / headless Chrome helpers -----------------------------
+// Used by ui.mjs and screenshots.mjs so both drive Chrome the exact same
+// way (spawn, connect, send/evalJs/nav/waitFor/enableSemantics).
+
+export function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.on('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Creates a headless-Chrome + CDP session. Returns an object with the
+ * same helpers ui.mjs used to keep as module-level state/functions, now
+ * reusable from screenshots.mjs too. Call `start()` then `connect()`,
+ * and `cleanup()` (also auto-registered on process exit) when done.
+ */
+export function createCdpSession({ chromeBin, windowSize = '1400,900' } = {}) {
+  const CHROME_BIN = chromeBin ?? process.env.CHROME_BIN ?? 'google-chrome';
+  const profileDir = mkdtempSync(path.join(tmpdir(), 'bftag-e2e-chrome-'));
+  let chrome;
+  let cdp;
+  let msgId = 0;
+  const pending = new Map();
+  const consoleErrors = [];
+
+  function cleanup() {
+    if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
+      try {
+        chrome.kill('SIGKILL');
+      } catch {
+        // already gone
+      }
+    }
+    try {
+      rmSync(profileDir, { recursive: true, force: true });
+    } catch {
+      // best effort
+    }
+  }
+  process.on('exit', cleanup);
+
+  async function start() {
+    const port = await freePort();
+    chrome = spawn(
+      CHROME_BIN,
+      [
+        '--headless=new',
+        '--no-sandbox',
+        '--ignore-certificate-errors',
+        `--window-size=${windowSize}`,
+        '--autoplay-policy=no-user-gesture-required',
+        `--user-data-dir=${profileDir}`,
+        `--remote-debugging-port=${port}`,
+        'about:blank',
+      ],
+      { stdio: 'ignore' },
+    );
+    chrome.on('error', (e) => console.log(`NOTE chrome spawn error: ${e.message}`));
+    return port;
+  }
+
+  async function connect(port) {
+    let tabs;
+    for (let i = 0; i < 60; i++) {
+      try {
+        tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+        break;
+      } catch {
+        await sleep(250);
+      }
+    }
+    if (!tabs) throw new Error('Chrome DevTools endpoint never came up');
+    const page = tabs.find((t) => t.type === 'page');
+    cdp = new WebSocket(page.webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => {
+      cdp.on('open', resolve);
+      cdp.on('error', reject);
+    });
+    cdp.on('message', (d) => {
+      const m = JSON.parse(d.toString());
+      if (m.id && pending.has(m.id)) {
+        const { resolve } = pending.get(m.id);
+        pending.delete(m.id);
+        resolve(m.result ?? {});
+      }
+      if (m.method === 'Runtime.exceptionThrown') {
+        consoleErrors.push(m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text ?? 'exception');
+      }
+      if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
+        consoleErrors.push(m.params.args.map((a) => a.value ?? a.description).join(' '));
+      }
+    });
+    await send('Page.enable');
+    await send('Runtime.enable');
+  }
+
+  function send(method, params = {}) {
+    return new Promise((resolve, reject) => {
+      const id = ++msgId;
+      pending.set(id, { resolve, reject });
+      cdp.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  async function evalJs(expression) {
+    const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    if (r.exceptionDetails) {
+      throw new Error(r.exceptionDetails.text ?? 'Runtime.evaluate exception');
+    }
+    return r.result?.value;
+  }
+
+  async function waitFor(predicate, timeoutMs = 8000, intervalMs = 150) {
+    const start = Date.now();
+    for (;;) {
+      let value;
+      try {
+        value = await predicate();
+      } catch {
+        value = undefined;
+      }
+      if (value) return value;
+      if (Date.now() - start > timeoutMs) return undefined;
+      await sleep(intervalMs);
+    }
+  }
+
+  async function nav(url) {
+    await send('Page.navigate', { url });
+    await waitFor(async () => (await evalJs('document.readyState')) === 'complete', 10000, 200);
+  }
+
+  const enableSemantics = () =>
+    evalJs(
+      `(() => { const p = document.querySelector('flt-semantics-placeholder'); if (p) { p.click(); return true; } return false; })()`,
+    );
+
+  return {
+    start,
+    connect,
+    send,
+    evalJs,
+    waitFor,
+    nav,
+    enableSemantics,
+    cleanup,
+    get consoleErrors() {
+      return consoleErrors;
+    },
+  };
 }
 
 export function summary(label) {
