@@ -9,15 +9,38 @@ import '../map_tile_provider.dart';
 import '../station_provider.dart';
 import '../widgets/alarm_dialog.dart';
 import '../widgets/running_incidents_section.dart'
-    show scheduledAlarmsWarningFragment;
+    show formatElapsedSince, scheduledAlarmsWarningFragment;
 import 'shifts_screen.dart' show pickDefaultBfDay;
 
 String _stateChipLabel(IncidentState state) => state.label;
+
+/// Earliest `triggeredAt` of [incident]'s alarms, formatted via
+/// [formatElapsedSince] (concept §3.1/§3.4c, AC21) -- `null` when
+/// [incident] is not `running` or has no triggered alarm yet (a purely
+/// planned/missed Alarmierung does not count).
+String? _elapsedLabelFor(Incident incident, List<Alarm> alarms, DateTime now) {
+  if (incident.state != IncidentState.running) return null;
+  DateTime? first;
+  for (final alarm in alarms) {
+    if (alarm.incidentId != incident.id) continue;
+    final triggeredAt = alarm.triggeredAt;
+    if (triggeredAt == null) continue;
+    if (first == null || triggeredAt.isBefore(first)) first = triggeredAt;
+  }
+  if (first == null) return null;
+  return formatElapsedSince(first, now);
+}
 
 /// Einsätze screen (`/admin/einsaetze`, Berechtigung Einsatzvorbereitung,
 /// Leitstelle oder Administrator, ADR 0016): BF-Tag-Auswahl, Filter nach
 /// Zustand (Entwurf/laufend/abgeschlossen -- verworfen ausgeblendet),
 /// Liste, Editor mit Meldebild und geheimem Drehbuch.
+///
+/// Implements the kritischer Pfad (concept `docs/design/screens/
+/// web-einsaetze.md` §3.4): after a successful `create()` the filter
+/// switches to "Entwurf", the new card scrolls into view and is briefly
+/// highlighted, and keyboard focus moves to its "Alarmieren" button; after
+/// a successful Sofort-Erstalarm the filter switches to "laufend".
 class IncidentsScreen extends ConsumerStatefulWidget {
   const IncidentsScreen({super.key});
 
@@ -32,11 +55,41 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
   IncidentState _filter = IncidentState.draft;
   String? _loadError;
 
+  /// Id of the card currently showing the brief post-create highlight
+  /// (§3.4a), or `null` when none is highlighted.
+  String? _highlightedIncidentId;
+  Timer? _highlightTimer;
+
+  /// Keyboard focus for each card's Alarmieren/Nachalarmieren button,
+  /// created on demand and reused across rebuilds so §3.4a/§5 can move
+  /// focus to a specific card after it is (re)created.
+  final Map<String, FocusNode> _alarmFocusNodes = {};
+
+  /// Anchors used to resolve a card's `BuildContext` for
+  /// `Scrollable.ensureVisible` (§3.4a) -- keyed by incident id, created
+  /// on demand.
+  final Map<String, GlobalKey> _cardAnchorKeys = {};
+
   @override
   void initState() {
     super.initState();
     unawaited(_loadDays());
   }
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    for (final node in _alarmFocusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  FocusNode _focusNodeFor(String incidentId) =>
+      _alarmFocusNodes[incidentId] ??= FocusNode();
+
+  GlobalKey _anchorKeyFor(String incidentId) =>
+      _cardAnchorKeys[incidentId] ??= GlobalKey();
 
   BfDay? get _selectedDay {
     final days = _days;
@@ -104,6 +157,44 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// §3.4a: after a successful `create()`, switches the filter to
+  /// "Entwurf" and briefly highlights the new card, independent of
+  /// whether the user can see/reach its Alarmieren button.
+  void _scheduleHighlightClear() {
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() => _highlightedIncidentId = null);
+    });
+  }
+
+  /// §3.4a/§5: scrolls the new card into view and, when the current
+  /// Berechtigung can see an Alarmieren button, moves keyboard focus onto
+  /// it -- the AC16 counterpart to §3.4b's focus on the first vehicle
+  /// checkbox inside [AlarmDialog].
+  void _focusNewIncidentCard(String incidentId) {
+    final session = ref.read(sessionControllerProvider);
+    final permission = switch (session) {
+      SessionSignedIn(person: final person) => person.permission,
+      _ => null,
+    };
+    final canAlarm =
+        permission == Permission.dispatch || permission == Permission.admin;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final anchorContext = _anchorKeyFor(incidentId).currentContext;
+      if (anchorContext != null) {
+        await Scrollable.ensureVisible(
+          anchorContext,
+          duration: const Duration(milliseconds: 200),
+          alignment: 0.5,
+        );
+      }
+      if (!mounted || !canAlarm) return;
+      _focusNodeFor(incidentId).requestFocus();
+    });
+  }
+
   Future<void> _openCreateDialog() async {
     final day = _selectedDay;
     if (day == null) return;
@@ -113,7 +204,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     );
     if (result == null) return;
     try {
-      await ref
+      final created = await ref
           .read(incidentRepositoryProvider)
           .create(
             day.id,
@@ -124,7 +215,13 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
             latitude: result.latitude,
             longitude: result.longitude,
           );
+      setState(() {
+        _filter = IncidentState.draft;
+        _highlightedIncidentId = created.id;
+      });
       await _reload();
+      _scheduleHighlightClear();
+      _focusNewIncidentCard(created.id);
     } catch (error) {
       _showError(
         describeIncidentError(
@@ -180,6 +277,12 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final title = isNachalarmierung
         ? 'Nachalarmierung für Einsatz #${incident.number}'
         : 'Einsatz #${incident.number} "${incident.keyword}" alarmieren';
+    // §3.4c/AC19: only a successful Sofort-Erstalarm (not a
+    // Nachalarmierung, not a Planung) switches the filter to "laufend" --
+    // tracked via this flag instead of the dialog's `pop(true)` result,
+    // which is also `true` for the idempotent "bereits alarmiert" case
+    // and for a successful Planung.
+    var triggeredNow = false;
     final triggered = await showDialog<bool>(
       context: context,
       builder: (context) => AlarmDialog(
@@ -187,9 +290,13 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
         title: title,
         alreadyAlarmedVehicleIds: alreadyAlarmed,
         hasFirstAlarm: hasFirstAlarmFor(incident.id, alarms, scheduledAlarms),
+        onTriggered: isNachalarmierung ? null : () => triggeredNow = true,
       ),
     );
     if (triggered == true) {
+      if (triggeredNow) {
+        setState(() => _filter = IncidentState.running);
+      }
       await _reload();
     }
   }
@@ -201,6 +308,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
             .where((sa) => sa.incident.id == incident.id)
             .toList();
     final warning = scheduledAlarmsWarningFragment(scheduledAlarms);
+    final alarmColors = Theme.of(context).extension<BftagAlarmColors>()!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -218,6 +326,10 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
           ),
           FilledButton(
             key: const Key('confirm-dialog-confirm'),
+            style: ButtonStyle(
+              backgroundColor: WidgetStatePropertyAll(alarmColors.alarm),
+              foregroundColor: WidgetStatePropertyAll(alarmColors.onAlarm),
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Verwerfen'),
           ),
@@ -240,13 +352,21 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     final session = ref.watch(sessionControllerProvider);
-    // Keeps alarmsProvider/scheduledAlarmsProvider subscribed and fresh so
-    // the on-demand ref.read() calls in _openAlarmDialog/_discard (ADR
-    // 0022) see up-to-date data even if this screen is opened directly
-    // (not via the Lage-Screen, which already watches both).
-    ref.watch(alarmsProvider);
+    // Keeps alarmsProvider/scheduledAlarmsProvider/vehiclesProvider
+    // subscribed and fresh so the on-demand ref.read() calls in
+    // _openAlarmDialog/_discard (ADR 0022) see up-to-date data even if this
+    // screen is opened directly (not via the Lage-Screen, which already
+    // watches alarms/scheduledAlarms) -- and, critically, so AlarmDialog's
+    // own `ref.watch(vehiclesProvider)` sees the already-resolved AsyncData
+    // instead of racing a late subscription against realtime_client.dart's
+    // single-shot broadcast StreamController (which does not replay past
+    // events to new listeners).
+    final alarms = ref.watch(alarmsProvider).valueOrNull ?? const <Alarm>[];
     ref.watch(scheduledAlarmsProvider);
+    ref.watch(vehiclesProvider);
     final permission = switch (session) {
       SessionSignedIn(person: final person) => person.permission,
       _ => null,
@@ -257,30 +377,19 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final day = _selectedDay;
     final dayEnded = day?.state == BfDayState.ended;
     final incidents = _filteredIncidents;
+    final now = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Einsätze')),
-      floatingActionButton: day == null
-          ? null
-          : FloatingActionButton.extended(
-              key: const Key('create-incident'),
-              onPressed: dayEnded ? null : _openCreateDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Einsatz anlegen'),
-            ),
-      body: days == null
-          ? Center(
-              child: _loadError != null
-                  ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
-            )
-          : days.isEmpty
-          ? const Center(child: Text('Keine BF-Tage angelegt.'))
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(
+        title: const Text('Einsätze'),
+        actions: [
+          if (days != null && days.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(right: spacing.lg),
+              child: Row(
                 children: [
+                  Text('BF-Tag:', style: theme.textTheme.bodyMedium),
+                  SizedBox(width: spacing.sm),
                   DropdownButton<String>(
                     key: const Key('bf-day-dropdown'),
                     value: _selectedDayId,
@@ -292,100 +401,304 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
                       if (value != null) _selectDay(value);
                     },
                   ),
-                  const SizedBox(height: 12),
-                  if (day != null) ...[
-                    SegmentedButton<IncidentState>(
-                      key: const Key('incident-filter'),
-                      segments: const [
-                        ButtonSegment(
-                          value: IncidentState.draft,
-                          label: Text('Entwurf'),
-                        ),
-                        ButtonSegment(
-                          value: IncidentState.running,
-                          label: Text('laufend'),
-                        ),
-                        ButtonSegment(
-                          value: IncidentState.closed,
-                          label: Text('abgeschlossen'),
-                        ),
-                      ],
-                      selected: {_filter},
-                      onSelectionChanged: (selection) {
-                        setState(() => _filter = selection.first);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    if (_incidents == null)
-                      const Expanded(
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (incidents.isEmpty)
-                      const Expanded(
-                        child: Center(child: Text('Keine Einsätze vorhanden.')),
-                      )
-                    else
-                      Expanded(
-                        child: ListView.builder(
-                          key: const Key('incidents-list'),
-                          itemCount: incidents.length,
-                          itemBuilder: (context, index) {
-                            final incident = incidents[index];
-                            return ListTile(
-                              key: Key('incident-${incident.id}'),
-                              title: Text(
-                                '#${incident.number} ${incident.keyword} – ${incident.address}',
-                              ),
-                              onTap: () => _openEditDialog(incident),
-                              trailing: Wrap(
-                                spacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Chip(
-                                    key: Key('incident-state-${incident.id}'),
-                                    label: Text(
-                                      _stateChipLabel(incident.state),
-                                    ),
-                                  ),
-                                  if (incident.state == IncidentState.draft &&
-                                      canAlarm)
-                                    IconButton(
-                                      key: Key('alarm-incident-${incident.id}'),
-                                      icon: const Icon(Icons.campaign),
-                                      tooltip: 'Alarmieren',
-                                      onPressed: () =>
-                                          _openAlarmDialog(incident),
-                                    ),
-                                  if (incident.state == IncidentState.running &&
-                                      canAlarm)
-                                    IconButton(
-                                      key: Key(
-                                        'nachalarmieren-incident-${incident.id}',
-                                      ),
-                                      icon: const Icon(Icons.campaign),
-                                      tooltip: 'Nachalarmieren',
-                                      onPressed: () =>
-                                          _openAlarmDialog(incident),
-                                    ),
-                                  if (incident.state == IncidentState.draft)
-                                    IconButton(
-                                      key: Key(
-                                        'discard-incident-${incident.id}',
-                                      ),
-                                      icon: const Icon(Icons.delete_outline),
-                                      tooltip: 'Verwerfen',
-                                      onPressed: () => _discard(incident),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
                 ],
               ),
             ),
+          Padding(
+            padding: EdgeInsets.only(right: spacing.lg),
+            child: FilledButton.icon(
+              key: const Key('create-incident'),
+              onPressed: (day == null || dayEnded) ? null : _openCreateDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Einsatz anlegen'),
+            ),
+          ),
+        ],
+      ),
+      body: days == null
+          ? Center(
+              child: _loadError != null
+                  ? BftagStateView.error(
+                      message: _loadError!,
+                      onRetry: _loadDays,
+                    )
+                  : const CircularProgressIndicator(),
+            )
+          : days.isEmpty
+          ? const BftagStateView.empty(
+              title: 'Keine BF-Tage angelegt.',
+              icon: Icons.event_busy_outlined,
+            )
+          : Padding(
+              padding: EdgeInsets.all(spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SegmentedButton<IncidentState>(
+                    key: const Key('incident-filter'),
+                    segments: const [
+                      ButtonSegment(
+                        value: IncidentState.draft,
+                        label: Text('Entwurf'),
+                      ),
+                      ButtonSegment(
+                        value: IncidentState.running,
+                        label: Text('laufend'),
+                      ),
+                      ButtonSegment(
+                        value: IncidentState.closed,
+                        label: Text('abgeschlossen'),
+                      ),
+                    ],
+                    selected: {_filter},
+                    onSelectionChanged: (selection) {
+                      setState(() => _filter = selection.first);
+                    },
+                  ),
+                  SizedBox(height: spacing.lg),
+                  if (_incidents == null)
+                    const Expanded(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (incidents.isEmpty)
+                    Expanded(
+                      child: BftagStateView.empty(
+                        icon: Icons.local_fire_department,
+                        title: 'Keine Einsätze im Zustand ${_filter.label}.',
+                        action: _filter == IncidentState.draft
+                            ? FilledButton.icon(
+                                key: const Key('incidents-empty-create'),
+                                onPressed: dayEnded ? null : _openCreateDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Einsatz anlegen'),
+                              )
+                            : null,
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView(
+                        key: const Key('incidents-list'),
+                        children: [
+                          for (final incident in incidents)
+                            Padding(
+                              padding: EdgeInsets.only(bottom: spacing.md),
+                              child: KeyedSubtree(
+                                key: _anchorKeyFor(incident.id),
+                                child: _IncidentCard(
+                                  key: Key('incident-${incident.id}'),
+                                  incident: incident,
+                                  highlighted:
+                                      incident.id == _highlightedIncidentId,
+                                  elapsedLabel: _elapsedLabelFor(
+                                    incident,
+                                    alarms,
+                                    now,
+                                  ),
+                                  canAlarm: canAlarm,
+                                  alarmFocusNode: canAlarm
+                                      ? _focusNodeFor(incident.id)
+                                      : null,
+                                  onTap: () => _openEditDialog(incident),
+                                  onDiscard: () => _discard(incident),
+                                  onAlarm: () => _openAlarmDialog(incident),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+/// A single Einsatz card (concept §3.1): title row with the "#Nummer"
+/// badge, Stichwort and the always-visible Zustands-Label
+/// (`incident-state-${id}`), the Adresse beneath it, and a narrow,
+/// vertically centered action column with "seit X min" (laufend only),
+/// "Verwerfen" (Entwurf only) and "Alarmieren"/"Nachalarmieren".
+class _IncidentCard extends StatelessWidget {
+  const _IncidentCard({
+    super.key,
+    required this.incident,
+    required this.highlighted,
+    required this.elapsedLabel,
+    required this.canAlarm,
+    required this.alarmFocusNode,
+    required this.onTap,
+    required this.onDiscard,
+    required this.onAlarm,
+  });
+
+  final Incident incident;
+  final bool highlighted;
+  final String? elapsedLabel;
+  final bool canAlarm;
+  final FocusNode? alarmFocusNode;
+  final VoidCallback onTap;
+  final VoidCallback onDiscard;
+  final VoidCallback onAlarm;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
+    final alarmColors = theme.extension<BftagAlarmColors>()!;
+    final statusColors = theme.extension<BftagStatusColors>()!;
+    final isDraft = incident.state == IncidentState.draft;
+    final isRunning = incident.state == IncidentState.running;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 700),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(radii.large),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(radii.large),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: spacing.lg,
+            vertical: spacing.sm,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(radii.large),
+                  onTap: onTap,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: spacing.sm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: spacing.sm,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainer,
+                                borderRadius: BorderRadius.circular(radii.full),
+                              ),
+                              child: Text(
+                                '#${incident.number}',
+                                style: theme.textTheme.labelLarge,
+                              ),
+                            ),
+                            SizedBox(width: spacing.sm),
+                            Expanded(
+                              child: Text(
+                                incident.keyword,
+                                style: theme.textTheme.titleMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            SizedBox(width: spacing.sm),
+                            Chip(
+                              key: Key('incident-state-${incident.id}'),
+                              label: Text(_stateChipLabel(incident.state)),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: spacing.xs),
+                        Text(
+                          incident.address,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (isRunning && elapsedLabel != null) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: statusColors.fms2,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: spacing.xs),
+                          Text(
+                            'seit $elapsedLabel',
+                            key: Key('incident-elapsed-${incident.id}'),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: spacing.xs),
+                    ],
+                    if (isDraft)
+                      Tooltip(
+                        message: 'Verwerfen',
+                        child: TextButton(
+                          key: Key('discard-incident-${incident.id}'),
+                          onPressed: onDiscard,
+                          child: const Text('Verwerfen'),
+                        ),
+                      ),
+                    if (canAlarm && (isDraft || isRunning))
+                      Padding(
+                        padding: EdgeInsets.only(top: isDraft ? spacing.xs : 0),
+                        child: Tooltip(
+                          message: isDraft ? 'Alarmieren' : 'Nachalarmieren',
+                          child: FilledButton.icon(
+                            key: Key(
+                              isDraft
+                                  ? 'alarm-incident-${incident.id}'
+                                  : 'nachalarmieren-incident-${incident.id}',
+                            ),
+                            focusNode: alarmFocusNode,
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStatePropertyAll(
+                                alarmColors.alarm,
+                              ),
+                              foregroundColor: WidgetStatePropertyAll(
+                                alarmColors.onAlarm,
+                              ),
+                            ),
+                            icon: const Icon(Icons.notification_important),
+                            label: Text(
+                              isDraft ? 'Alarmieren' : 'Nachalarmieren',
+                            ),
+                            onPressed: onAlarm,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -416,9 +729,11 @@ class _IncidentFormResult {
 }
 
 /// Editor dialog with two clearly separated sections (ADR 0016): Meldebild
-/// (Stichwort, Adresse, Lagebeschreibung) and -- in a visually distinct,
-/// warning-coloured container with lock icon -- the geheime Drehbuch.
-/// Read-only once the Einsatz is `closed`.
+/// (Stichwort, Adresse, Lagebeschreibung) and -- in a visually distinct
+/// "Vertraulich" container (concept §3.2: `surfaceContainer` + 1 px
+/// `outline`-Rahmen + Schloss-Icon, NOT the `warning`/`alarm` tokens,
+/// since confidentiality is not an error/alarm state) -- the geheime
+/// Drehbuch. Read-only once the Einsatz is `closed`.
 class _IncidentFormDialog extends ConsumerStatefulWidget {
   const _IncidentFormDialog({this.incident});
 
@@ -439,8 +754,8 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
   /// Current Einsatzort pin (ADR 0026), `null` when none is set.
   LatLng? _pin;
 
-  /// Whether [widget.incident] already had a pin -- distinguishes "no
-  /// change" from "pin explicitly removed" for [IncidentRepository.update]
+  /// Whether [widget.incident] already had a pin -- distinguishes \"no
+  /// change\" from \"pin explicitly removed\" for [IncidentRepository.update]
   /// (see [_IncidentFormResult.clearLocation]).
   bool _hadLocation = false;
 
@@ -520,6 +835,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
     final incident = widget.incident;
     final isEdit = incident != null;
     final readOnly = incident?.state == IncidentState.closed;
@@ -539,25 +857,22 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Meldebild',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
+              Text('Meldebild', style: theme.textTheme.titleMedium),
+              SizedBox(height: spacing.sm),
               TextField(
                 key: const Key('incident-form-keyword'),
                 controller: _keywordController,
                 readOnly: readOnly,
                 decoration: const InputDecoration(labelText: 'Stichwort'),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: spacing.md),
               TextField(
                 key: const Key('incident-form-address'),
                 controller: _addressController,
                 readOnly: readOnly,
                 decoration: const InputDecoration(labelText: 'Adresse'),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: spacing.md),
               TextField(
                 key: const Key('incident-form-report'),
                 controller: _reportController,
@@ -567,12 +882,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                   labelText: 'Lagebeschreibung',
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Einsatzort (Karte)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
+              SizedBox(height: spacing.lg),
+              Text('Einsatzort (Karte)', style: theme.textTheme.titleMedium),
+              SizedBox(height: spacing.sm),
               if (!readOnly) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,7 +898,7 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: spacing.sm),
                     FilledButton(
                       key: const Key('incident-form-location-search-button'),
                       onPressed: _searching ? null : _search,
@@ -595,7 +907,7 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                   ],
                 ),
                 if (suggestions != null) ...[
-                  const SizedBox(height: 4),
+                  SizedBox(height: spacing.xs),
                   if (suggestions.isEmpty)
                     const Text('Keine Vorschläge')
                   else
@@ -612,7 +924,7 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                       ],
                     ),
                 ],
-                const SizedBox(height: 8),
+                SizedBox(height: spacing.sm),
               ],
               SizedBox(
                 height: 300,
@@ -627,38 +939,41 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                 ),
               ),
               if (!readOnly && _pin != null) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: spacing.sm),
                 TextButton(
                   key: const Key('incident-form-remove-pin'),
                   onPressed: _removePin,
                   child: const Text('Pin entfernen'),
                 ),
               ],
-              const SizedBox(height: 16),
+              SizedBox(height: spacing.lg),
               Container(
                 key: const Key('script-section'),
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(spacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.15),
-                  border: Border.all(color: Colors.amber.shade800, width: 1.5),
-                  borderRadius: BorderRadius.circular(8),
+                  color: theme.colorScheme.surfaceContainer,
+                  border: Border.all(color: theme.colorScheme.outline),
+                  borderRadius: BorderRadius.circular(radii.medium),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.lock, color: Colors.amber.shade800),
-                        const SizedBox(width: 8),
-                        const Expanded(
+                        Icon(
+                          Icons.lock,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        SizedBox(width: spacing.sm),
+                        Expanded(
                           child: Text(
                             'Drehbuch – GEHEIM, nie für die Mannschaft sichtbar',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleMedium,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: spacing.sm),
                     TextField(
                       key: const Key('incident-form-script'),
                       controller: _scriptController,
