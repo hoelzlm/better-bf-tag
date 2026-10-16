@@ -30,8 +30,7 @@ class _FakeVehicleAdminRepository implements VehicleAdminRepository {
     required String callSign,
     required String shortName,
     required String type,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Vehicle> update(
@@ -40,8 +39,7 @@ class _FakeVehicleAdminRepository implements VehicleAdminRepository {
     String? shortName,
     String? type,
     bool? active,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> reorder(List<String> vehicleIds) => throw UnimplementedError();
@@ -79,8 +77,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     required String name,
     required DateTime startsAt,
     required DateTime endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> update(
@@ -88,8 +85,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     String? name,
     DateTime? startsAt,
     DateTime? endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> start(String id) => throw UnimplementedError();
@@ -122,8 +118,7 @@ class _FakeAnnouncementRepository implements AnnouncementRepository {
     String bfDayId, {
     required String text,
     String? shiftId,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> delete(String id) => throw UnimplementedError();
@@ -217,10 +212,22 @@ void main() {
     context.go('/monitor');
     await tester.pumpAndSettle();
 
-    expect(
+    expect(find.byKey(const Key('monitor-activation-overlay')), findsOneWidget);
+  });
+
+  testWidgets('/monitor is always dark (bftagMonitorTheme), even with a light '
+      'MaterialApp theme (ADR 0027)', (tester) async {
+    await _pumpAppAt(tester, session: const SessionSignedOut());
+
+    final context = tester.element(find.byKey(const Key('login-submit')));
+    expect(Theme.of(context).brightness, Brightness.light);
+    context.go('/monitor');
+    await tester.pumpAndSettle();
+
+    final monitorContext = tester.element(
       find.byKey(const Key('monitor-activation-overlay')),
-      findsOneWidget,
     );
+    expect(Theme.of(monitorContext).brightness, Brightness.dark);
   });
 
   testWidgets(
@@ -269,24 +276,23 @@ void main() {
     },
   );
 
-  testWidgets(
-    'the Fahrzeuge nav entry is hidden for non-admin permissions',
-    (tester) async {
-      const person = Person(
-        id: 'p1',
-        displayName: 'Max Mustermann',
-        personType: PersonType.supervisor,
-        permission: Permission.dispatch,
-      );
-      await _pumpAppAt(
-        tester,
-        session: const SessionSignedIn(person, 'access-token'),
-      );
+  testWidgets('the Fahrzeuge nav entry is hidden for non-admin permissions', (
+    tester,
+  ) async {
+    const person = Person(
+      id: 'p1',
+      displayName: 'Max Mustermann',
+      personType: PersonType.supervisor,
+      permission: Permission.dispatch,
+    );
+    await _pumpAppAt(
+      tester,
+      session: const SessionSignedIn(person, 'access-token'),
+    );
 
-      expect(find.byKey(const Key('nav-fahrzeuge')), findsNothing);
-      expect(find.byKey(const Key('nav-persons')), findsNothing);
-    },
-  );
+    expect(find.byKey(const Key('nav-fahrzeuge')), findsNothing);
+    expect(find.byKey(const Key('nav-persons')), findsNothing);
+  });
 
   testWidgets(
     'non-admin navigating to /admin/persons is redirected to /admin',
@@ -311,28 +317,27 @@ void main() {
     },
   );
 
-  testWidgets(
-    'admin can navigate to /admin/fahrzeuge via the nav entry',
-    (tester) async {
-      const person = Person(
-        id: 'p1',
-        displayName: 'Max Mustermann',
-        personType: PersonType.supervisor,
-        permission: Permission.admin,
-      );
-      await _pumpAppAt(
-        tester,
-        session: const SessionSignedIn(person, 'access-token'),
-      );
+  testWidgets('admin can navigate to /admin/fahrzeuge via the nav entry', (
+    tester,
+  ) async {
+    const person = Person(
+      id: 'p1',
+      displayName: 'Max Mustermann',
+      personType: PersonType.supervisor,
+      permission: Permission.admin,
+    );
+    await _pumpAppAt(
+      tester,
+      session: const SessionSignedIn(person, 'access-token'),
+    );
 
-      expect(find.byKey(const Key('nav-fahrzeuge')), findsOneWidget);
+    expect(find.byKey(const Key('nav-fahrzeuge')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('nav-fahrzeuge')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-fahrzeuge')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Fahrzeuge'), findsOneWidget);
-    },
-  );
+    expect(find.text('Fahrzeuge'), findsOneWidget);
+  });
 
   testWidgets(
     'crew permission navigating to /admin/bf-tage is redirected to /admin',
@@ -382,28 +387,27 @@ void main() {
     },
   );
 
-  testWidgets(
-    'admin can navigate to /admin/bf-tage via the nav entry',
-    (tester) async {
-      const person = Person(
-        id: 'p1',
-        displayName: 'Max Mustermann',
-        personType: PersonType.supervisor,
-        permission: Permission.admin,
-      );
-      await _pumpAppAt(
-        tester,
-        session: const SessionSignedIn(person, 'access-token'),
-      );
+  testWidgets('admin can navigate to /admin/bf-tage via the nav entry', (
+    tester,
+  ) async {
+    const person = Person(
+      id: 'p1',
+      displayName: 'Max Mustermann',
+      personType: PersonType.supervisor,
+      permission: Permission.admin,
+    );
+    await _pumpAppAt(
+      tester,
+      session: const SessionSignedIn(person, 'access-token'),
+    );
 
-      expect(find.byKey(const Key('nav-bf-tage')), findsOneWidget);
+    expect(find.byKey(const Key('nav-bf-tage')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('nav-bf-tage')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-bf-tage')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('BF-Tage'), findsOneWidget);
-    },
-  );
+    expect(find.text('BF-Tage'), findsOneWidget);
+  });
 
   testWidgets(
     'crew permission navigating to /admin/schichten is redirected to /admin',
@@ -453,28 +457,27 @@ void main() {
     },
   );
 
-  testWidgets(
-    'admin can navigate to /admin/schichten via the nav entry',
-    (tester) async {
-      const person = Person(
-        id: 'p1',
-        displayName: 'Max Mustermann',
-        personType: PersonType.supervisor,
-        permission: Permission.admin,
-      );
-      await _pumpAppAt(
-        tester,
-        session: const SessionSignedIn(person, 'access-token'),
-      );
+  testWidgets('admin can navigate to /admin/schichten via the nav entry', (
+    tester,
+  ) async {
+    const person = Person(
+      id: 'p1',
+      displayName: 'Max Mustermann',
+      personType: PersonType.supervisor,
+      permission: Permission.admin,
+    );
+    await _pumpAppAt(
+      tester,
+      session: const SessionSignedIn(person, 'access-token'),
+    );
 
-      expect(find.byKey(const Key('nav-schichten')), findsOneWidget);
+    expect(find.byKey(const Key('nav-schichten')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('nav-schichten')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-schichten')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Schichten'), findsOneWidget);
-    },
-  );
+    expect(find.text('Schichten'), findsOneWidget);
+  });
 
   testWidgets(
     'crew permission navigating to /admin/durchsagen is redirected to /admin',
@@ -572,26 +575,25 @@ void main() {
     },
   );
 
-  testWidgets(
-    'admin can navigate to /admin/tagesablauf via the nav entry',
-    (tester) async {
-      const person = Person(
-        id: 'p1',
-        displayName: 'Max Mustermann',
-        personType: PersonType.supervisor,
-        permission: Permission.admin,
-      );
-      await _pumpAppAt(
-        tester,
-        session: const SessionSignedIn(person, 'access-token'),
-      );
+  testWidgets('admin can navigate to /admin/tagesablauf via the nav entry', (
+    tester,
+  ) async {
+    const person = Person(
+      id: 'p1',
+      displayName: 'Max Mustermann',
+      personType: PersonType.supervisor,
+      permission: Permission.admin,
+    );
+    await _pumpAppAt(
+      tester,
+      session: const SessionSignedIn(person, 'access-token'),
+    );
 
-      expect(find.byKey(const Key('nav-tagesablauf')), findsOneWidget);
+    expect(find.byKey(const Key('nav-tagesablauf')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('nav-tagesablauf')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-tagesablauf')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Tagesablauf'), findsOneWidget);
-    },
-  );
+    expect(find.text('Tagesablauf'), findsOneWidget);
+  });
 }

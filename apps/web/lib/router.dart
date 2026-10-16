@@ -70,11 +70,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           if (isLoginRoute) {
             return '/admin';
           }
-          final isFahrzeugeRoute =
-              state.matchedLocation == '/admin/fahrzeuge';
+          final isFahrzeugeRoute = state.matchedLocation == '/admin/fahrzeuge';
           final isPersonsRoute = state.matchedLocation == '/admin/persons';
-          final isMonitorsRoute =
-              state.matchedLocation == '/admin/monitors';
+          final isMonitorsRoute = state.matchedLocation == '/admin/monitors';
           final isBfTageRoute = state.matchedLocation == '/admin/bf-tage';
           final isSlidesRoute = state.matchedLocation == '/admin/slides';
           if ((isFahrzeugeRoute ||
@@ -117,14 +115,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       }
     },
     routes: [
-      GoRoute(
-        path: '/',
-        redirect: (context, state) => '/admin',
-      ),
+      GoRoute(path: '/', redirect: (context, state) => '/admin'),
       GoRoute(
         path: '/admin/login',
-        builder: (context, state) =>
-            const _SessionGate(child: LoginScreen()),
+        builder: (context, state) => const _SessionGate(child: LoginScreen()),
       ),
       GoRoute(
         path: '/admin',
@@ -137,8 +131,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/admin/persons',
-        builder: (context, state) =>
-            const _SessionGate(child: PersonsScreen()),
+        builder: (context, state) => const _SessionGate(child: PersonsScreen()),
       ),
       GoRoute(
         path: '/admin/monitors',
@@ -147,18 +140,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/admin/bf-tage',
-        builder: (context, state) =>
-            const _SessionGate(child: BfDaysScreen()),
+        builder: (context, state) => const _SessionGate(child: BfDaysScreen()),
       ),
       GoRoute(
         path: '/admin/slides',
-        builder: (context, state) =>
-            const _SessionGate(child: SlidesScreen()),
+        builder: (context, state) => const _SessionGate(child: SlidesScreen()),
       ),
       GoRoute(
         path: '/admin/schichten',
-        builder: (context, state) =>
-            const _SessionGate(child: ShiftsScreen()),
+        builder: (context, state) => const _SessionGate(child: ShiftsScreen()),
       ),
       GoRoute(
         path: '/admin/durchsagen',
@@ -167,8 +157,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/admin/tagesablauf',
-        builder: (context, state) =>
-            const _SessionGate(child: ProgramScreen()),
+        builder: (context, state) => const _SessionGate(child: ProgramScreen()),
       ),
       GoRoute(
         path: '/admin/einsaetze',
@@ -181,7 +170,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           overrides: monitorProviderOverrides(
             tokenStore: LocalStorageTokenStore(),
           ),
-          child: const MonitorScreen(),
+          child: Theme(data: bftagMonitorTheme(), child: const MonitorScreen()),
         ),
       ),
     ],
