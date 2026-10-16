@@ -53,14 +53,18 @@ Future<void> _pump(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        incidentsProvider.overrideWith((ref) => Stream.value([incident])),
-        alarmsProvider.overrideWith((ref) => Stream.value(const [])),
-        vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-        stationProvider.overrideWith((ref) async => station),
-        mapTileProviderProvider.overrideWithValue(_FakeTileProvider()),
-      ],
-      child: MaterialApp(home: MonitorIncidentScreen(incidentId: incident.id)),
+      child: ProviderScope(
+        overrides: [
+          incidentsProvider.overrideWith((ref) => Stream.value([incident])),
+          alarmsProvider.overrideWith((ref) => Stream.value(const [])),
+          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+          stationProvider.overrideWith((ref) async => station),
+          mapTileProviderProvider.overrideWithValue(_FakeTileProvider()),
+        ],
+        child: MaterialApp(
+          home: MonitorIncidentScreen(incidentId: incident.id),
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();

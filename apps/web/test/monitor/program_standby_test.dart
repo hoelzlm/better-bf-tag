@@ -189,10 +189,14 @@ Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
   tester.view.physicalSize = const Size(1920, 1080);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  // Mirrors production nesting (router.dart; PR #31 / commit 7764c01):
+  // a root ProviderScope with the `/monitor` scope nested inside.
   await tester.pumpWidget(
     ProviderScope(
-      overrides: env.overrides,
-      child: const MaterialApp(home: MonitorScreen()),
+      child: ProviderScope(
+        overrides: env.overrides,
+        child: const MaterialApp(home: MonitorScreen()),
+      ),
     ),
   );
   await tester.pump();

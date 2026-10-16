@@ -216,10 +216,14 @@ class _Env {
 }
 
 Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
+  // Mirrors production nesting (router.dart; PR #31 / commit 7764c01):
+  // a root ProviderScope with the `/monitor` scope nested inside.
   await tester.pumpWidget(
     ProviderScope(
-      overrides: env.overrides,
-      child: const MaterialApp(home: MonitorScreen()),
+      child: ProviderScope(
+        overrides: env.overrides,
+        child: const MaterialApp(home: MonitorScreen()),
+      ),
     ),
   );
   await tester.pump();
