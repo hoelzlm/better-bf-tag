@@ -5,6 +5,7 @@ import 'package:bftag_web/station_provider.dart';
 import 'package:bftag_web/widgets/alarm_dialog.dart' show AlarmDialogMode;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -414,7 +415,10 @@ Future<_FakeIncidentRepository> _pump(
         if (alarmRepository != null)
           alarmRepositoryProvider.overrideWithValue(alarmRepository),
       ],
-      child: const MaterialApp(home: IncidentsScreen()),
+      child: MaterialApp(
+        theme: bftagLightTheme(),
+        home: const IncidentsScreen(),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -448,7 +452,7 @@ Vehicle _vehicle({
 }
 
 void main() {
-  testWidgets('filter switches between shown states', (tester) async {
+  testWidgets('AC1: filter switches between shown states', (tester) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -460,14 +464,14 @@ void main() {
       },
     );
 
-    expect(find.text('#1 Verkehrsunfall – Hauptstraße 1'), findsOneWidget);
-    expect(find.text('#2 Verkehrsunfall – Hauptstraße 1'), findsNothing);
+    expect(find.byKey(const Key('incident-i1')), findsOneWidget);
+    expect(find.byKey(const Key('incident-i2')), findsNothing);
 
     await tester.tap(find.text('laufend'));
     await tester.pumpAndSettle();
 
-    expect(find.text('#1 Verkehrsunfall – Hauptstraße 1'), findsNothing);
-    expect(find.text('#2 Verkehrsunfall – Hauptstraße 1'), findsOneWidget);
+    expect(find.byKey(const Key('incident-i1')), findsNothing);
+    expect(find.byKey(const Key('incident-i2')), findsOneWidget);
   });
 
   testWidgets('editor shows script-section with the GEHEIM header', (
@@ -485,7 +489,9 @@ void main() {
     );
   });
 
-  testWidgets('discard button only shown for draft incidents', (tester) async {
+  testWidgets('AC7: discard button only shown for draft incidents', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -501,7 +507,9 @@ void main() {
     expect(find.byKey(const Key('discard-incident-i1')), findsNothing);
   });
 
-  testWidgets('create calls repository with entered values', (tester) async {
+  testWidgets('AC3: create calls repository with entered values', (
+    tester,
+  ) async {
     final incidentRepository = await _pump(tester, days: [_bfDay()]);
 
     await tester.tap(find.byKey(const Key('create-incident')));
@@ -535,7 +543,9 @@ void main() {
     expect(call.script, 'Darsteller: 1 Person, leicht verletzt');
   });
 
-  testWidgets('preparation does not see the Alarmieren button', (tester) async {
+  testWidgets('AC22: preparation does not see the Alarmieren button', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -548,7 +558,7 @@ void main() {
     expect(find.byKey(const Key('alarm-incident-i1')), findsNothing);
   });
 
-  testWidgets('dispatch sees the Alarmieren button for a draft incident', (
+  testWidgets('AC5: dispatch sees the Alarmieren button for a draft incident', (
     tester,
   ) async {
     await _pump(
@@ -563,77 +573,80 @@ void main() {
     expect(find.byKey(const Key('alarm-incident-i1')), findsOneWidget);
   });
 
-  testWidgets('Alarmieren dialog shows the double-crew warning and calls the '
-      'repository once even on a double tap', (tester) async {
-    final shift = Shift(
-      id: 's1',
-      bfDayId: 'd1',
-      name: 'Tagschicht',
-      startsAt: DateTime.now().subtract(const Duration(hours: 1)),
-      endsAt: DateTime.now().add(const Duration(hours: 1)),
-      crew: const [
-        CrewAssignment(
-          vehicleId: 'v1',
-          personId: 'p1',
-          displayName: 'Erika Musterfrau',
-          function: 'GF',
+  testWidgets(
+    'AC9/AC10: Alarmieren dialog shows the double-crew warning and calls '
+    'the repository once even on a double tap',
+    (tester) async {
+      final shift = Shift(
+        id: 's1',
+        bfDayId: 'd1',
+        name: 'Tagschicht',
+        startsAt: DateTime.now().subtract(const Duration(hours: 1)),
+        endsAt: DateTime.now().add(const Duration(hours: 1)),
+        crew: const [
+          CrewAssignment(
+            vehicleId: 'v1',
+            personId: 'p1',
+            displayName: 'Erika Musterfrau',
+            function: 'GF',
+          ),
+          CrewAssignment(
+            vehicleId: 'v2',
+            personId: 'p1',
+            displayName: 'Erika Musterfrau',
+            function: 'MA',
+          ),
+        ],
+      );
+      final alarmRepository = _FakeAlarmRepository();
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [
+          _vehicle(id: 'v1', shortName: 'HLF 1'),
+          _vehicle(id: 'v2', shortName: 'LF 2'),
+        ],
+        shifts: [shift],
+        alarmRepository: alarmRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('alarm-vehicle-v2')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('alarm-double-crewed-p1')), findsOneWidget);
+      expect(
+        find.text(
+          'Erika Musterfrau sitzt auf mehreren ausgewählten '
+          'Fahrzeugen – wird nur einmal alarmiert.',
         ),
-        CrewAssignment(
-          vehicleId: 'v2',
-          personId: 'p1',
-          displayName: 'Erika Musterfrau',
-          function: 'MA',
-        ),
-      ],
-    );
-    final alarmRepository = _FakeAlarmRepository();
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      incidents: {
-        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
-      },
-      permission: Permission.dispatch,
-      vehicles: [
-        _vehicle(id: 'v1', shortName: 'HLF 1'),
-        _vehicle(id: 'v2', shortName: 'LF 2'),
-      ],
-      shifts: [shift],
-      alarmRepository: alarmRepository,
-    );
+        findsWidgets,
+      );
 
-    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
-    await tester.pumpAndSettle();
+      final submitButton = find.byKey(const Key('alarm-dialog-submit'));
+      // Fire two taps back-to-back before the first request resolves/rebuilds
+      // -- the dialog must disable itself so only one call reaches the
+      // repository.
+      await tester.tap(submitButton);
+      await tester.tap(submitButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('alarm-vehicle-v2')));
-    await tester.pump();
+      expect(alarmRepository.triggerCalls, hasLength(1));
+      final call = alarmRepository.triggerCalls.single;
+      expect(call.$1, 'i1');
+      expect(call.$2.toSet(), {'v1', 'v2'});
+    },
+  );
 
-    expect(find.byKey(const Key('alarm-double-crewed-p1')), findsOneWidget);
-    expect(
-      find.text(
-        'Erika Musterfrau sitzt auf mehreren ausgewählten '
-        'Fahrzeugen – wird nur einmal alarmiert.',
-      ),
-      findsWidgets,
-    );
-
-    final submitButton = find.byKey(const Key('alarm-dialog-submit'));
-    // Fire two taps back-to-back before the first request resolves/rebuilds
-    // -- the dialog must disable itself so only one call reaches the
-    // repository.
-    await tester.tap(submitButton);
-    await tester.tap(submitButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
-
-    expect(alarmRepository.triggerCalls, hasLength(1));
-    final call = alarmRepository.triggerCalls.single;
-    expect(call.$1, 'i1');
-    expect(call.$2.toSet(), {'v1', 'v2'});
-  });
-
-  testWidgets('Jetzt alarmieren is disabled with 0 vehicles selected', (
+  testWidgets('AC8: Jetzt alarmieren is disabled with 0 vehicles selected', (
     tester,
   ) async {
     await _pump(
@@ -656,7 +669,8 @@ void main() {
   });
 
   testWidgets(
-    '409 invalid_state_transition on trigger is shown as a plain notice',
+    'AC10: 409 invalid_state_transition on trigger is shown as a plain '
+    'notice',
     (tester) async {
       final alarmRepository = _FakeAlarmRepository()
         ..triggerError = DioException(
@@ -695,7 +709,7 @@ void main() {
   );
 
   testWidgets(
-    '"Relativ zum Erstalarm" is disabled without an Erstalarm, enabled '
+    'AC8: "Relativ zum Erstalarm" is disabled without an Erstalarm, enabled '
     'once one exists',
     (tester) async {
       await _pump(
@@ -720,8 +734,8 @@ void main() {
   );
 
   testWidgets(
-    '"Relativ zum Erstalarm" is enabled when the incident already has a '
-    'triggered Erstalarm, and plans with offset_minutes',
+    'AC6/AC11: "Relativ zum Erstalarm" is enabled when the incident already '
+    'has a triggered Erstalarm, and plans with offset_minutes',
     (tester) async {
       final alarmRepository = _FakeAlarmRepository();
       await _pump(
@@ -781,7 +795,8 @@ void main() {
   );
 
   testWidgets(
-    '"Zeitpunkt" mode plans with the picked scheduledAt converted to UTC',
+    'AC11: "Zeitpunkt" mode plans with the picked scheduledAt converted to '
+    'UTC',
     (tester) async {
       final alarmRepository = _FakeAlarmRepository();
       await _pump(
@@ -814,8 +829,8 @@ void main() {
   );
 
   testWidgets(
-    'Einsatz verwerfen warns with the count of planned Alarmierungen for '
-    'a draft incident',
+    'AC7: Einsatz verwerfen warns with the count of planned Alarmierungen '
+    'for a draft incident',
     (tester) async {
       final incident = _incident(
         id: 'i1',
@@ -857,7 +872,7 @@ void main() {
   );
 
   testWidgets(
-    'Einsatz verwerfen calls discard on the repository after confirm',
+    'AC7: Einsatz verwerfen calls discard on the repository after confirm',
     (tester) async {
       final incidentRepository = await _pump(
         tester,
@@ -880,72 +895,63 @@ void main() {
   );
 
   testWidgets(
-    'empty incidents list shows "Keine Einsätze vorhanden."',
+    'AC12: empty incidents list shows "Keine Einsätze im Zustand Entwurf."',
     (tester) async {
       await _pump(tester, days: [_bfDay()], incidents: {'d1': []});
 
-      expect(find.text('Keine Einsätze vorhanden.'), findsOneWidget);
+      expect(find.text('Keine Einsätze im Zustand Entwurf.'), findsOneWidget);
     },
   );
 
-  testWidgets(
-    'no BF-Tage shows "Keine BF-Tage angelegt."',
-    (tester) async {
-      await _pump(tester, days: []);
+  testWidgets('no BF-Tage shows "Keine BF-Tage angelegt."', (tester) async {
+    await _pump(tester, days: []);
 
-      expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
-    },
-  );
+    expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
+  });
 
-  testWidgets(
-    'BF-Tage load error shows the error message instead of the dropdown',
-    (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            bfDayAdminRepositoryProvider.overrideWithValue(
-              _ThrowingBfDayAdminRepository(),
-            ),
-            incidentRepositoryProvider.overrideWithValue(
-              _FakeIncidentRepository(),
-            ),
-            sessionControllerProvider.overrideWith(
-              () => _FixedSessionController(
-                SessionSignedIn(
-                  Person(
-                    id: 'p1',
-                    displayName: 'Max Mustermann',
-                    personType: PersonType.supervisor,
-                    permission: Permission.admin,
-                  ),
-                  'token',
+  testWidgets('AC13: BF-Tage load error shows the error message instead of the '
+      'dropdown', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bfDayAdminRepositoryProvider.overrideWithValue(
+            _ThrowingBfDayAdminRepository(),
+          ),
+          incidentRepositoryProvider.overrideWithValue(
+            _FakeIncidentRepository(),
+          ),
+          sessionControllerProvider.overrideWith(
+            () => _FixedSessionController(
+              SessionSignedIn(
+                Person(
+                  id: 'p1',
+                  displayName: 'Max Mustermann',
+                  personType: PersonType.supervisor,
+                  permission: Permission.admin,
                 ),
+                'token',
               ),
             ),
-            vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-            shiftsProvider.overrideWith((ref) => Stream.value(const [])),
-            alarmsProvider.overrideWith((ref) => Stream.value(const [])),
-            geocodeRepositoryProvider.overrideWithValue(
-              _FakeGeocodeRepository(),
-            ),
-            stationProvider.overrideWith((ref) async => null),
-            mapTileProviderProvider.overrideWithValue(_FakeTileProvider()),
-            scheduledAlarmsProvider.overrideWith(
-              (ref) => Stream.value(const []),
-            ),
-          ],
-          child: const MaterialApp(home: IncidentsScreen()),
+          ),
+          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+          shiftsProvider.overrideWith((ref) => Stream.value(const [])),
+          alarmsProvider.overrideWith((ref) => Stream.value(const [])),
+          geocodeRepositoryProvider.overrideWithValue(_FakeGeocodeRepository()),
+          stationProvider.overrideWith((ref) async => null),
+          mapTileProviderProvider.overrideWithValue(_FakeTileProvider()),
+          scheduledAlarmsProvider.overrideWith((ref) => Stream.value(const [])),
+        ],
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const IncidentsScreen(),
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('BF-Tage konnten nicht geladen werden.'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('bf-day-dropdown')), findsNothing);
-    },
-  );
+    expect(find.text('BF-Tage konnten nicht geladen werden.'), findsOneWidget);
+    expect(find.byKey(const Key('bf-day-dropdown')), findsNothing);
+  });
 
   group('Einsatzort (Karte) (ADR 0026)', () {
     testWidgets('search finds a suggestion, selecting it and saving sends its '
@@ -1051,7 +1057,7 @@ void main() {
         },
       );
 
-      await tester.tap(find.text('#1 Verkehrsunfall – Hauptstraße 1'));
+      await tester.tap(find.byKey(const Key('incident-i1')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('incident-form-remove-pin')), findsOneWidget);
@@ -1070,4 +1076,333 @@ void main() {
       expect(call.clearLocation, isTrue);
     });
   });
+
+  testWidgets('AC15/AC16: successful create switches the filter to Entwurf, '
+      'highlights the new card and moves focus to its Alarmieren button '
+      '(concept §3.4a/§5)', (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      incidents: {
+        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.running)],
+      },
+      permission: Permission.dispatch,
+    );
+
+    await tester.tap(find.text('laufend'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('incident-i1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('create-incident')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('incident-form-keyword')),
+      'Zimmerbrand',
+    );
+    await tester.enterText(
+      find.byKey(const Key('incident-form-address')),
+      'Musterweg 5',
+    );
+    await tester.tap(find.byKey(const Key('incident-form-submit')));
+    await tester.pumpAndSettle();
+
+    // Filter switched to "Entwurf": the running incident is now
+    // hidden, the new draft is shown.
+    expect(find.byKey(const Key('incident-i1')), findsNothing);
+    expect(find.byKey(const Key('incident-new-incident')), findsOneWidget);
+
+    // Briefly highlighted (primaryContainer) right after creation.
+    BoxDecoration decorationOf(Key key) =>
+        tester
+                .widget<AnimatedContainer>(
+                  find.descendant(
+                    of: find.byKey(key),
+                    matching: find.byType(AnimatedContainer),
+                  ),
+                )
+                .decoration
+            as BoxDecoration;
+
+    final theme = bftagLightTheme();
+    expect(
+      decorationOf(const Key('incident-new-incident')).color,
+      theme.colorScheme.primaryContainer,
+    );
+
+    // Keyboard focus moved onto the new card's Alarmieren button: Enter
+    // opens its AlarmDialog without any further tap.
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Einsatz #2 "Zimmerbrand" alarmieren'), findsOneWidget);
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+
+    // Highlight clears again after ~700ms.
+    await tester.pump(const Duration(milliseconds: 750));
+    expect(
+      decorationOf(const Key('incident-new-incident')).color,
+      isNot(theme.colorScheme.primaryContainer),
+    );
+  });
+
+  testWidgets(
+    'AC19: a successful Sofort-Erstalarm (not a Nachalarmierung) switches '
+    'the filter to "laufend" (concept §3.4c)',
+    (tester) async {
+      final alarmRepository = _FakeAlarmRepository();
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [_vehicle(id: 'v1', shortName: 'HLF 1')],
+        alarmRepository: alarmRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('alarm-vehicle-v1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('alarm-dialog-submit')));
+      await tester.pumpAndSettle();
+
+      expect(alarmRepository.triggerCalls, hasLength(1));
+      final filter = tester.widget<SegmentedButton<IncidentState>>(
+        find.byKey(const Key('incident-filter')),
+      );
+      expect(filter.selected, {IncidentState.running});
+    },
+  );
+
+  testWidgets('AC17/AC18: AlarmDialog opens with focus on the first vehicle '
+      'checkbox; Space then Enter triggers the alarm without a single tap '
+      '(concept §3.4b)', (tester) async {
+    final alarmRepository = _FakeAlarmRepository();
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      incidents: {
+        'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+      },
+      permission: Permission.dispatch,
+      vehicles: [_vehicle(id: 'v1', shortName: 'HLF 1')],
+      alarmRepository: alarmRepository,
+    );
+
+    await tester.tap(find.byKey(const Key('alarm-incident-i1')));
+    await tester.pumpAndSettle();
+
+    // Enter with no vehicle selected does nothing (invalid submit).
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(alarmRepository.triggerCalls, isEmpty);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(alarmRepository.triggerCalls, hasLength(1));
+    expect(alarmRepository.triggerCalls.single.$2, ['v1']);
+  });
+
+  testWidgets(
+    'AC2: "Einsatz anlegen" only opens the create dialog when a BF-Tag is '
+    'selected and not ended',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay(state: BfDayState.ended)],
+        incidents: {'d1': []},
+      );
+
+      final buttonEnded = tester.widget<FilledButton>(
+        find.byKey(const Key('create-incident')),
+      );
+      expect(buttonEnded.onPressed, isNull);
+
+      await tester.tap(find.byKey(const Key('create-incident')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('incident-form-keyword')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'AC4: tapping a card (outside the action buttons) opens the Bearbeiten '
+    'dialog prefilled',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [
+            _incident(
+              id: 'i1',
+              number: 1,
+              keyword: 'Zimmerbrand',
+              address: 'Musterweg 5',
+            ),
+          ],
+        },
+      );
+
+      await tester.tap(find.byKey(const Key('incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Einsatz bearbeiten'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('incident-form-keyword')))
+            .controller!
+            .text,
+        'Zimmerbrand',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('incident-form-address')))
+            .controller!
+            .text,
+        'Musterweg 5',
+      );
+    },
+  );
+
+  testWidgets(
+    'AC6: Nachalarmieren preselects already-alarmed vehicles disabled as '
+    '"bereits alarmiert"',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.running)],
+        },
+        permission: Permission.dispatch,
+        vehicles: [
+          _vehicle(id: 'v1'),
+          _vehicle(id: 'v2', shortName: 'LF 2'),
+        ],
+        alarms: [
+          Alarm(
+            id: 'a1',
+            incidentId: 'i1',
+            state: AlarmState.triggered,
+            triggeredAt: DateTime.now().subtract(const Duration(minutes: 5)),
+            vehicleIds: const ['v1'],
+            recipients: const [],
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('laufend'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('nachalarmieren-incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nachalarmierung für Einsatz #1'), findsOneWidget);
+      final alreadyAlarmed = tester.widget<CheckboxListTile>(
+        find.byKey(const Key('alarm-vehicle-v1')),
+      );
+      expect(alreadyAlarmed.value, isTrue);
+      expect(alreadyAlarmed.onChanged, isNull);
+      final other = tester.widget<CheckboxListTile>(
+        find.byKey(const Key('alarm-vehicle-v2')),
+      );
+      expect(other.value, isFalse);
+      expect(other.onChanged, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'AC14: closed incidents show all fields readOnly in the Bearbeiten '
+    'dialog with no Speichern button',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.closed)],
+        },
+      );
+
+      await tester.tap(find.text('abgeschlossen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('incident-form-keyword')))
+            .readOnly,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('incident-form-script')))
+            .readOnly,
+        isTrue,
+      );
+      expect(find.byKey(const Key('incident-form-submit')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'AC20: every card shows a Zustands-Label with key incident-state-\$id '
+    'regardless of the active filter',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+      );
+
+      expect(find.byKey(const Key('incident-state-i1')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('incident-state-i1')),
+          matching: find.text('Entwurf'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'AC21: a running incident with a triggered Alarm shows "seit X min", '
+    'computed from the earliest triggeredAt; without one the meta is '
+    'absent',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [
+            _incident(id: 'i1', number: 1, state: IncidentState.running),
+            _incident(id: 'i2', number: 2, state: IncidentState.running),
+          ],
+        },
+        alarms: [
+          Alarm(
+            id: 'a1',
+            incidentId: 'i1',
+            state: AlarmState.triggered,
+            triggeredAt: DateTime.now().subtract(const Duration(minutes: 7)),
+            vehicleIds: const ['v1'],
+            recipients: const [],
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('laufend'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('incident-elapsed-i1')), findsOneWidget);
+      expect(find.text('seit 7 min'), findsOneWidget);
+      expect(find.byKey(const Key('incident-elapsed-i2')), findsNothing);
+    },
+  );
 }
