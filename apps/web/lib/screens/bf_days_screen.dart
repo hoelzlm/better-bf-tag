@@ -234,85 +234,271 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
     final isDispatchOrAdmin =
         isAdmin || permission == Permission.dispatch;
     final days = _days;
+    final spacing = Theme.of(context).extension<BftagSpacing>()!;
     return Scaffold(
-      appBar: AppBar(title: const Text('BF-Tage')),
-      floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              key: const Key('create-bf-day'),
-              onPressed: _openCreateDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('BF-Tag anlegen'),
-            )
-          : null,
-      body: days == null
-          ? Center(
-              child: _loadError != null
-                  ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
-            )
-          : ListView.builder(
-              key: const Key('bf-days-list'),
-              padding: const EdgeInsets.only(bottom: 88),
-              itemCount: days.length,
-              itemBuilder: (context, index) {
-                final day = days[index];
-                final isPlanning = day.state == BfDayState.planning;
-                final isRunning = day.state == BfDayState.running;
-                final isEnded = day.state == BfDayState.ended;
-                return ListTile(
-                  key: Key('bf-day-${day.id}'),
-                  title: Text(day.name),
-                  subtitle: Text(
+      appBar: AppBar(
+        title: const Text('BF-Tage'),
+        actions: [
+          if (isAdmin)
+            Padding(
+              padding: EdgeInsets.only(right: spacing.lg),
+              child: FilledButton.icon(
+                key: const Key('create-bf-day'),
+                onPressed: _openCreateDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('BF-Tag anlegen'),
+              ),
+            ),
+        ],
+      ),
+      body: _buildBody(context, days, isAdmin, isDispatchOrAdmin),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    List<BfDay>? days,
+    bool isAdmin,
+    bool isDispatchOrAdmin,
+  ) {
+    if (days == null) {
+      final loadError = _loadError;
+      if (loadError != null) {
+        return BftagStateView.error(message: loadError, onRetry: _reload);
+      }
+      return const BftagStateView.loading();
+    }
+    if (days.isEmpty) {
+      return BftagStateView.empty(
+        icon: Icons.calendar_month,
+        title: 'Noch keine BF-Tage angelegt.',
+        action: isAdmin
+            ? FilledButton.icon(
+                key: const Key('bf-days-empty-create'),
+                onPressed: _openCreateDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('BF-Tag anlegen'),
+              )
+            : null,
+      );
+    }
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>()!;
+    return Column(
+      children: [
+        Container(
+          color: theme.colorScheme.surfaceContainer,
+          padding: EdgeInsets.symmetric(
+            horizontal: spacing.lg,
+            vertical: spacing.sm,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text('Name', style: theme.textTheme.titleMedium),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text('Zeitraum', style: theme.textTheme.titleMedium),
+              ),
+              SizedBox(
+                width: 170,
+                child: Text('Zustand', style: theme.textTheme.titleMedium),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            key: const Key('bf-days-list'),
+            padding: EdgeInsets.only(bottom: spacing.xxxl + spacing.xl),
+            itemCount: days.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) => _BfDayRow(
+              day: days[index],
+              isAdmin: isAdmin,
+              isDispatchOrAdmin: isDispatchOrAdmin,
+              onEdit: () => _openEditDialog(days[index]),
+              onStart: () => _start(days[index]),
+              onEnd: () => _end(days[index]),
+              onParticipants: () => _openParticipantsDialog(days[index]),
+              onAnonymize: () => _openAnonymizeDialog(days[index]),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BfDayRow extends StatelessWidget {
+  const _BfDayRow({
+    required this.day,
+    required this.isAdmin,
+    required this.isDispatchOrAdmin,
+    required this.onEdit,
+    required this.onStart,
+    required this.onEnd,
+    required this.onParticipants,
+    required this.onAnonymize,
+  });
+
+  final BfDay day;
+  final bool isAdmin;
+  final bool isDispatchOrAdmin;
+  final VoidCallback onEdit;
+  final VoidCallback onStart;
+  final VoidCallback onEnd;
+  final VoidCallback onParticipants;
+  final VoidCallback onAnonymize;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>()!;
+    final isPlanning = day.state == BfDayState.planning;
+    final isRunning = day.state == BfDayState.running;
+    final isEnded = day.state == BfDayState.ended;
+    final actions = <Widget>[
+      if (isAdmin)
+        IconButton(
+          key: Key('bf-day-participants-${day.id}'),
+          icon: const Icon(Icons.groups),
+          tooltip: 'Teilnahmen',
+          onPressed: onParticipants,
+        ),
+      if (isPlanning && isAdmin)
+        TextButton(
+          key: Key('bf-day-start-${day.id}'),
+          onPressed: onStart,
+          child: const Text('Starten'),
+        ),
+      if (isRunning && isAdmin)
+        TextButton(
+          key: Key('bf-day-end-${day.id}'),
+          onPressed: onEnd,
+          child: const Text('Beenden'),
+        ),
+      if (isEnded && day.isAnonymized)
+        Text(
+          key: Key('bf-day-anonymized-${day.id}'),
+          'Anonymisiert am ${_formatDateTime(day.anonymizedAt!)}',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      if (isEnded && !day.isAnonymized && isDispatchOrAdmin)
+        TextButton(
+          key: Key('bf-day-anonymize-${day.id}'),
+          onPressed: onAnonymize,
+          child: const Text('Anonymisieren'),
+        ),
+    ];
+    return InkWell(
+      key: Key('bf-day-${day.id}'),
+      onTap: isPlanning && isAdmin ? onEdit : null,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: spacing.lg,
+          vertical: spacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(flex: 2, child: Text(day.name)),
+                Expanded(
+                  flex: 3,
+                  child: Text(
                     '${_formatDateTime(day.startsAt)} – '
                     '${_formatDateTime(day.endsAt)}',
                   ),
-                  onTap: isPlanning && isAdmin
-                      ? () => _openEditDialog(day)
-                      : null,
-                  trailing: Wrap(
-                    spacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Chip(
-                        key: Key('bf-day-state-${day.id}'),
-                        label: Text(day.state.label),
-                      ),
-                      if (isAdmin)
-                        IconButton(
-                          key: Key('bf-day-participants-${day.id}'),
-                          icon: const Icon(Icons.groups),
-                          tooltip: 'Teilnahmen',
-                          onPressed: () => _openParticipantsDialog(day),
-                        ),
-                      if (isPlanning && isAdmin)
-                        TextButton(
-                          key: Key('bf-day-start-${day.id}'),
-                          onPressed: () => _start(day),
-                          child: const Text('Starten'),
-                        ),
-                      if (isRunning && isAdmin)
-                        TextButton(
-                          key: Key('bf-day-end-${day.id}'),
-                          onPressed: () => _end(day),
-                          child: const Text('Beenden'),
-                        ),
-                      if (isEnded && day.isAnonymized)
-                        Text(
-                          key: Key('bf-day-anonymized-${day.id}'),
-                          'Anonymisiert am '
-                          '${_formatDateTime(day.anonymizedAt!)}',
-                        ),
-                      if (isEnded && !day.isAnonymized && isDispatchOrAdmin)
-                        TextButton(
-                          key: Key('bf-day-anonymize-${day.id}'),
-                          onPressed: () => _openAnonymizeDialog(day),
-                          child: const Text('Anonymisieren'),
-                        ),
-                    ],
+                ),
+                SizedBox(
+                  width: 170,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BfDayStateChip(
+                      key: Key('bf-day-state-${day.id}'),
+                      state: day.state,
+                    ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
+            if (actions.isNotEmpty) ...[
+              SizedBox(height: spacing.xs),
+              Wrap(
+                spacing: spacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: actions,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Zustand-Chip (design-system §5.5 Mapping, keine Alarm-/FMS-Farben):
+/// `planning` = `outline`-Rahmen/`onSurfaceVariant`, `running` =
+/// `primaryContainer`/`primary` + Punkt-Icon, `ended` =
+/// `surfaceContainer`/`onSurfaceVariant`.
+class _BfDayStateChip extends StatelessWidget {
+  const _BfDayStateChip({required this.state, super.key});
+
+  final BfDayState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final radii = theme.extension<BftagRadii>()!;
+    final spacing = theme.extension<BftagSpacing>()!;
+    final Color background;
+    final Color foreground;
+    final bool bordered;
+    switch (state) {
+      case BfDayState.planning:
+        background = Colors.transparent;
+        foreground = theme.colorScheme.onSurfaceVariant;
+        bordered = true;
+      case BfDayState.running:
+        background = theme.colorScheme.primaryContainer;
+        foreground = theme.colorScheme.primary;
+        bordered = false;
+      case BfDayState.ended:
+        background = theme.colorScheme.surfaceContainerHigh;
+        foreground = theme.colorScheme.onSurfaceVariant;
+        bordered = false;
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.sm,
+        vertical: spacing.xs / 2,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(radii.full),
+        border: bordered
+            ? Border.all(color: theme.colorScheme.outline)
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (state == BfDayState.running) ...[
+            Icon(Icons.circle, size: 8, color: foreground),
+            SizedBox(width: spacing.xs),
+          ],
+          Text(
+            state.label,
+            style: theme.textTheme.labelMedium?.copyWith(color: foreground),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -679,8 +865,9 @@ class _AnonymizeDialogState extends ConsumerState<_AnonymizeDialog> {
         FilledButton(
           key: const Key('anonymize-dialog-confirm'),
           style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
-            foregroundColor: Theme.of(context).colorScheme.onError,
+            backgroundColor: Theme.of(context).extension<BftagAlarmColors>()!.alarm,
+            foregroundColor:
+                Theme.of(context).extension<BftagAlarmColors>()!.onAlarm,
           ),
           onPressed: summary == null
               ? null

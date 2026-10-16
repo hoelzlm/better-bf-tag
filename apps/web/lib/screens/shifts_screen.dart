@@ -409,6 +409,8 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
       unawaited(_reloadSelectedDay());
     });
 
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     final vehicles = ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
     final days = _days;
     final day = _selectedDay;
@@ -426,18 +428,22 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
           ? Center(
               child: _loadError != null
                   ? Text(_loadError!)
-                  : const CircularProgressIndicator(),
+                  : CircularProgressIndicator(color: theme.colorScheme.primary),
             )
           : days.isEmpty
-              ? const Center(child: Text('Keine BF-Tage angelegt.'))
+              ? const BftagStateView.empty(
+                  title: 'Keine BF-Tage angelegt.',
+                  icon: Icons.event_busy_outlined,
+                )
               : Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(spacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DropdownButton<String>(
+                      DropdownButtonFormField<String>(
                         key: const Key('bf-day-dropdown'),
-                        value: _selectedDayId,
+                        initialValue: _selectedDayId,
+                        decoration: const InputDecoration(labelText: 'BF-Tag'),
                         items: [
                           for (final d in days)
                             DropdownMenuItem(value: d.id, child: Text(d.name)),
@@ -446,7 +452,7 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
                           if (value != null) _selectDay(value);
                         },
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: spacing.md),
                       if (day != null) ...[
                         Wrap(
                           key: const Key('shift-tabs'),
@@ -469,15 +475,25 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            FilledButton.icon(
-                              key: const Key('create-shift'),
-                              onPressed:
-                                  dayEnded ? null : _openCreateShiftDialog,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Schicht anlegen'),
-                            ),
+                            if (dayEnded)
+                              Tooltip(
+                                message: 'BF-Tag ist beendet',
+                                child: FilledButton.icon(
+                                  key: const Key('create-shift'),
+                                  onPressed: null,
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Schicht anlegen'),
+                                ),
+                              )
+                            else
+                              FilledButton.icon(
+                                key: const Key('create-shift'),
+                                onPressed: _openCreateShiftDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Schicht anlegen'),
+                              ),
                             if (shift != null) ...[
-                              const SizedBox(width: 8),
+                              SizedBox(width: spacing.sm),
                               IconButton(
                                 key: const Key('edit-shift'),
                                 onPressed: dayEnded
@@ -500,14 +516,21 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
                             ],
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: spacing.lg),
                         if (_shifts == null)
-                          const Expanded(
-                            child: Center(child: CircularProgressIndicator()),
+                          Expanded(
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                           )
                         else if (shift == null)
                           const Expanded(
-                            child: Center(child: Text('Keine Schicht vorhanden.')),
+                            child: BftagStateView.empty(
+                              title: 'Keine Schicht vorhanden.',
+                              icon: Icons.event_seat_outlined,
+                            ),
                           )
                         else
                           Expanded(
@@ -519,13 +542,13 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
                                   shift: shift,
                                   vehicles: vehicles,
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: spacing.lg),
                                 Expanded(
                                   child: SingleChildScrollView(
                                     child: Wrap(
                                       key: const Key('vehicle-cards'),
-                                      spacing: 12,
-                                      runSpacing: 12,
+                                      spacing: spacing.lg,
+                                      runSpacing: spacing.lg,
                                       children: [
                                         for (final v in vehicles)
                                           _VehicleCard(
@@ -568,6 +591,8 @@ class _ParticipantsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     final unassigned = participants
         .where((p) => !shift.crew.any((c) => c.personId == p.personId))
         .toList();
@@ -583,10 +608,17 @@ class _ParticipantsColumn extends StatelessWidget {
       final isDouble = assignedVehicleIds.length > 1;
       final chip = Chip(
         avatar: isDouble
-            ? const Icon(Icons.warning, color: Colors.orange, size: 18)
+            ? Icon(Icons.warning, color: theme.colorScheme.error, size: 18)
             : null,
         label: Text(p.displayName),
-        backgroundColor: assignedVehicleIds.isEmpty ? Colors.grey.shade300 : null,
+        backgroundColor: assignedVehicleIds.isEmpty
+            ? theme.colorScheme.surfaceContainer
+            : null,
+        side: isDouble
+            ? BorderSide(color: theme.colorScheme.error)
+            : assignedVehicleIds.isEmpty
+                ? BorderSide(color: theme.colorScheme.outline)
+                : null,
       );
       final content = isDouble
           ? Tooltip(
@@ -610,21 +642,21 @@ class _ParticipantsColumn extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Nicht eingeteilt', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            Text('Nicht eingeteilt', style: theme.textTheme.titleMedium),
+            SizedBox(height: spacing.sm),
             Wrap(
               key: const Key('unassigned-participants'),
-              spacing: 6,
-              runSpacing: 6,
+              spacing: spacing.sm,
+              runSpacing: spacing.sm,
               children: [for (final p in unassigned) chipFor(p)],
             ),
-            const SizedBox(height: 16),
-            const Text('Eingeteilt', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            SizedBox(height: spacing.lg),
+            Text('Eingeteilt', style: theme.textTheme.titleMedium),
+            SizedBox(height: spacing.sm),
             Wrap(
               key: const Key('assigned-participants'),
-              spacing: 6,
-              runSpacing: 6,
+              spacing: spacing.sm,
+              runSpacing: spacing.sm,
               children: [for (final p in assigned) chipFor(p)],
             ),
           ],
@@ -656,6 +688,9 @@ class _VehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
     final sortedCrew = List<CrewAssignment>.of(crew)
       ..sort((a, b) => compareCrewFunctions(a.function, b.function));
 
@@ -663,37 +698,45 @@ class _VehicleCard extends StatelessWidget {
       key: Key('vehicle-dropzone-${vehicle.id}'),
       onAcceptWithDetails: (details) => onDrop(details.data),
       builder: (context, candidateData, rejectedData) {
-        return Container(
-          key: Key('vehicle-card-${vehicle.id}'),
+        final isActive = candidateData.isNotEmpty;
+        return SizedBox(
           width: 220,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: candidateData.isNotEmpty ? Colors.blue : Colors.grey,
-              width: candidateData.isNotEmpty ? 2 : 1,
+          child: Card(
+            key: Key('vehicle-card-${vehicle.id}'),
+            color: theme.colorScheme.surfaceContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radii.large),
+              side: BorderSide(
+                color: isActive
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline,
+                width: isActive ? 2 : 1,
+              ),
             ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(vehicle.shortName, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              if (sortedCrew.isEmpty) const Text('—'),
-              for (final a in sortedCrew)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: _CrewEntry(
-                    assignment: a,
-                    allVehicleIds: doubleBooked[a.personId] ?? {a.vehicleId},
-                    vehicles: vehicles,
-                    onRemove: () => onRemove(a.vehicleId, a.personId),
-                    onChangeFunction: () =>
-                        onChangeFunction(a.vehicleId, a.personId, a.function),
-                  ),
-                ),
-            ],
+            child: Padding(
+              padding: EdgeInsets.all(spacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(vehicle.shortName, style: theme.textTheme.titleMedium),
+                  SizedBox(height: spacing.sm),
+                  if (sortedCrew.isEmpty) const Text('—'),
+                  for (final a in sortedCrew)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: spacing.xs),
+                      child: _CrewEntry(
+                        assignment: a,
+                        allVehicleIds: doubleBooked[a.personId] ?? {a.vehicleId},
+                        vehicles: vehicles,
+                        onRemove: () => onRemove(a.vehicleId, a.personId),
+                        onChangeFunction: () =>
+                            onChangeFunction(a.vehicleId, a.personId, a.function),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -718,6 +761,7 @@ class _CrewEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isDouble = allVehicleIds.length > 1;
     final others = allVehicleIds
         .where((id) => id != assignment.vehicleId)
@@ -725,12 +769,13 @@ class _CrewEntry extends StatelessWidget {
         .toList();
     final chip = Chip(
       avatar: isDouble
-          ? const Icon(Icons.warning, color: Colors.orange, size: 18)
+          ? Icon(Icons.warning, color: theme.colorScheme.error, size: 18)
           : null,
       label: Text(
         '${assignment.function} ${assignment.displayName}',
         overflow: TextOverflow.ellipsis,
       ),
+      side: isDouble ? BorderSide(color: theme.colorScheme.error) : null,
     );
     final content = isDouble
         ? Tooltip(message: 'auch auf ${others.join(', ')}', child: chip)

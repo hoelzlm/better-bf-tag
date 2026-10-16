@@ -175,6 +175,9 @@ Future<_FakePersonAdminRepository> _pump(
   List<Person>? persons,
   Map<String, List<Device>>? devices,
 }) async {
+  tester.view.physicalSize = const Size(1600, 900);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   final repository = _FakePersonAdminRepository(
     persons: persons,
     devices: devices,
@@ -184,7 +187,7 @@ Future<_FakePersonAdminRepository> _pump(
       overrides: [
         personAdminRepositoryProvider.overrideWithValue(repository),
       ],
-      child: const MaterialApp(home: PersonsScreen()),
+      child: MaterialApp(theme: bftagLightTheme(), home: const PersonsScreen()),
     ),
   );
   await tester.pumpAndSettle();
@@ -329,6 +332,9 @@ void main() {
   testWidgets(
     'load error shows the error message instead of the list',
     (tester) async {
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -336,7 +342,8 @@ void main() {
               _ThrowingPersonAdminRepository(),
             ),
           ],
-          child: const MaterialApp(home: PersonsScreen()),
+          child:
+              MaterialApp(theme: bftagLightTheme(), home: const PersonsScreen()),
         ),
       );
       await tester.pumpAndSettle();
@@ -346,6 +353,98 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('persons-list')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'load error shows a retry button that calls the same load path',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final repository = _ThrowingPersonAdminRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            personAdminRepositoryProvider.overrideWithValue(repository),
+          ],
+          child:
+              MaterialApp(theme: bftagLightTheme(), home: const PersonsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erneut versuchen'), findsOneWidget);
+
+      await tester.tap(find.text('Erneut versuchen'));
+      await tester.pumpAndSettle();
+
+      // Still errors (fake always throws), but the retry path (same
+      // `_reload()` that initState used) was exercised without crashing.
+      expect(
+        find.text('Personen konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'empty list shows "Noch keine Personen" and a working create action',
+    (tester) async {
+      final repository = await _pump(tester, persons: []);
+
+      expect(find.textContaining('Noch keine Personen'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('persons-empty-create')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('person-form-display-name')),
+        'Erste Person',
+      );
+      await tester.tap(find.byKey(const Key('person-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.createCalls, hasLength(1));
+      expect(repository.createCalls.single.$1, 'Erste Person');
+    },
+  );
+
+  testWidgets(
+    'each person row shows Personentyp and Berechtigung as separate chips',
+    (tester) async {
+      await _pump(
+        tester,
+        persons: [
+          _person(
+            id: 'p1',
+            displayName: 'Max Mustermann',
+            personType: PersonType.youth,
+            permission: Permission.crew,
+          ),
+        ],
+      );
+
+      expect(find.text('Jugendlicher'), findsOneWidget);
+      expect(find.text('Mannschaft'), findsOneWidget);
+      // No more "·"-separated free text for type/permission.
+      expect(find.textContaining('Jugendlicher · Mannschaft'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'web-access-{id} is only shown for permission != crew',
+    (tester) async {
+      await _pump(
+        tester,
+        persons: [
+          _person(id: 'p1', permission: Permission.crew),
+          _person(id: 'p2', permission: Permission.dispatch),
+        ],
+      );
+
+      expect(find.byKey(const Key('web-access-p1')), findsNothing);
+      expect(find.byKey(const Key('web-access-p2')), findsOneWidget);
     },
   );
 
