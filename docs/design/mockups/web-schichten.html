@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>BF-Tag – Schichten</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
+
+  :root{
+    --surface:#FFFFFF; --surface-variant:#F1F3F5; --surface-container:#E8EAED;
+    --outline:#C9CED3; --on-surface:#1B1F23; --on-surface-variant:#4C555C;
+    --primary:#0B5E6B; --on-primary:#FFFFFF; --primary-container:#D6EEF2;
+    --warning:#B45309; --warning-container:#FDECD2;
+    --radius-l:16px; --radius-m:12px; --radius-s:8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--surface-variant);font-family:'Inter',sans-serif;color:var(--on-surface);}
+  .app{display:flex;width:1440px;height:900px;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;font-size:20px;
+    line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;
+    word-wrap:normal;direction:ltr;}
+
+  /* Sidebar (identisch zu lage.html / web-navigation.md) */
+  .sidebar{width:240px;flex:0 0 240px;background:var(--surface-variant);border-right:1px solid var(--outline);
+    display:flex;flex-direction:column;padding:20px 0;}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 20px 20px 20px;font-weight:700;font-size:18px;}
+  .brand .mark{width:28px;height:28px;border-radius:8px;background:var(--primary);display:inline-block;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;font-size:14px;font-weight:500;color:var(--on-surface-variant);
+    border-left:3px solid transparent;cursor:default;}
+  .nav-item .msym{font-size:20px;width:20px;}
+  .nav-item.active{background:var(--primary-container);color:var(--primary);border-left:3px solid var(--primary);font-weight:600;}
+  .nav-spacer{flex:1;}
+  .nav-user{padding:14px 20px;border-top:1px solid var(--outline);font-size:13px;color:var(--on-surface-variant);}
+  .nav-user b{color:var(--on-surface);display:block;font-size:14px;font-weight:600;}
+  .nav-user .logout{display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--on-surface-variant);}
+  .nav-user .logout .msym{font-size:16px;}
+
+  /* Main */
+  .main{flex:1;background:var(--surface);overflow:auto;}
+  .topbar{padding:20px 32px 0 32px;}
+  .topbar h1{font-size:24px;font-weight:600;margin:0 0 16px 0;}
+  .content{padding:0 32px 24px 32px;}
+
+  .field-label{font-size:13px;color:var(--on-surface-variant);margin-bottom:4px;}
+  .dropdown{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--outline);border-radius:var(--radius-m);
+    padding:8px 12px;font-size:14px;font-weight:500;margin-bottom:20px;}
+  .dropdown .msym{font-size:18px;}
+
+  .tabs-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .tabs{display:flex;gap:8px;}
+  .chip{border:1px solid var(--outline);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:500;}
+  .chip.selected{background:var(--primary-container);color:var(--primary);border-color:var(--primary);font-weight:600;}
+  .tab-actions{display:flex;align-items:center;gap:8px;}
+  .btn{padding:9px 16px;border-radius:var(--radius-m);font-weight:600;font-size:14px;cursor:default;border:1px solid transparent;
+    display:inline-flex;align-items:center;gap:6px;}
+  .btn .msym{font-size:18px;}
+  .btn-primary{background:var(--primary);color:var(--on-primary);}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-m);display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid var(--outline);color:var(--on-surface-variant);}
+
+  .board{display:flex;gap:24px;align-items:flex-start;}
+  .participants-col{width:220px;flex:0 0 220px;}
+  .participants-col h3{font-size:13px;font-weight:700;margin:0 0 8px 0;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:.03em;}
+  .p-chip{display:inline-block;border:1px solid var(--outline);background:var(--surface-variant);border-radius:999px;
+    padding:6px 12px;font-size:13px;margin:0 6px 6px 0;}
+  .vehicles{flex:1;display:flex;flex-wrap:wrap;gap:16px;}
+  .vcard{width:220px;background:var(--surface-variant);border-radius:var(--radius-l);padding:16px;}
+  .vcard.drop-target{border:2px solid var(--primary);padding:15px;}
+  .vcard:not(.drop-target){border:1px solid transparent;}
+  .vcard .vname{font-weight:700;font-size:15px;margin-bottom:10px;}
+  .crew-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:999px;
+    padding:6px 10px;font-size:13px;margin-bottom:6px;}
+  .crew-row.warn{border:1px solid var(--warning);}
+  .crew-row .warn-icon{color:var(--warning);font-size:16px;margin-right:4px;}
+  .crew-row .menu{color:var(--on-surface-variant);font-size:16px;}
+  .vcard .empty{color:var(--on-surface-variant);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="brand"><span class="mark"></span>BF-Tag</div>
+    <div class="nav-item"><span class="msym">home</span>Lage</div>
+    <div class="nav-item"><span class="msym">calendar_month</span>BF-Tage</div>
+    <div class="nav-item active"><span class="msym">schedule</span>Schichten</div>
+    <div class="nav-item"><span class="msym">group</span>Personen</div>
+    <div class="nav-item"><span class="msym">local_shipping</span>Fahrzeuge</div>
+    <div class="nav-item"><span class="msym">local_fire_department</span>Einsätze</div>
+    <div class="nav-item"><span class="msym">campaign</span>Durchsagen</div>
+    <div class="nav-item"><span class="msym">event_note</span>Tagesablauf</div>
+    <div class="nav-item"><span class="msym">image</span>Folien</div>
+    <div class="nav-item"><span class="msym">desktop_windows</span>Monitore</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-user">
+      <b>Leitstelle screenshots</b>Leitstelle
+      <div class="logout"><span class="msym">logout</span>Abmelden</div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar"><h1>Schichten</h1></div>
+    <div class="content">
+      <div class="field-label">BF-Tag</div>
+      <div class="dropdown">Screenshots screenshots <span class="msym">expand_more</span></div>
+
+      <div class="tabs-row">
+        <div class="tabs">
+          <div class="chip">Schicht 1</div>
+          <div class="chip selected"><span class="msym" style="font-size:14px;vertical-align:-2px;">check</span> Schicht 1 (aktuell)</div>
+        </div>
+        <div class="tab-actions">
+          <div class="btn btn-primary"><span class="msym">add</span>Schicht anlegen</div>
+          <div class="icon-btn"><span class="msym">edit</span></div>
+          <div class="icon-btn"><span class="msym">delete</span></div>
+        </div>
+      </div>
+
+      <div class="board">
+        <div class="participants-col">
+          <h3>Nicht eingeteilt</h3>
+          <div><span class="p-chip">Leitstelle screenshots</span><span class="p-chip">Vorbereitung screenshots</span></div>
+          <h3 style="margin-top:16px;">Eingeteilt</h3>
+          <div>
+            <span class="p-chip">Anna Jugend screenshots</span>
+            <span class="p-chip">Ben Jugend screenshots</span>
+            <span class="p-chip">Clara Betreuer screenshots</span>
+          </div>
+        </div>
+        <div class="vehicles">
+          <div class="vcard drop-target">
+            <div class="vname">HLF-1</div>
+            <div class="crew-row"><span>GF Anna Jugend s…</span><span class="msym menu">more_vert</span></div>
+            <div class="crew-row warn"><span><span class="msym warn-icon">warning</span>MA Ben Jugend s…</span><span class="msym menu">more_vert</span></div>
+          </div>
+          <div class="vcard">
+            <div class="vname">RTW-1</div>
+            <div class="crew-row"><span>MA Clara Betreuer …</span><span class="msym menu">more_vert</span></div>
+          </div>
+          <div class="vcard">
+            <div class="vname">DLK-1</div>
+            <div class="empty">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
