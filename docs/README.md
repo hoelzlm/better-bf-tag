@@ -14,6 +14,7 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [08 – Store-Veröffentlichung](08-store-release.md) | Google Play und Apple App Store / TestFlight |
 | [09 – Datenschutz](09-datenschutz.md) | DSGVO, Minderjährige, Datensparsamkeit |
 | [10 – Roadmap](10-roadmap.md) | 2-Wochen-Plan bis zur ersten nutzbaren Version |
+| [Teststrategie](testing/README.md) | Regressionsinventar, Unit-/Widget-Tests, E2E-Suite, Screenshot-Harness |
 
 ## Architecture Decision Records (ADR)
 

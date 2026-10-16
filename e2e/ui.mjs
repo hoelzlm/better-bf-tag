@@ -3,13 +3,9 @@
 //
 // Env (also see lib.mjs):
 //   CHROME_BIN   path to a Chrome/Chromium binary (default "google-chrome")
-import { spawn } from 'node:child_process';
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import net from 'node:net';
-import WebSocket from 'ws';
-import { ok, call, summary, ARTIFACT_DIR, BASE, ADMIN_USER, ADMIN_PASS } from './lib.mjs';
+import { ok, call, summary, ARTIFACT_DIR, BASE, ADMIN_USER, ADMIN_PASS, createCdpSession } from './lib.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -17,61 +13,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // "Großbrand" (API input) compare equal regardless of case/eszett.
 const norm = (s) => (s ?? '').toLowerCase().replace(/ß/g, 'ss');
 
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const srv = net.createServer();
-    srv.on('error', reject);
-    srv.listen(0, '127.0.0.1', () => {
-      const { port } = srv.address();
-      srv.close(() => resolve(port));
-    });
-  });
-}
-
-const CHROME_BIN = process.env.CHROME_BIN ?? 'google-chrome';
-const profileDir = mkdtempSync(path.join(tmpdir(), 'bftag-e2e-chrome-'));
-let chrome;
-
-function cleanupChrome() {
-  if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
-    try {
-      chrome.kill('SIGKILL');
-    } catch {
-      // already gone
-    }
-  }
-  try {
-    rmSync(profileDir, { recursive: true, force: true });
-  } catch {
-    // best effort
-  }
-}
-process.on('exit', cleanupChrome);
 process.on('SIGINT', () => process.exit(130));
 process.on('SIGTERM', () => process.exit(143));
 
-let cdp;
-let msgId = 0;
-const pending = new Map();
-const consoleErrors = [];
+const cdpSession = createCdpSession({ windowSize: '1400,900' });
+const { send, evalJs, waitFor, nav, enableSemantics } = cdpSession;
+const consoleErrors = cdpSession.consoleErrors;
 let failCount = 0;
 let stepCount = 0;
-
-function send(method, params = {}) {
-  return new Promise((resolve, reject) => {
-    const id = ++msgId;
-    pending.set(id, { resolve, reject });
-    cdp.send(JSON.stringify({ id, method, params }));
-  });
-}
-
-async function evalJs(expression) {
-  const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (r.exceptionDetails) {
-    throw new Error(r.exceptionDetails.text ?? 'Runtime.evaluate exception');
-  }
-  return r.result?.value;
-}
 
 async function shot(name) {
   const r = await send('Page.captureScreenshot', { format: 'png' });
@@ -113,31 +62,6 @@ async function check(cond, name, extra) {
   if (!result) await failShot(name);
   return result;
 }
-
-async function waitFor(predicate, timeoutMs = 8000, intervalMs = 150) {
-  const start = Date.now();
-  for (;;) {
-    let value;
-    try {
-      value = await predicate();
-    } catch {
-      value = undefined;
-    }
-    if (value) return value;
-    if (Date.now() - start > timeoutMs) return undefined;
-    await sleep(intervalMs);
-  }
-}
-
-async function nav(url) {
-  await send('Page.navigate', { url });
-  await waitFor(async () => (await evalJs('document.readyState')) === 'complete', 10000, 200);
-}
-
-const enableSemantics = () =>
-  evalJs(
-    `(() => { const p = document.querySelector('flt-semantics-placeholder'); if (p) { p.click(); return true; } return false; })()`,
-  );
 
 const labels = () =>
   evalJs(
@@ -202,61 +126,6 @@ async function pressEnter() {
   for (const type of ['keyDown', 'keyUp']) {
     await send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
   }
-}
-
-async function startChrome() {
-  const port = await freePort();
-  chrome = spawn(
-    CHROME_BIN,
-    [
-      '--headless=new',
-      '--no-sandbox',
-      '--ignore-certificate-errors',
-      '--window-size=1400,900',
-      '--autoplay-policy=no-user-gesture-required',
-      `--user-data-dir=${profileDir}`,
-      `--remote-debugging-port=${port}`,
-      'about:blank',
-    ],
-    { stdio: 'ignore' },
-  );
-  chrome.on('error', (e) => console.log(`NOTE chrome spawn error: ${e.message}`));
-  return port;
-}
-
-async function connectCdp(port) {
-  let tabs;
-  for (let i = 0; i < 60; i++) {
-    try {
-      tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
-      break;
-    } catch {
-      await sleep(250);
-    }
-  }
-  if (!tabs) throw new Error('Chrome DevTools endpoint never came up');
-  const page = tabs.find((t) => t.type === 'page');
-  cdp = new WebSocket(page.webSocketDebuggerUrl);
-  await new Promise((resolve, reject) => {
-    cdp.on('open', resolve);
-    cdp.on('error', reject);
-  });
-  cdp.on('message', (d) => {
-    const m = JSON.parse(d.toString());
-    if (m.id && pending.has(m.id)) {
-      const { resolve } = pending.get(m.id);
-      pending.delete(m.id);
-      resolve(m.result ?? {});
-    }
-    if (m.method === 'Runtime.exceptionThrown') {
-      consoleErrors.push(m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text ?? 'exception');
-    }
-    if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
-      consoleErrors.push(m.params.args.map((a) => a.value ?? a.description).join(' '));
-    }
-  });
-  await send('Page.enable');
-  await send('Runtime.enable');
 }
 
 const ADMIN_PAGES = [
@@ -325,8 +194,8 @@ async function triggerUiAlarm(token) {
 }
 
 async function main() {
-  const port = await startChrome();
-  await connectCdp(port);
+  const port = await cdpSession.start();
+  await cdpSession.connect(port);
 
   // --- login ---------------------------------------------------------
   await nav(`${BASE}/admin/login`);

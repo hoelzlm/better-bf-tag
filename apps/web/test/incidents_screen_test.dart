@@ -114,6 +114,13 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
   Future<BfDay> anonymize(String bfDayId) => throw UnimplementedError();
 }
 
+class _ThrowingBfDayAdminRepository extends _FakeBfDayAdminRepository {
+  @override
+  Future<List<BfDay>> list() async {
+    throw StateError('boom');
+  }
+}
+
 class _FakeIncidentRepository implements IncidentRepository {
   _FakeIncidentRepository({Map<String, List<Incident>>? incidentsByDay})
     : incidentsByDay = incidentsByDay ?? {};
@@ -846,6 +853,97 @@ void main() {
         ),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'Einsatz verwerfen calls discard on the repository after confirm',
+    (tester) async {
+      final incidentRepository = await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [_incident(id: 'i1', number: 1, state: IncidentState.draft)],
+        },
+      );
+
+      await tester.tap(find.byKey(const Key('discard-incident-i1')));
+      await tester.pumpAndSettle();
+
+      expect(incidentRepository.discardCalls, isEmpty);
+
+      await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(incidentRepository.discardCalls, ['i1']);
+    },
+  );
+
+  testWidgets(
+    'empty incidents list shows "Keine Einsätze vorhanden."',
+    (tester) async {
+      await _pump(tester, days: [_bfDay()], incidents: {'d1': []});
+
+      expect(find.text('Keine Einsätze vorhanden.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'no BF-Tage shows "Keine BF-Tage angelegt."',
+    (tester) async {
+      await _pump(tester, days: []);
+
+      expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'BF-Tage load error shows the error message instead of the dropdown',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bfDayAdminRepositoryProvider.overrideWithValue(
+              _ThrowingBfDayAdminRepository(),
+            ),
+            incidentRepositoryProvider.overrideWithValue(
+              _FakeIncidentRepository(),
+            ),
+            sessionControllerProvider.overrideWith(
+              () => _FixedSessionController(
+                SessionSignedIn(
+                  Person(
+                    id: 'p1',
+                    displayName: 'Max Mustermann',
+                    personType: PersonType.supervisor,
+                    permission: Permission.admin,
+                  ),
+                  'token',
+                ),
+              ),
+            ),
+            vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+            shiftsProvider.overrideWith((ref) => Stream.value(const [])),
+            alarmsProvider.overrideWith((ref) => Stream.value(const [])),
+            geocodeRepositoryProvider.overrideWithValue(
+              _FakeGeocodeRepository(),
+            ),
+            stationProvider.overrideWith((ref) async => null),
+            mapTileProviderProvider.overrideWithValue(_FakeTileProvider()),
+            scheduledAlarmsProvider.overrideWith(
+              (ref) => Stream.value(const []),
+            ),
+          ],
+          child: const MaterialApp(home: IncidentsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('BF-Tage konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('bf-day-dropdown')), findsNothing);
     },
   );
 

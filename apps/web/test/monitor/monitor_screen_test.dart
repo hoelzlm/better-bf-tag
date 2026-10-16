@@ -67,6 +67,10 @@ class _FakeMonitorAdapter implements HttpClientAdapter {
   int pairStatusCode = 200;
   Map<String, dynamic>? pairBody;
 
+  /// When set, `pair` throws this instead of returning a response -- used
+  /// to simulate a connection loss while submitting the Kopplungscode.
+  Object? pairError;
+
   int refreshStatusCode = 200;
   Map<String, dynamic>? refreshBody;
 
@@ -81,6 +85,8 @@ class _FakeMonitorAdapter implements HttpClientAdapter {
   ) async {
     if (options.path.contains('/auth/monitor/pair')) {
       pairCalls++;
+      final error = pairError;
+      if (error != null) throw error;
       return _json(pairStatusCode, pairBody);
     }
     if (options.path.contains('/auth/monitor/refresh')) {
@@ -154,10 +160,16 @@ class _Env {
 }
 
 Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
+  // Mirrors production: `main.dart`'s root ProviderScope with the
+  // `/monitor` route's own scoped ProviderScope nested inside (router.dart,
+  // see PR #31 / commit 7764c01). A single flat scope hides "provider not
+  // scoped" bugs.
   await tester.pumpWidget(
     ProviderScope(
-      overrides: env.overrides,
-      child: const MaterialApp(home: MonitorScreen()),
+      child: ProviderScope(
+        overrides: env.overrides,
+        child: const MaterialApp(home: MonitorScreen()),
+      ),
     ),
   );
   await tester.pump();
@@ -358,6 +370,43 @@ void main() {
     },
   );
 
+  testWidgets('pairing screen shows the code input and submit button '
+      'before any code is entered', (tester) async {
+    final env = _Env();
+    await _pumpMonitor(tester, env);
+    await _activate(tester);
+
+    expect(find.text('Monitor koppeln'), findsOneWidget);
+    expect(find.byKey(const Key('monitor-pairing-code')), findsOneWidget);
+    expect(find.byKey(const Key('monitor-pairing-submit')), findsOneWidget);
+    expect(find.byKey(const Key('monitor-pairing-error')), findsNothing);
+    expect(env.adapter.pairCalls, 0);
+  });
+
+  testWidgets(
+    'a DioException without a response (connection loss) while pairing '
+    'shows "Server nicht erreichbar." and stays on the pairing screen',
+    (tester) async {
+      final env = _Env();
+      env.adapter.pairError = DioException(
+        requestOptions: RequestOptions(path: '/auth/monitor/pair'),
+        type: DioExceptionType.connectionError,
+      );
+      await _pumpMonitor(tester, env);
+      await _activate(tester);
+
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'ABCD-EFGH',
+      );
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Server nicht erreichbar.'), findsOneWidget);
+      expect(find.text('Monitor koppeln'), findsOneWidget);
+    },
+  );
+
   testWidgets('revoked signal shows the pairing screen with the gesperrt '
       'text and clears the store', (tester) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
@@ -369,9 +418,11 @@ void main() {
     final container = ProviderContainer(overrides: env.overrides);
     addTearDown(container.dispose);
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: MonitorScreen()),
+      ProviderScope(
+        child: UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: MonitorScreen()),
+        ),
       ),
     );
     await tester.pump();
@@ -398,6 +449,29 @@ void main() {
     expect(await env.tokenStore.read(), isNull);
   });
 
+  testWidgets('clock shows hour:minute, seconds, and the date', (
+    tester,
+  ) async {
+    final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
+    env.adapter.pairBody = _pairResponseBody(
+      accessToken: 'at1',
+      refreshToken: 'rt1',
+      monitorId: 'mon1',
+    );
+    await _pumpMonitor(tester, env);
+    await _activate(tester);
+    await tester.enterText(
+      find.byKey(const Key('monitor-pairing-code')),
+      'ABCDEFGH',
+    );
+    await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('09:41'), findsOneWidget);
+    expect(find.text(':07'), findsOneWidget);
+    expect(find.byKey(const Key('monitor-date')), findsOneWidget);
+  });
+
   testWidgets(
     'connection reconnecting shows the red banner; live hides it',
     (tester) async {
@@ -409,16 +483,18 @@ void main() {
       );
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...env.overrides,
-            // Stub the vehicle list so no real RealtimeClient is built for
-            // this banner-only assertion (avoids a pending watchdog timer).
-            vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-            realtimeConnectionProvider.overrideWith(
-              (ref) => Stream.value(ConnectionStatus.reconnecting),
-            ),
-          ],
-          child: const MaterialApp(home: MonitorScreen()),
+          child: ProviderScope(
+            overrides: [
+              ...env.overrides,
+              // Stub the vehicle list so no real RealtimeClient is built for
+              // this banner-only assertion (avoids a pending watchdog timer).
+              vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+              realtimeConnectionProvider.overrideWith(
+                (ref) => Stream.value(ConnectionStatus.reconnecting),
+              ),
+            ],
+            child: const MaterialApp(home: MonitorScreen()),
+          ),
         ),
       );
       await tester.pump();
@@ -446,14 +522,16 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          ...env.overrides,
-          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-          realtimeConnectionProvider.overrideWith(
-            (ref) => Stream.value(ConnectionStatus.live),
-          ),
-        ],
-        child: const MaterialApp(home: MonitorScreen()),
+        child: ProviderScope(
+          overrides: [
+            ...env.overrides,
+            vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+            realtimeConnectionProvider.overrideWith(
+              (ref) => Stream.value(ConnectionStatus.live),
+            ),
+          ],
+          child: const MaterialApp(home: MonitorScreen()),
+        ),
       ),
     );
     await tester.pump();
@@ -637,16 +715,21 @@ void main() {
       dio.httpClientAdapter = adapter;
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...monitorProviderOverrides(tokenStore: env.tokenStore, dio: dio),
-            monitorPlatformProvider.overrideWithValue(env.platform),
-            monitorWebSocketConnectorProvider
-                .overrideWithValue((uri) => _FakeWsConnection()),
-            monitorClockProvider.overrideWith(
-              (ref) => clockController.stream,
-            ),
-          ],
-          child: const MaterialApp(home: MonitorScreen()),
+          child: ProviderScope(
+            overrides: [
+              ...monitorProviderOverrides(
+                tokenStore: env.tokenStore,
+                dio: dio,
+              ),
+              monitorPlatformProvider.overrideWithValue(env.platform),
+              monitorWebSocketConnectorProvider
+                  .overrideWithValue((uri) => _FakeWsConnection()),
+              monitorClockProvider.overrideWith(
+                (ref) => clockController.stream,
+              ),
+            ],
+            child: const MaterialApp(home: MonitorScreen()),
+          ),
         ),
       );
       clockController.add(DateTime.utc(2026, 10, 9, 10, 0, 0));

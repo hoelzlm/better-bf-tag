@@ -320,6 +320,41 @@ void main() {
     expect(find.textContaining('Neuer BF-Tag'), findsOneWidget);
   });
 
+  testWidgets('edit dialog (tap list tile) calls update with the new values',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay(id: 'd1', name: 'BF-Tag 2026', state: BfDayState.planning)],
+    );
+
+    await tester.tap(find.byKey(const Key('bf-day-d1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('BF-Tag bearbeiten'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('bf-day-form-name')),
+      'Umbenannter BF-Tag',
+    );
+    await tester.tap(find.byKey(const Key('bf-day-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Umbenannter BF-Tag'), findsOneWidget);
+  });
+
+  testWidgets('a running BF-Tag cannot be opened for editing (no onTap)',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay(id: 'd1', state: BfDayState.running)],
+    );
+
+    await tester.tap(find.byKey(const Key('bf-day-d1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('BF-Tag bearbeiten'), findsNothing);
+  });
+
   testWidgets('starting a BF-Tag calls start only after confirm',
       (tester) async {
     final repository = await _pump(

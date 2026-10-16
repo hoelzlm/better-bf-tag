@@ -92,6 +92,15 @@ class _FakeVehicleAdminRepository implements VehicleAdminRepository {
   Future<void> setStatus(String id, int status) => throw UnimplementedError();
 }
 
+class _ThrowingVehicleAdminRepository extends _FakeVehicleAdminRepository {
+  _ThrowingVehicleAdminRepository() : super([]);
+
+  @override
+  Future<List<Vehicle>> listAll() async {
+    throw StateError('boom');
+  }
+}
+
 Future<_FakeVehicleAdminRepository> _pump(
   WidgetTester tester, {
   required List<Vehicle> vehicles,
@@ -189,4 +198,50 @@ void main() {
 
     expect(repository.activeToggleCalls, [('v1', false)]);
   });
+
+  testWidgets(
+    'editing a vehicle calls update with the entered fields',
+    (tester) async {
+      final repository = await _pump(
+        tester,
+        vehicles: [_vehicle(id: 'v1', callSign: 'Florian 1')],
+      );
+
+      await tester.tap(find.byKey(const ValueKey('v1')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('vehicle-form-call-sign')),
+        'Florian 1 neu',
+      );
+      await tester.tap(find.byKey(const Key('vehicle-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.vehicles.single.callSign, 'Florian 1 neu');
+      expect(find.textContaining('Florian 1 neu'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'load error shows the error message instead of the list',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            vehicleAdminRepositoryProvider.overrideWithValue(
+              _ThrowingVehicleAdminRepository(),
+            ),
+          ],
+          child: const MaterialApp(home: VehiclesScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Fahrzeuge konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('vehicles-list')), findsNothing);
+    },
+  );
 }

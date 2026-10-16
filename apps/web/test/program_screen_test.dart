@@ -300,4 +300,117 @@ void main() {
     expect(find.byKey(const Key('program-edit-p1')), findsNothing);
     expect(find.byKey(const Key('program-delete-p1')), findsNothing);
   });
+
+  testWidgets('Leerzustand: no BF-Tage shows a message', (tester) async {
+    await _pump(tester, days: const [], items: const []);
+
+    expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
+  });
+
+  testWidgets('Leerzustand: no Programmpunkte shows a message', (
+    tester,
+  ) async {
+    await _pump(tester, days: [_bfDay()], items: const []);
+
+    expect(find.text('Keine Programmpunkte vorhanden.'), findsOneWidget);
+  });
+
+  testWidgets('Fehlerzustand: BF-Tage load error shows a message', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bfDayAdminRepositoryProvider.overrideWithValue(
+            _ThrowingBfDayAdminRepository(),
+          ),
+          programItemRepositoryProvider.overrideWithValue(
+            _FakeProgramItemRepository(const []),
+          ),
+        ],
+        child: const MaterialApp(home: ProgramScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('BF-Tage konnten nicht geladen werden.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Fehlerzustand: create error shows a SnackBar', (tester) async {
+    final repository = await _pump(tester, days: [_bfDay()], items: const []);
+    repository.createError = Exception('boom');
+
+    await tester.tap(find.byKey(const Key('program-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('program-form-title')),
+      'Abendessen',
+    );
+    await tester.tap(find.byKey(const Key('program-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets('Fehlerzustand: delete error shows a SnackBar', (tester) async {
+    final repository = await _pump(
+      tester,
+      days: [_bfDay()],
+      items: [_item(id: 'p1')],
+    );
+    repository.deleteError = Exception('boom');
+
+    await tester.tap(find.byKey(const Key('program-delete-p1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+}
+
+class _ThrowingBfDayAdminRepository implements BfDayAdminRepository {
+  @override
+  Future<List<BfDay>> list() async => throw Exception('boom');
+
+  @override
+  Future<BfDay> create({
+    required String name,
+    required DateTime startsAt,
+    required DateTime endsAt,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> update(
+    String id, {
+    String? name,
+    DateTime? startsAt,
+    DateTime? endsAt,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> start(String id) => throw UnimplementedError();
+
+  @override
+  Future<BfDay> end(String id) => throw UnimplementedError();
+
+  @override
+  Future<List<Participant>> listParticipants(String day) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> setParticipants(String day, List<String> personIds) =>
+      throw UnimplementedError();
+
+  @override
+  Future<AnonymizationSummary> anonymizationPreview(String bfDayId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BfDay> anonymize(String bfDayId) => throw UnimplementedError();
 }

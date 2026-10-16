@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_web/screens/shifts_screen.dart';
 import 'package:dio/dio.dart';
@@ -128,6 +130,7 @@ class _FakeShiftRepository implements ShiftRepository {
   Map<String, List<Shift>> shiftsByDay;
   final List<(String, List<CrewAssignmentInput>)> setCrewCalls = [];
   final List<(String, String, DateTime, DateTime)> createCalls = [];
+  final List<(String, String, String?, DateTime?, DateTime?)> updateCalls = [];
   Object? setCrewError;
 
   @override
@@ -160,11 +163,31 @@ class _FakeShiftRepository implements ShiftRepository {
     String? name,
     DateTime? startsAt,
     DateTime? endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) async {
+    updateCalls.add((day, id, name, startsAt, endsAt));
+    final list = shiftsByDay[day] ?? const [];
+    final index = list.indexWhere((s) => s.id == id);
+    final current = list[index];
+    final updated = _shift(
+      id: current.id,
+      bfDayId: day,
+      name: name ?? current.name,
+      startsAt: startsAt ?? current.startsAt,
+      endsAt: endsAt ?? current.endsAt,
+      crew: current.crew,
+    );
+    shiftsByDay[day] = [
+      for (final s in list) if (s.id == id) updated else s,
+    ];
+    return updated;
+  }
 
   @override
-  Future<void> deleteShift(String day, String id) async {}
+  Future<void> deleteShift(String day, String id) async {
+    shiftsByDay[day] = [
+      for (final s in shiftsByDay[day] ?? const []) if (s.id != id) s,
+    ];
+  }
 
   @override
   Future<Shift> setCrew(
@@ -217,6 +240,7 @@ Future<(
   Map<String, List<Shift>>? shifts,
   Map<String, List<Participant>>? participants,
   List<Vehicle>? vehicles,
+  Stream<List<Shift>>? shiftsEvents,
 }) async {
   final bfDayRepository = _FakeBfDayAdminRepository(
     days: days,
@@ -229,7 +253,7 @@ Future<(
         bfDayAdminRepositoryProvider.overrideWithValue(bfDayRepository),
         shiftRepositoryProvider.overrideWithValue(shiftRepository),
         vehiclesProvider.overrideWith((ref) => Stream.value(vehicles ?? const [])),
-        shiftsProvider.overrideWith((ref) => Stream.value(const [])),
+        shiftsProvider.overrideWith((ref) => shiftsEvents ?? Stream.value(const <Shift>[])),
         bfDayProvider.overrideWith((ref) => Stream.value(null)),
       ],
       child: const MaterialApp(home: ShiftsScreen()),
@@ -457,5 +481,148 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Die Person nimmt nicht am BF-Tag teil.'), findsOneWidget);
+  });
+
+  testWidgets('edit-shift calls updateShift with the new values',
+      (tester) async {
+    final (_, shiftRepository) = await _pump(
+      tester,
+      days: [_bfDay()],
+      shifts: {
+        'd1': [_shift(id: 's1', name: 'Schicht 1')],
+      },
+      participants: {
+        'd1': [_participant()],
+      },
+      vehicles: [_vehicle()],
+    );
+
+    await tester.tap(find.byKey(const Key('edit-shift')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Schicht bearbeiten'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('shift-form-name')),
+      'Tagschicht',
+    );
+    await tester.tap(find.byKey(const Key('shift-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(shiftRepository.updateCalls, hasLength(1));
+    expect(shiftRepository.updateCalls.single.$2, 's1');
+    expect(shiftRepository.updateCalls.single.$3, 'Tagschicht');
+    expect(find.textContaining('Tagschicht'), findsOneWidget);
+  });
+
+  testWidgets('delete-shift calls deleteShift only after confirm',
+      (tester) async {
+    final (_, _) = await _pump(
+      tester,
+      days: [_bfDay()],
+      shifts: {
+        'd1': [_shift(id: 's1', name: 'Schicht 1')],
+      },
+      participants: {
+        'd1': [_participant()],
+      },
+      vehicles: [_vehicle()],
+    );
+
+    await tester.tap(find.byKey(const Key('delete-shift')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Schicht löschen'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Schicht 1'), findsNothing);
+  });
+
+  testWidgets(
+      'cancelling the delete-shift confirmation does not remove the shift',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      shifts: {
+        'd1': [_shift(id: 's1', name: 'Schicht 1')],
+      },
+      participants: {
+        'd1': [_participant()],
+      },
+      vehicles: [_vehicle()],
+    );
+
+    await tester.tap(find.byKey(const Key('delete-shift')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abbrechen').last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Schicht 1'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Echtzeit-Updates: a shiftsProvider event reloads the shift list',
+      (tester) async {
+    final controller = StreamController<List<Shift>>();
+    addTearDown(controller.close);
+    final shiftRepository = _FakeShiftRepository(
+      shiftsByDay: {
+        'd1': [_shift(id: 's1', name: 'Schicht 1')],
+      },
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bfDayAdminRepositoryProvider.overrideWithValue(
+            _FakeBfDayAdminRepository(
+              days: [_bfDay()],
+              participants: {'d1': [_participant()]},
+            ),
+          ),
+          shiftRepositoryProvider.overrideWithValue(shiftRepository),
+          vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
+          shiftsProvider.overrideWith((ref) => controller.stream),
+          bfDayProvider.overrideWith((ref) => Stream.value(null)),
+        ],
+        child: const MaterialApp(home: ShiftsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Schicht 1'), findsOneWidget);
+
+    // Simulate a WebSocket live-update: a new shift appears via the
+    // backend-pushed shiftsProvider event, which triggers a reload.
+    shiftRepository.shiftsByDay['d1'] = [
+      ...shiftRepository.shiftsByDay['d1']!,
+      _shift(id: 's2', name: 'Schicht 2'),
+    ];
+    controller.add(const []);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Schicht 2'), findsOneWidget);
+  });
+
+  testWidgets('Leerzustand: no shifts on the selected BF-Tag shows a message',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      shifts: {'d1': []},
+      participants: {'d1': [_participant()]},
+      vehicles: [_vehicle()],
+    );
+
+    expect(find.text('Keine Schicht vorhanden.'), findsOneWidget);
+  });
+
+  testWidgets('Leerzustand: no BF-Tage at all shows a message',
+      (tester) async {
+    await _pump(tester, days: []);
+
+    expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
   });
 }

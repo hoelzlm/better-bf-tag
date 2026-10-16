@@ -58,6 +58,19 @@ infra-smoke:
 e2e:
     ./e2e/run.sh
 
+# Design-Review-Screenshots (Web/Monitor via e2e-Stack, App via Widget-Tests)
+# nach docs/design/screenshots/<dir>/{web,monitor,app}/ -- gleiche Dateinamen
+# in jedem <dir>, damit vorher/nachher 1:1 vergleichbar ist (docs/testing/README.md).
+screenshots dir="before":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    REPO_ROOT="$(pwd)"
+    OUT="$REPO_ROOT/docs/design/screenshots/{{dir}}"
+    mkdir -p "$OUT/app"
+    cd apps/mobile && flutter test screenshot_test --dart-define=SCREENSHOT_DIR="$OUT"
+    cd "$REPO_ROOT"
+    E2E_MODE=screenshots SCREENSHOT_DIR="$OUT" ./e2e/run.sh
+
 # Automated local round-trip test for the nightly backup/restore scripts.
 infra-backup-test:
     ./infra/test/backup-restore.sh

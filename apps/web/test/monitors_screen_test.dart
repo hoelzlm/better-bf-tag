@@ -178,4 +178,64 @@ void main() {
     expect(repository.revokeCalls, ['m1']);
     expect(find.byKey(const Key('revoke-monitor-m1')), findsNothing);
   });
+
+  testWidgets('tapping a monitor opens rename and calls updateMonitor', (
+    tester,
+  ) async {
+    final repository = await _pump(
+      tester,
+      monitors: [_monitor(id: 'm1', name: 'Monitor 1')],
+    );
+
+    await tester.tap(find.byKey(const Key('monitor-m1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('monitor-form-name')),
+      'Monitor Zelt',
+    );
+    await tester.tap(find.byKey(const Key('monitor-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(repository.updateCalls, [('m1', 'Monitor Zelt')]);
+    expect(find.text('Monitor Zelt'), findsOneWidget);
+  });
+
+  testWidgets('Fehlerzustand: load error shows a message', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          monitorAdminRepositoryProvider.overrideWith(
+            (ref) => _ThrowingMonitorAdminRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: MonitorsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Monitore konnten nicht geladen werden.'),
+      findsOneWidget,
+    );
+  });
+}
+
+class _ThrowingMonitorAdminRepository implements MonitorAdminRepository {
+  @override
+  Future<List<Monitor>> listMonitors() async => throw Exception('boom');
+
+  @override
+  Future<Monitor> createMonitor({required String name}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Monitor> updateMonitor(String id, {required String name}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> revokeMonitor(String id) => throw UnimplementedError();
+
+  @override
+  Future<MonitorPairingCode> createPairingCode(String id) =>
+      throw UnimplementedError();
 }
