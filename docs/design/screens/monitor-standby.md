@@ -142,9 +142,11 @@ ausgezogen): 1) Durchsage-Live-Banner **`primaryContainer`**-Fläche (nicht mehr
 - **Kein BF-Tag läuft:** Fahrzeugstatus-Spalte bleibt sichtbar (Fahrzeuge existieren unabhängig vom BF-Tag),
   Besatzungsteil pro Zeile zeigt „—“ (wie heute `_CrewVehicleCard` bei leerer Crew) statt Namen. Tagesablauf-
   Spalte zeigt Leerzustand: Icon „event_note“ 48 px + „Kein Tagesablauf für heute.“ (Designsystem 5.10).
-- **BF-Tag läuft, aber keine aktive Schicht:** wie heute (`_CrewPanel` blendet sich komplett aus) — hier:
-  Besatzungsteil pro Zeile zeigt „—“, kein Schichtname/-zeitraum in der Kopfzeile des Panels (entfällt, da
-  es keine eigene Kopfzeile pro Panel mehr gibt, die Information steckt jetzt in den Zeilen selbst).
+- **BF-Tag läuft, aber keine aktive Schicht:** Panel-Überschrift (`crew-panel-heading`, Abschnitt 3) zeigt nur
+  „Fahrzeugstatus & Besatzung“ **ohne** Schichtzusatz — der Schichtteil erscheint laut Abschnitt 3 nur, wenn
+  tatsächlich eine Schicht aktiv ist; das deckt sich mit dem heutigen Verhalten der `_CrewPanel`-Überschrift
+  bei fehlender Schicht. Die Fahrzeugliste selbst bleibt unverändert sichtbar (Fahrzeuge existieren
+  unabhängig von Schichten), Besatzungsteil pro Zeile zeigt „—“ statt Namen.
 - **Viele Fahrzeuge (> 7, mehr als die linke Spalte ohne Zoomen fasst):** Liste **rotiert** seitenweise
   (wie die Folien, gleicher Mechanismus `SlideRotator`-Muster): je 7 Fahrzeuge eine „Seite“, Wechsel alle
   10 s, kleine Punktreihe unten im Panel (`•••`, aktiver Punkt `primary`) zeigt Seite X/Y. Kein Scrollen,

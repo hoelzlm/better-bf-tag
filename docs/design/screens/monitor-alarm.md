@@ -53,7 +53,7 @@ FMS-Pillen und Quittiert-Fortschritt, passend zur Einsatzansicht-Fassung.
 │  Starke Rauchentwicklung aus dem Dach.            monitorBody 28, onAlarm     │
 │                                                                                │
 │  [ HLF-1  alarmiert ]   [ RTW-1  alarmiert ]   [ DLK-1  alarmiert ]           │
-│   onAlarm-auf-alarm-Pille, monitorAlarmTitle 56 Name + monitorLabel 22 „alarmiert“│
+│   onAlarm-auf-alarm-Pille, monitorAlarmTitle 56 Name + monitorLabel 28 „alarmiert“│
 │                                                                                │
 │                                                                                │
 │  seit 00:08 · 0/3 quittiert                        monitorBody 28, onAlarm 90%│
@@ -74,11 +74,19 @@ der vollständige Text ist ohnehin in `monitor-einsatz.md` nach dem Übergang zu
 
 Fahrzeugchips: Fahrzeugname **in `monitorAlarmTitle` 56 px** (vorher `monitorHeadline` 40 — Review-Runde 1
 Punkt 10, die Fläche hatte laut Mockup ca. 45 % ungenutzten Leerraum, der jetzt in größere, aus 10 m noch
-leichter lesbare Chips fließt) + Label „alarmiert“ (`monitorLabel` 22) auf `onAlarm`-bei-16%-Fläche-Pille
-(dunkler Ton auf hellem Alarmrot, wie im bestehenden Mockup) — bewusst **keine FMS-Pille** hier (die
-Fahrzeuge haben in diesem Moment typischerweise noch FMS 3 „Einsatz übernommen“ oder sind mitten im
-Statuswechsel; die FMS-Farbpalette hier einzublenden würde zwei Farbsysteme auf einer Fläche mischen und die
-Lesbarkeit aus 10 m verschlechtern) — FMS-Status erscheint erst wieder in der ruhigeren Einsatzansicht.
+leichter lesbare Chips fließt) + Label „alarmiert“ (`monitorLabel` **28 px**, Review-Runde 2 Punkt 2 — vorher
+22 px im Raster angegeben, das widersprach dem 40-px-Mindestmaß für Fließtext auf dieser Fläche; im Mockup
+die HTML-Klasse `.sub`) auf `onAlarm`-bei-16%-Fläche-Pille (dunkler Ton auf hellem Alarmrot, wie im
+bestehenden Mockup) — bewusst **keine FMS-Pille** hier (die Fahrzeuge haben in diesem Moment typischerweise
+noch FMS 3 „Einsatz übernommen“ oder sind mitten im Statuswechsel; die FMS-Farbpalette hier einzublenden
+würde zwei Farbsysteme auf einer Fläche mischen und die Lesbarkeit aus 10 m verschlechtern) — FMS-Status
+erscheint erst wieder in der ruhigeren Einsatzansicht.
+
+**Datenquelle der Fahrzeugliste** (Review-Runde 2 Punkt 1d): die im Alarmzustand gezeigten Fahrzeuge sind
+exakt `Alarm.vehicleIds` (`packages/core/lib/src/domain/alarm.dart:160`) der **auslösenden** Alarmierung —
+also des `Alarm`-Objekts, dessen `alarm.triggered`-Event den aktuell laufenden 20-s-Timer gestartet (oder neu
+gestartet) hat. Keine neue Datenquelle, keine serverseitige Erweiterung: `vehicleIds` existiert bereits exakt
+für diesen Zweck und wird vom bestehenden `Alarm`-Modell unverändert übernommen.
 
 Fußzeile: „seit mm:ss“ (Laufzeit seit `triggeredAt` **dieser** Alarmierung, nicht des Einsatzes insgesamt —
 bei einer Nachalarmierung ist das die Zeit seit der Nachalarmierung, nicht seit dem Erstalarm) + „X/Y
@@ -137,6 +145,22 @@ da in den ersten Sekunden ohnehin kaum jemand quittiert haben wird).
   unverändert weiter (`Timer`, kein `AnimationController`, der bei fehlendem Vsync pausieren könnte) — beim
   Zurückkehren in den Vordergrund zeigt der Screen korrekt den Zustand, der zur verstrichenen Zeit passt
   (Alarm oder bereits die ruhige Einsatzansicht), kein Nachholen/Wiederholen der 20 s.
+- **Der Einsatz wird geschlossen (`incident.closed`), während der 20-s-Alarmzustand noch läuft** (Review-
+  Runde 2 Punkt 1a, bisher nicht spezifiziert): der laufende `_alarmFlashDuration`-Timer wird sofort
+  **abgebrochen** (nicht abgewartet) — derselbe Mechanismus, mit dem `MonitorIncidentScreen` heute schon auf
+  einen nicht mehr gültigen `_shownIncidentId` reagiert (Abschnitt „stillValid“ in `monitor_screen.dart`,
+  Zeilen 188–191). Gibt es zu diesem Zeitpunkt einen anderen offenen Einsatz mit Alarmierung (einen weiteren
+  `candidates`-Eintrag), springt der Monitor direkt in dessen ruhige `MonitorIncidentScreen`-Ansicht — **nicht**
+  erneut in den lauten Alarmzustand, denn für diesen anderen Einsatz liegt kein neues `alarm.triggered`-Event
+  vor, nur das bereits bekannte. Gibt es keinen weiteren offenen Einsatz mit Alarmierung, geht der Monitor
+  direkt zu `MonitorStandbyScreen` über — ohne Zwischenstopp in der (dann ohnehin leeren) Einsatzansicht.
+- **Die 15-s-Rotation zwischen mehreren offenen Einsätzen pausiert während des 20-s-Alarmzustands** (Review-
+  Runde 2 Punkt 1c, Ergänzung zum bestehenden Punkt „Rotation löst den Alarmzustand nicht erneut aus“ in
+  Abschnitt 5): Der `_incidentRotationInterval`-Timer (15 s, in `monitor_screen.dart`) läuft während der
+  Vollflächen-Alarmanzeige **nicht** — es wäre widersinnig, während der lautesten, wichtigsten 20 Sekunden im
+  Hintergrund zu einem anderen Einsatz weiterzurotieren, den der Betreuer in diesem Moment ohnehin nicht sieht.
+  Nach dem automatischen Übergang zur Einsatzansicht (Abschnitt 5) läuft die Rotation normal weiter, als wäre
+  sie nie unterbrochen worden (kein Nachholen verpasster Zeit, einfach neu gestartet).
 
 ## 5. Interaktionen/Übergänge
 
@@ -146,6 +170,19 @@ einer läuft) einen 20-s-Timer und zeigt die Vollflächen-Alarmfläche für gena
 Alarmierung; läuft der Timer ab, ohne dass ein neueres Event ihn zurückgesetzt hat, folgt der automatische
 Cross-Fade zu `MonitorIncidentScreen`. Es existiert zu jedem Zeitpunkt höchstens ein aktiver 20-s-Timer.
 Details/Randfälle siehe Abschnitt 4.
+
+**Gesamter Kreislauf (Review-Runde 2 Punkt 1, kurze Zusammenfassung):**
+
+```
+Standby ──alarm.triggered──▶ Alarm (20 s) ──Timer abgelaufen──▶ Einsatzansicht ──incident.closed──▶ Standby
+                                   │                                    │         (oder: weiterer offener
+                                   └──incident.closed (Abschnitt 4)─────┘          Einsatz → Einsatzansicht)
+```
+
+Jeder Zustand kann jederzeit erneut in „Alarm“ unterbrochen werden, sobald ein neues `alarm.triggered`
+eintrifft (auch während „Einsatzansicht“ oder sogar während eines bereits laufenden anderen „Alarm“ —
+Abschnitt 4). Der Kreis schließt sich erst, wenn kein offener Einsatz mit Alarmierung mehr existiert
+(`candidates.isEmpty`), dann zurück zu Standby.
 
 - **Auslöser:** jedes live empfangene `alarm.triggered`-Event (Erstalarm oder Nachalarmierung) — **nicht**
   Alarme, die bereits im initialen Snapshot enthalten waren (bestehende Unterscheidung bleibt: „Alarms
@@ -166,7 +203,9 @@ Details/Randfälle siehe Abschnitt 4.
   Zustand.
 - **Rotation zwischen mehreren bereits laufenden (nicht gerade neu alarmierten) Einsätzen:** bleibt
   ausschließlich Aufgabe der ruhigen Einsatzansicht (15-s-Rotation) — der laute Alarmzustand wird dadurch
-  **nicht** erneut ausgelöst, nur durch ein echtes neues `alarm.triggered`-Event.
+  **nicht** erneut ausgelöst, nur durch ein echtes neues `alarm.triggered`-Event. Zusätzlich (Review-Runde 2
+  Punkt 1c, Details in Abschnitt 4): diese 15-s-Rotation **pausiert vollständig**, solange der 20-s-
+  Alarmzustand aktiv ist, und läuft nach dem automatischen Übergang zur Einsatzansicht unverändert weiter.
 
 ## 6. Testbare Akzeptanzkriterien
 
@@ -195,6 +234,20 @@ Details/Randfälle siehe Abschnitt 4.
    `15+20=35` s Gesamtzeit erfolgen, nicht bei den ursprünglichen 20 s) — Abschnitt 4/5 „Lebenszyklus“.
 10. Meldebild-Text im Alarmzustand ist ≥ 40 px, Fahrzeugchip-Name ≥ 56 px (Layout-/Schriftgrößen-Test gegen
     die `TextStyle`-Werte) — Review-Runde 1 Punkt 10.
+11. Wird der Einsatz während des laufenden 20-s-Alarmzustands geschlossen (`incident.closed`), bricht der
+    Timer sofort ab und der Monitor zeigt sofort `MonitorIncidentScreen` für einen verbleibenden offenen
+    Einsatz mit Alarmierung, oder `MonitorStandbyScreen`, falls keiner mehr existiert — Fake-Timer-Test: nach
+    5 s von 20 s `incident.closed` auslösen, prüfen, dass bei `candidates.isEmpty` sofort Standby erscheint
+    und bei vorhandenem zweiten Kandidaten sofort dessen `MonitorIncidentScreen`, beides **ohne** auf die
+    verbleibenden 15 s zu warten — Review-Runde 2 Punkt 1a.
+12. Während der 20-s-Alarmzustand läuft, feuert der `_incidentRotationInterval`-Timer (15 s) nicht — Fake-
+    Timer-Test: zwei offene Einsätze mit Alarmierung, Alarm für Einsatz A läuft; nach 15 s (während die
+    Alarmanzeige für A noch bis 20 s läuft) ist weiterhin A sichtbar, nicht Einsatz B; nach dem automatischen
+    Übergang bei 20 s läuft die Rotation normal mit vollen 15 s weiter — Review-Runde 2 Punkt 1c.
+13. Die im Alarmzustand gezeigte Fahrzeugliste stammt exakt aus `Alarm.vehicleIds` des auslösenden
+    `Alarm`-Objekts (kein zusätzliches/anderes Feld, keine Ableitung aus `Incident`) — Widget-Test, der ein
+    `Alarm` mit bekannten `vehicleIds` injiziert und die gerenderten Chip-Keys gegen genau diese Liste prüft
+    — Review-Runde 2 Punkt 1d.
 
 ## 7. Zu erhaltende Keys + Semantics
 
