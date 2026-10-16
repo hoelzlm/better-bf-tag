@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>BF-Tag – Monitor Einsatzansicht</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
+  :root{
+    --surface:#14181C; --surface-variant:#1C2126; --outline:#3A4147;
+    --on-surface:#EDEFF1; --on-surface-variant:#AAB2B8;
+    --primary:#4FB8C9; --primary-container:#0E3A42;
+    --alarm:#FF5449; --fms2:#43A047; --fms3:#F2A900; --fms4:#1E88E5; --fms6:#6B7280;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:1920px;height:1080px;background:var(--surface);color:var(--on-surface);font-family:'Inter',sans-serif;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;line-height:1;display:inline-block;}
+  .outer{display:flex;flex-direction:column;height:1080px;}
+  .conn-banner{height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:var(--surface-variant);font-size:28px;font-weight:500;display:none;}
+
+  .header{height:140px;flex:0 0 140px;border-bottom:1px solid var(--outline);display:flex;flex-direction:column;justify-content:center;padding:0 48px;gap:6px;}
+  .row1{display:flex;justify-content:space-between;align-items:baseline;}
+  .row1 .title{font-size:40px;font-weight:600;}
+  .row1 .title .kw{color:var(--alarm);}
+  .row1 .time{font-size:36px;font-weight:600;color:var(--on-surface-variant);}
+  .row2{display:flex;justify-content:space-between;align-items:center;}
+  .row2 .addr{font-size:28px;color:var(--on-surface-variant);}
+  .chips{display:flex;gap:12px;}
+  .chip{padding:6px 18px;border-radius:999px;font-size:22px;font-weight:600;}
+  .chip.neutral{background:var(--surface-variant);color:var(--on-surface-variant);}
+  .chip.progress{background:var(--primary-container);color:var(--on-surface);}
+
+  .main{flex:1;display:grid;grid-template-columns:960px 960px;}
+  .left{display:flex;flex-direction:column;border-right:1px solid var(--outline);}
+  .meldebild{padding:28px 40px;border-bottom:1px solid var(--outline);flex:0 0 320px;}
+  .meldebild h3{font-size:22px;color:var(--on-surface-variant);margin:0 0 12px 0;font-weight:600;}
+  .meldebild p{font-size:28px;line-height:1.5;margin:0;}
+  .quittiert{padding:28px 40px;background:var(--surface-variant);flex:1;}
+  .quittiert .progress-text{font-size:32px;font-weight:600;margin-bottom:16px;}
+  .names{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;}
+  .name-row{display:flex;align-items:center;gap:10px;font-size:24px;color:var(--on-surface-variant);}
+  .name-row .msym{font-size:22px;color:var(--fms2);}
+
+  .map{position:relative;overflow:hidden;background:#171C21;}
+  .map svg{width:100%;height:100%;display:block;}
+
+  .vehicles{height:150px;flex:0 0 150px;border-top:1px solid var(--outline);display:flex;align-items:center;gap:16px;padding:0 48px;}
+  .vcard{background:var(--surface-variant);border-radius:16px;padding:14px 22px;display:flex;align-items:center;gap:16px;}
+  .vcard .names2{display:flex;flex-direction:column;}
+  .vcard .vname{font-size:40px;font-weight:600;}
+  .vcard .callsign{font-size:22px;color:var(--on-surface-variant);}
+  .vfms{width:56px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;border:1px solid rgba(237,239,241,0.24);}
+  .vfms.s2{background:var(--fms2);color:#0B1F0D;}
+  .vfms.s3{background:var(--fms3);color:#1B1300;}
+  .vfms.s4{background:var(--fms4);color:#fff;}
+</style>
+</head>
+<body>
+<div class="outer">
+  <div class="conn-banner"></div>
+  <div class="header">
+    <div class="row1">
+      <div class="title">EINSATZ 3 · <span class="kw">B2 Kellerbrand</span></div>
+      <div class="time">08:34:40</div>
+    </div>
+    <div class="row2">
+      <div class="addr">Hauptstraße 1 &nbsp;·&nbsp; seit 00:42</div>
+      <div class="chips">
+        <div class="chip neutral">ERSTALARM</div>
+        <div class="chip progress">2/5 quittiert</div>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="left">
+      <div class="meldebild">
+        <h3>Meldebild</h3>
+        <p>Rauchentwicklung aus dem Kellerfenster, Bewohner teilweise evakuiert, eine Person noch vermisst. Nachbarn berichten von Brandgeruch seit ca. 10 Minuten.</p>
+      </div>
+      <div class="quittiert">
+        <div class="progress-text">2/5 quittiert</div>
+        <div class="names">
+          <div class="name-row"><span class="msym">check_circle</span>Max Mustermann</div>
+          <div class="name-row" style="color:#6B7280"><span class="msym">schedule</span>Anna Jung</div>
+          <div class="name-row"><span class="msym">check_circle</span>Ben Jung</div>
+          <div class="name-row" style="color:#6B7280"><span class="msym">schedule</span>Clara Berg</div>
+          <div class="name-row" style="color:#6B7280"><span class="msym">schedule</span>Erika Meyer</div>
+        </div>
+      </div>
+    </div>
+    <div class="map">
+      <svg viewBox="0 0 960 790" preserveAspectRatio="xMidYMid slice">
+        <rect width="960" height="790" fill="#171C21"/>
+        <g stroke="#2B3238" stroke-width="10">
+          <line x1="0" y1="180" x2="960" y2="160"/>
+          <line x1="0" y1="420" x2="960" y2="440"/>
+          <line x1="0" y1="640" x2="960" y2="660"/>
+          <line x1="220" y1="0" x2="200" y2="790"/>
+          <line x1="560" y1="0" x2="600" y2="790"/>
+          <line x1="780" y1="0" x2="820" y2="790"/>
+        </g>
+        <g fill="#20262C" stroke="#2B3238" stroke-width="4">
+          <rect x="260" y="30" width="260" height="120" rx="6"/>
+          <rect x="640" y="30" width="110" height="300" rx="6"/>
+          <rect x="30" y="220" width="160" height="160" rx="6"/>
+          <rect x="260" y="200" width="270" height="190" rx="6"/>
+          <rect x="640" y="380" width="110" height="220" rx="6"/>
+          <rect x="30" y="460" width="160" height="150" rx="6"/>
+          <rect x="260" y="460" width="270" height="140" rx="6"/>
+          <rect x="840" y="200" width="100" height="400" rx="6"/>
+        </g>
+        <g transform="translate(480,310)">
+          <circle r="26" fill="#FF5449" opacity="0.25"/>
+          <path d="M0,-34 C17,-34 30,-21 30,-4 C30,18 0,40 0,40 C0,40 -30,18 -30,-4 C-30,-21 -17,-34 0,-34 Z" fill="#FF5449"/>
+          <circle r="9" fill="#171C21"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="vehicles">
+    <div class="vcard"><div class="names2"><div class="vname">HLF-1</div><div class="callsign">Florian 46/1</div></div><div class="vfms s4">4</div></div>
+    <div class="vcard"><div class="names2"><div class="vname">RTW-1</div><div class="callsign">Florian 71/1</div></div><div class="vfms s3">3</div></div>
+    <div class="vcard"><div class="names2"><div class="vname">DLK-1</div><div class="callsign">Florian 33/1</div></div><div class="vfms s2">2</div></div>
+  </div>
+</div>
+</body>
+</html>

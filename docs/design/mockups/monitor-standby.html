@@ -8,6 +8,7 @@
   @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
   @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
   @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
   :root{
     --surface:#14181C; --surface-variant:#1C2126; --surface-container:#242A30;
     --outline:#3A4147; --on-surface:#EDEFF1; --on-surface-variant:#AAB2B8;
@@ -16,66 +17,83 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;width:1920px;height:1080px;background:var(--surface);color:var(--on-surface);font-family:'Inter',sans-serif;overflow:hidden;}
-  .grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:140px 1fr 260px 70px;height:1080px;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;line-height:1;display:inline-block;}
+  .outer{display:flex;flex-direction:column;height:1080px;}
+  .conn-banner{height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:var(--surface-variant);color:var(--on-surface);font-size:28px;font-weight:500;}
+  .conn-banner .msym{font-size:28px;color:var(--on-surface-variant);}
+
+  .grid{display:grid;grid-template-columns:960px 960px;grid-template-rows:140px 1fr 100px;flex:1;}
+
   .header{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;padding:0 48px;border-bottom:1px solid var(--outline);}
   .clock{font-size:64px;font-weight:600;letter-spacing:1px;}
-  .date{font-size:28px;color:var(--on-surface-variant);margin-top:4px;}
-  .brand{display:flex;align-items:center;gap:16px;font-size:28px;font-weight:600;}
-  .brand .mark{width:48px;height:48px;border-radius:12px;background:var(--primary);}
+  .clock .secs{font-size:28px;font-weight:600;color:var(--on-surface-variant);}
+  .date{font-size:22px;color:var(--on-surface-variant);margin-top:4px;}
+  .brand{display:flex;align-items:center;gap:16px;font-size:22px;font-weight:600;}
+  .brand .dot{width:10px;height:10px;border-radius:999px;background:var(--fms2);}
+  .brand .name{color:var(--on-surface);}
 
-  .panel{padding:32px 48px;border-right:1px solid var(--outline);}
-  .panel:last-child{border-right:none;}
-  .panel h2{font-size:40px;font-weight:600;margin:0 0 24px 0;}
+  .panel{padding:32px 48px;border-right:1px solid var(--outline);overflow:hidden;}
+  .panel:last-child{border-right:none;padding:0;display:flex;flex-direction:column;}
+  .panel h2{font-size:28px;font-weight:600;margin:0 0 20px 0;color:var(--on-surface-variant);}
 
-  .vehicle-list{display:flex;flex-direction:column;gap:20px;}
-  .vehicle{display:flex;align-items:center;gap:24px;background:var(--surface-variant);border-radius:16px;padding:20px 28px;}
-  .vehicle .name{font-size:40px;font-weight:600;width:200px;}
-  .vehicle .crew{font-size:28px;color:var(--on-surface-variant);flex:1;}
-  .fms{width:72px;height:72px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;
-    border:1px solid rgba(237,239,241,0.24);}
+  .vehicle-list{display:flex;flex-direction:column;gap:16px;}
+  .vehicle{display:flex;align-items:center;gap:24px;background:var(--surface-variant);border-radius:16px;padding:16px 24px;min-height:96px;}
+  .vehicle .name{font-size:40px;font-weight:600;width:200px;flex:0 0 200px;}
+  .vehicle .crew{font-size:28px;color:var(--on-surface-variant);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .fms{width:56px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
+    border:1px solid rgba(237,239,241,0.24);flex:0 0 56px;}
   .fms.s2{background:var(--fms2);color:#0B1F0D;}
   .fms.s3{background:var(--fms3);color:#1B1300;}
   .fms.s6{background:var(--fms6);color:#fff;}
 
-  .program{display:flex;flex-direction:column;gap:16px;}
-  .program-item{display:flex;gap:24px;align-items:baseline;font-size:28px;}
-  .program-item .time{color:var(--primary);font-weight:600;width:140px;}
-  .program-item.now{background:var(--primary-container);border-radius:12px;padding:8px 16px;margin:-8px -16px;}
+  .program-compact{padding:24px 48px;border-bottom:1px solid var(--outline);flex:0 0 260px;display:flex;flex-direction:column;justify-content:center;gap:14px;}
+  .program-item{display:flex;gap:24px;align-items:baseline;font-size:26px;color:var(--on-surface-variant);}
+  .program-item .time{color:var(--primary);font-weight:600;width:120px;flex:0 0 120px;}
+  .program-item.now{background:var(--primary-container);border-radius:12px;padding:10px 16px;margin:-10px -16px;color:var(--on-surface);}
+  .program-label{font-size:16px;text-transform:uppercase;letter-spacing:1px;color:var(--on-surface-variant);margin-top:2px;}
 
-  .footer{grid-column:1/3;display:flex;align-items:center;gap:20px;padding:0 48px;background:var(--primary-container);
-    color:var(--on-surface);font-size:28px;font-weight:500;}
-  .footer .icon{width:40px;height:40px;border-radius:999px;background:var(--primary);flex:0 0 40px;}
+  .slide-area{flex:1;padding:32px 48px;display:flex;flex-direction:column;overflow:hidden;}
+  .slide-title{font-size:40px;font-weight:600;margin-bottom:16px;}
+  .slide-body{font-size:28px;line-height:1.5;color:var(--on-surface-variant);}
 
-  .slide-area{grid-column:1/3;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--outline);
-    font-size:28px;color:var(--on-surface-variant);}
+  .footer{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 48px;background:var(--primary-container);
+    color:var(--on-surface);font-size:26px;font-weight:500;}
+  .footer .msym{font-size:32px;color:var(--primary);}
+  .footer b{font-weight:700;}
 </style>
 </head>
 <body>
-<div class="grid">
-  <div class="header">
-    <div><div class="clock">08:34</div><div class="date">Samstag, 17. Oktober</div></div>
-    <div class="brand"><span class="mark"></span>BF-Tag · Wache 1</div>
-  </div>
-  <div class="panel">
-    <h2>Fahrzeugstatus</h2>
-    <div class="vehicle-list">
-      <div class="vehicle"><div class="name">HLF-1</div><div class="crew">Florian 46/1 · GF Max M. · MA Erika M.</div><div class="fms s2">2</div></div>
-      <div class="vehicle"><div class="name">RTW-1</div><div class="crew">Florian 71/1 · GF Anna J. · MA Ben J.</div><div class="fms s3">3</div></div>
-      <div class="vehicle"><div class="name">DLK-1</div><div class="crew">Florian 33/1 · GF Clara B.</div><div class="fms s6">6</div></div>
+<div class="outer">
+  <div class="conn-banner"><span class="msym">cloud_off</span>Keine Verbindung – verbinde neu …</div>
+  <div class="grid">
+    <div class="header">
+      <div><div class="clock">08:34<span class="secs">:17</span></div><div class="date">Samstag, 17. Oktober</div></div>
+      <div class="brand"><span class="dot"></span><span class="name">BF-Tag · Wache 1</span></div>
     </div>
-  </div>
-  <div class="panel">
-    <h2>Tagesablauf</h2>
-    <div class="program">
-      <div class="program-item"><div class="time">08:00</div>Fahrzeugpflege</div>
-      <div class="program-item now"><div class="time">08:30</div>Ausbildung – Löschangriff</div>
-      <div class="program-item"><div class="time">12:00</div>Essen</div>
-      <div class="program-item"><div class="time">13:00</div>Übungseinsätze</div>
-      <div class="program-item"><div class="time">22:00</div>Nachtruhe</div>
+    <div class="panel">
+      <h2>Fahrzeugstatus &amp; Besatzung · Schicht 2 · 08:00–12:00</h2>
+      <div class="vehicle-list">
+        <div class="vehicle"><div class="name">HLF-1</div><div class="crew">Florian 46/1 · GF Max M. · MA Erika M.</div><div class="fms s2">2</div></div>
+        <div class="vehicle"><div class="name">RTW-1</div><div class="crew">Florian 71/1 · GF Anna J. · MA Ben J.</div><div class="fms s3">3</div></div>
+        <div class="vehicle"><div class="name">DLK-1</div><div class="crew">Florian 33/1 · GF Clara B.</div><div class="fms s6">6</div></div>
+      </div>
     </div>
+    <div class="panel">
+      <div class="program-compact">
+        <div class="program-item now"><div class="time">08:30</div>Ausbildung – Löschangriff<div class="program-label">Jetzt</div></div>
+        <div class="program-item"><div class="time">12:00</div>Essen<div class="program-label">Danach</div></div>
+      </div>
+      <div class="slide-area">
+        <div class="slide-title">Verhalten im Brandfall – Übersicht</div>
+        <div class="slide-body">1. Ruhe bewahren, Raum verlassen, Tür schließen.<br>
+        2. Sammelpunkt am Gerätehaus aufsuchen, auf Betreuer warten.<br>
+        3. Niemals selbst löschen oder zurück ins Gebäude gehen.<br>
+        4. Betreuer führt die Anwesenheitskontrolle am Sammelpunkt durch.</div>
+      </div>
+    </div>
+    <div class="footer"><span class="msym">campaign</span><b>Durchsage</b>&nbsp;· Leitstelle: Bitte alle Fahrzeuge bis 08:45 Uhr einsatzbereit melden.</div>
   </div>
-  <div class="slide-area">Folie: Verhalten im Brandfall – Übersicht</div>
-  <div class="footer"><span class="icon"></span>Durchsage · Leitstelle: Bitte alle Fahrzeuge bis 08:45 Uhr einsatzbereit melden.</div>
 </div>
 </body>
 </html>
