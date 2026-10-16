@@ -50,7 +50,7 @@ FMS-Pillen und Quittiert-Fortschritt, passend zur Einsatzansicht-Fassung.
 │  B3 GROSSBRAND LAGERHALLE                                                     │
 │  monitorAlarmTitle 96, Bold, onAlarm                                          │
 │  Industriestraße 7                                monitorDisplay 64, onAlarm  │
-│  Starke Rauchentwicklung aus dem Dach.            monitorBody 28, onAlarm     │
+│  Starke Rauchentwicklung aus dem Dach.            ≥ 40 px, onAlarm            │
 │                                                                                │
 │  [ HLF-1  alarmiert ]   [ RTW-1  alarmiert ]   [ DLK-1  alarmiert ]           │
 │   onAlarm-auf-alarm-Pille, monitorAlarmTitle 56 Name + monitorLabel 28 „alarmiert“│
