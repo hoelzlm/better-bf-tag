@@ -20,7 +20,9 @@
   .wrap{display:flex;flex-direction:column;height:844px;}
   .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;font-size:24px;
     line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;}
-  .appbar{padding:52px 20px 16px 20px;font-size:22px;font-weight:600;border-bottom:1px solid var(--outline);}
+  .appbar{padding:52px 20px 16px 20px;font-size:22px;font-weight:600;border-bottom:1px solid var(--outline);
+    display:flex;align-items:center;justify-content:space-between;}
+  .appbar .gear{font-size:24px;color:var(--on-surface);}
   .content{padding:20px;flex:1;}
   .vehicle-head{margin-bottom:16px;}
   .vehicle-head .name{font-size:22px;font-weight:700;}
@@ -28,8 +30,8 @@
   .role{font-size:14px;color:var(--on-surface-variant);margin-bottom:20px;}
   .role b{color:var(--on-surface);font-weight:600;}
 
-  .fms-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .fms-btn{height:104px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  .fms-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .fms-btn{height:96px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;
     background:var(--surface-container);color:var(--on-surface);}
   .fms-btn .num{font-size:32px;font-weight:700;}
   .fms-btn .label{font-size:12px;font-weight:500;text-align:center;padding:0 8px;margin-top:4px;}
@@ -48,7 +50,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="appbar">Mein Fahrzeug</div>
+  <div class="appbar"><span>Mein Fahrzeug</span><span class="msym gear">settings</span></div>
   <div class="content">
     <div class="vehicle-head">
       <div class="name">Florian 46/1</div>
@@ -71,9 +73,9 @@
   </div>
   <div class="navbar">
     <div class="nav-tab active"><span class="msym">local_shipping</span>Fahrzeug</div>
-    <div class="nav-tab"><span class="msym">local_fire_department</span>Einsätze</div>
-    <div class="nav-tab"><span class="msym">campaign</span>Durchsagen</div>
-    <div class="nav-tab"><span class="msym">event_note</span>Ablauf</div>
+    <div class="nav-tab"><span class="msym">campaign</span>Einsätze</div>
+    <div class="nav-tab"><span class="msym">chat_bubble</span>Durchsagen</div>
+    <div class="nav-tab"><span class="msym">schedule</span>Ablauf</div>
   </div>
 </div>
 </body>
