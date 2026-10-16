@@ -38,31 +38,49 @@ in `docs/design/screens/*.md` (separate Karten) und bauen strikt hierauf auf.
 | `alarm`             | `#D32F2F`  | `#FF5449`       | Alarmfläche, Erstalarm, destruktive Buttons   |
 | `onAlarm`           | `#FFFFFF`  | `#1A0000`       | Text/Icon auf `alarm`                         |
 | `alarmContainer`    | `#FBE9E7`  | `#4A1410`       | Alarm-Badges, dezente Warnflächen             |
+| `warning`           | `#B45309`  | `#F2A93B`       | Formular-/Validierungsfehler, Fehlerzustand   |
+| `onWarning`         | `#FFFFFF`  | `#1A1100`       | Text/Icon auf `warning`                       |
+| `warningContainer`  | `#FDECD2`  | `#4A2E08`       | Fehler-Banner, dezente Warnflächen            |
+
+`warning` ist eine eigene Fläche für Formularfehler/Validierung (Gelb/Orange-Familie, **nicht** `alarm`-Rot) —
+Begründung und Flutter-Mapping (`ColorScheme.error`) siehe Abschnitt 5.2/5.10. `alarm` bleibt ausschließlich für
+echten Alarm und destruktive Aktionen reserviert (Grundprinzip 1) und lebt in Flutter nur in `BftagAlarmColors`,
+nicht in `ColorScheme.error`.
 
 Petrol (`#0B5E6B` / `#4FB8C9`) statt Blau vermeidet Verwechslung mit Status 7/8 (FMS-Blau, s. u.) und bleibt klar
 von Rot getrennt. Alle Paarungen Text-auf-Fläche oben erreichen WCAG AA (≥ 4.5:1 für Fließtext, ≥ 3:1 für große
-Schrift/Icons); `onSurface`/`surface` auf dem Monitor-Dunkel-Schema erreichen AAA (siehe Tabelle 2.3).
+Schrift/Icons); die Monitor-Spalte erreicht AAA bis auf eine dokumentierte, bewusste Abweichung (siehe 2.3).
 
-### 2.2 Dark-Mode (App)
+### 2.2 Dunkel-Modus: App und Monitor sind identisch
 
-Gleiche Tokenstruktur wie Monitor-Dunkel, aber etwas heller/weniger kontrastreich für Handnutzung bei Tag:
-`surface` `#171B1F`, `onSurface` `#ECEDEF`, `primary` `#4FB8C9`. Die App folgt dem System-Theme (hell/dunkel);
-der Alarm-Screen ist in beiden Modi vollflächig `alarm`/`onAlarm` — siehe `docs/design/screens/app-alarm.md`.
+App-Dark nutzt exakt dieselben Tokenwerte wie die Spalte „Dunkel/Monitor“ in Tabelle 2.1 — keine zweite,
+abweichende Palette. Das schließt alle dort gelisteten Rollen ein (`surface`, `surfaceVariant`,
+`surfaceContainer`, `outline`, `onSurface`, `onSurfaceVariant`, `primary`, `onPrimary`, `primaryContainer`,
+`alarm`, `onAlarm`, `alarmContainer`, `warning`, `onWarning`, `warningContainer`). Grund: ein Betreuer, der
+abends zwischen App (Dunkel) und Monitor wechselt, soll dieselben Statusfarben wiedererkennen, nicht zwei leicht
+verschobene Varianten lernen müssen. Die App folgt dem System-Theme (hell/dunkel über `ThemeMode.system`); der
+Alarm-Screen ist in beiden Modi vollflächig `alarm`/`onAlarm` — siehe `docs/design/screens/app-alarm.md`.
 
-### 2.3 Kontrastprüfung (Beispiele, WCAG-Formel)
+### 2.3 Kontrastprüfung
 
-| Kombination                              | Verhältnis | Ziel        | Ergebnis |
-|-------------------------------------------|-----------:|-------------|----------|
-| `onSurface` #1B1F23 auf `surface` #FFFFFF | 15.8:1     | AA 4.5:1    | ✅ AAA   |
-| `onSurfaceVariant` #4C555C auf `surface`  | 7.1:1      | AA 4.5:1    | ✅ AAA   |
-| `onPrimary` #FFFFFF auf `primary` #0B5E6B | 5.9:1      | AA 4.5:1    | ✅ AA    |
-| `onAlarm` #FFFFFF auf `alarm` #D32F2F     | 4.8:1      | AA 4.5:1    | ✅ AA    |
-| Monitor: `onSurface` #EDEFF1 auf `surface` #14181C | 15.1:1 | AAA 7:1 | ✅ AAA |
-| Monitor: `onPrimary` #06262B auf `primary` #4FB8C9 | 8.7:1  | AAA 7:1 | ✅ AAA |
-| Monitor: `onAlarm` #1A0000 auf `alarm` #FF5449     | 6.9:1  | AAA 7:1 (knapp verfehlt) | ⚠️ AA (6.9:1), bewusst: helles Alarmrot muss auf 10 m sättigungsstark bleiben; Text zusätzlich fett + groß gesetzt (siehe 2.4) |
+Werte berechnet mit `docs/design/tools/contrast.py` (stdlib-only, WCAG-Formel über relative Luminanz, sRGB).
+Bei jeder Änderung an einem Hex-Wert dieses Skript neu laufen lassen und die Tabelle aktualisieren — Werte hier
+sind kein Schätzwert, sondern direkter Skript-Output.
 
-Berechnung mit der relativen-Luminanz-Formel (sRGB). Bei der Umsetzung (ux-03) mit einem Kontrastrechner
-gegenprüfen, bevor finale Hex-Werte eingefroren werden.
+| Kombination                                        | Verhältnis | Ziel     | Ergebnis |
+|------------------------------------------------------|-----------:|----------|----------|
+| `onSurface` #1B1F23 auf `surface` #FFFFFF (hell)     | 16.58:1    | AA 4.5:1 | ✅ AAA   |
+| `onSurfaceVariant` #4C555C auf `surface` (hell)      | 7.61:1     | AA 4.5:1 | ✅ AAA   |
+| `onPrimary` #FFFFFF auf `primary` #0B5E6B (hell)     | 7.43:1     | AA 4.5:1 | ✅ AAA   |
+| `onAlarm` #FFFFFF auf `alarm` #D32F2F (hell)         | 4.98:1     | AA 4.5:1 | ✅ AA    |
+| `onWarning` #FFFFFF auf `warning` #B45309 (hell)     | 5.02:1     | AA 4.5:1 | ✅ AA    |
+| Monitor: `onSurface` #EDEFF1 auf `surface` #14181C   | 15.48:1    | AAA 7:1  | ✅ AAA   |
+| Monitor: `onPrimary` #06262B auf `primary` #4FB8C9   | 6.84:1     | AAA 7:1  | ⚠️ AA (6.84:1), knapp unter AAA — akzeptiert, Primärfläche ist auf dem Monitor Navigation/Akzent, kein Fließtext |
+| Monitor: `onAlarm` #1A0000 auf `alarm` #FF5449       | 6.34:1     | AAA 7:1 (knapp verfehlt) | ⚠️ AA (6.34:1), akzeptiert: helles Alarmrot muss auf 10 m sättigungsstark bleiben; Text zusätzlich fett + groß gesetzt (siehe 2.4/3.2) |
+| Monitor: `onWarning` #1A1100 auf `warning` #F2A93B   | 9.35:1     | AAA 7:1  | ✅ AAA   |
+
+Bekannte, bewusste Abweichung von AAA bleibt auf `onPrimary`/`primary` und `onAlarm`/`alarm` am Monitor begrenzt
+(siehe Begründung oben); beide liegen weiterhin deutlich über dem AA-Minimum.
 
 ### 2.4 FMS-Statusfarben (fixe Tokens, Monitor/Web/App identisch)
 
@@ -70,23 +88,38 @@ Heutiger Code verwendet Material-Named-Colors inkonsistent (`vehicle_status_bar.
 amber/grey/blue`) — u. a. ist FMS 4 „Am Einsatzort“ rot, kollidiert mit der Alarmfarbe. Neu: eigene Palette,
 nirgends identisch mit `alarm`.
 
-| FMS | Bedeutung               | Token         | Hex       | Text/Icon-Farbe | Kontrast |
-|-----|--------------------------|---------------|-----------|------------------|----------|
-| 1   | Einsatzbereit über Funk  | `fms1`        | `#2E7D32` | `#FFFFFF`        | 4.6:1 ✅ |
-| 2   | Einsatzbereit auf Wache  | `fms2`        | `#43A047` | `#0B1F0D`        | 7.3:1 ✅ |
-| 3   | Einsatz übernommen       | `fms3`        | `#F2A900` | `#1B1300`        | 8.9:1 ✅ |
-| 4   | Am Einsatzort            | `fms4`        | `#8E5CD9` | `#FFFFFF`        | 4.9:1 ✅ |
-| 5   | Sprechwunsch             | `fms5`        | `#F2A900` + Blinkrahmen `onSurface` | `#1B1300` | 8.9:1 ✅ (gleiche Fläche wie 3, aber mit Rahmen/Icon „Sprechblase“ unterscheidbar — s. u.) |
-| 6   | Nicht einsatzbereit      | `fms6`        | `#6B7280` | `#FFFFFF`        | 4.6:1 ✅ |
-| 7   | Patient aufgenommen      | `fms7`        | `#2F6FED` | `#FFFFFF`        | 4.7:1 ✅ |
-| 8   | Am Transportziel         | `fms8`        | `#1455B0` | `#FFFFFF`        | 6.9:1 ✅ |
+| FMS | Bedeutung               | Token  | Hex       | Text/Icon-Farbe | Kontrast (Text/Icon auf Fläche) |
+|-----|--------------------------|--------|-----------|------------------|----------------------------------|
+| 1   | Einsatzbereit über Funk  | `fms1` | `#2E7D32` | `#FFFFFF`        | 5.13:1 ✅ |
+| 2   | Einsatzbereit auf Wache  | `fms2` | `#43A047` | `#0B1F0D`        | 5.23:1 ✅ |
+| 3   | Einsatz übernommen       | `fms3` | `#F2A900` | `#1B1300`        | 9.17:1 ✅ |
+| 4   | Am Einsatzort            | `fms4` | `#7A3FC2` | `#FFFFFF`        | 6.33:1 ✅ |
+| 5   | Sprechwunsch             | `fms5` | `#AD1A72` | `#FFFFFF`        | 6.63:1 ✅ |
+| 6   | Nicht einsatzbereit      | `fms6` | `#6B7280` | `#FFFFFF`        | 4.83:1 ✅ |
+| 7   | Patient aufgenommen      | `fms7` | `#2660D1` | `#FFFFFF`        | 5.71:1 ✅ |
+| 8   | Am Transportziel         | `fms8` | `#1455B0` | `#FFFFFF`        | 7.10:1 ✅ |
 
-FMS 3 und 5 teilen sich Gelb/Orange (beide „wartet auf Funkkontakt“-Familie in der Praxis), werden aber zusätzlich
-über Icon (Haken vs. Sprechblase) und Label unterschieden — nie nur über Farbe (WCAG 1.4.1). FMS 4 bewusst Lila,
-nicht Rot, um jede Verwechslung mit Alarm zu vermeiden. Diese 8 Token-Farben sind auf Monitor-Dunkel und
-App-Dark identisch (keine zweite Palette) — Flächen sind ausreichend groß/satt, dass sie auf dunklem Grund nicht
-verwaschen; nur die Icon-Kontraste wurden gegen `#14181C` separat geprüft (alle ≥ 4.5:1 außer `fms3`/`fms5`
-gegen Monitorhintergrund, dort zusätzlich dunkler Rahmen `outline`).
+Werte aus `docs/design/tools/contrast.py`. FMS 4 wurde gegenüber dem ersten Entwurf dunkler gesetzt (`#8E5CD9`
+verfehlte mit 4.48:1 WCAG AA); FMS 7 ebenfalls leicht dunkler (ursprünglich 4.55:1, jetzt 5.71:1), beide jetzt mit
+klarer AA-Reserve. FMS 4 bewusst Lila/Violett, nicht Rot, um jede Verwechslung mit Alarm zu vermeiden.
+
+**FMS 5 (Sprechwunsch) hat eine eigene Farbe (Magenta/Pink `#AD1A72`), nicht mehr dieselbe Fläche wie FMS 3.**
+Begründung: FMS 5 ist der einzige Status, bei dem die Leitstelle aktiv reagieren muss (Fahrzeug will funken) —
+er muss auf dem Monitor aus 10 m auffallen, ohne auf ein kleines Icon angewiesen zu sein. Die Farbe ist bewusst
+weder Rot/Alarm-Orange noch in der Nähe von FMS 3 (Gelb/Orange), FMS 4 (Violett), FMS 7/8 (Blau) oder FMS 1/2
+(Grün) angesiedelt, um auch bei Rot-Grün-Schwäche unterscheidbar zu bleiben. Zusätzlich immer mit Icon
+„Sprechblase“ und Label, nie nur über Farbe (WCAG 1.4.1). Es gibt **keinen Blinkrahmen** — falls FMS 5 zusätzlich
+betont wird, nur über den ≤ 1 Hz-Puls aus Abschnitt 7 (unter Reduced-Motion deaktiviert, dann bleibt die Fläche
+statisch sichtbar).
+
+**FMS-Fuellfarben gegen den dunklen Monitor-/App-Dark-Hintergrund (`#14181C`):** keine der acht Flächen erreicht
+dort zuverlässig 3:1 Kontrast zur Fläche selbst (`docs/design/tools/contrast.py`, Messwerte 2.51–5.40:1, die
+meisten unter 3:1 — z. B. `fms8` 2.51:1, `fms5` 2.69:1, `fms4` 2.82:1). Die Pille ist auf dunklem Grund trotzdem
+klar erkennbar, weil (a) der Text/Icon-auf-Fläche-Kontrast aus der Tabelle oben überall ≥ 4.8:1 bleibt und die
+Nummer/das Label die Information trägt, nicht die Flächenabgrenzung, und (b) jede FMS-Pille auf dunklem Grund
+zusätzlich einen 1 px `onSurface`-bei-24%-Rahmen erhält (feste Regel in Abschnitt 5.5), der die Kante der Fläche
+vom Hintergrund trennt, unabhängig vom Farbton. Auf hellem Grund (Admin-Web) entfällt dieser Rahmen, da dort
+alle Flächen ausreichend Kontrast zum weißen Hintergrund haben.
 
 ## 3. Typografie
 
@@ -136,9 +169,10 @@ gehören ins Impressum der Admin-Web, nicht auf den Monitor).
 
 ### 4.1 Abstandsraster (4/8-pt)
 
-Token-Skala: `space2=2 space4=4 space8=8 space12=12 space16=16 space24=24 space32=32 space48=48 space64=64`
-(px bzw. dp). Standardabstand zwischen Karten/Sektionen: `space24`; innerer Karten-Padding: `space16`–`space24`;
-Formularfeld-Abstand: `space16`. Monitor verdoppelt effektiv (nutzt `space32`/`space48`/`space64` als Basis).
+Token-Skala (identisch zu `BftagSpacing` in Abschnitt 10, eine Namensgebung für Dokument und Code):
+`xs=4 sm=8 md=12 lg=16 xl=24 xxl=32 xxxl=48 huge=64` (px bzw. dp). Standardabstand zwischen Karten/Sektionen:
+`xl`; innerer Karten-Padding: `lg`–`xl`; Formularfeld-Abstand: `lg`. Monitor verdoppelt effektiv (nutzt
+`xxl`/`xxxl`/`huge` als Basis statt `xs`–`lg`).
 
 ### 4.2 Radien
 
@@ -176,15 +210,21 @@ abgebildet, keine Custom-Paint-Widgets nötig.
   kein Hover/Focus. Loading: Text durch `CircularProgressIndicator` (16 px, `onPrimary`) ersetzt, Button bleibt
   in Originalgröße, nicht klickbar.
 - **Sekundär** (`OutlinedButton`): `outline`-Rahmen 1 px, `onSurface`-Text. Hover: `surfaceVariant`-Füllung.
-- **Destruktiv** (`FilledButton` mit `alarm`-Fläche/`onAlarm`-Text): ausschließlich für löschende/abbrechende
-  Aktionen mit Bestätigungsdialog (z. B. Einsatz löschen, Person entfernen). Niemals für „Alarmieren“ (das ist
-  eine Leitstellen-Kernaktion, kein destruktiver Akt — bleibt Primärbutton, siehe `web-einsaetze.md`).
+- **Alarm** (`FilledButton` mit `alarm`-Fläche/`onAlarm`-Text, eigenes `BftagAlarmColors`-Styling statt
+  `ColorScheme`): für Aktionen, die einen Alarm auslösen oder verschärfen — „Alarmieren“, „Nachalarmieren“ —
+  sowie für destruktive Aktionen mit Bestätigungsdialog (z. B. Einsatz löschen, Person entfernen). Rot markiert
+  hier bewusst „diese Handlung löst etwas Alarm-Artiges aus/ist nicht rückgängig zu machen“, nicht nur
+  „destruktiv“ — deshalb ein gemeinsamer Stil für beide Fälle (Grundprinzip 1: Rot = Alarm). Wo ein
+  Bestätigungsschritt heute existiert, bleibt er erhalten (z. B. „Wirklich nachalarmieren?“-Dialog); wo „Alarmieren“
+  bisher ohne Bestätigung ausgelöst wird, bleibt das Verhalten unverändert — nur die Farbe ändert sich (siehe
+  `web-einsaetze.md` für das Detail-Konzept dieser Karte).
 - Mindestgröße überall ≥ 48×48 dp (Touch), auf Web ≥ 36 px Höhe mit 48 dp Touch-Fläche inkl. Innenabstand.
 
 ### 5.2 Textfelder (`TextFormField`/`InputDecorationTheme`)
 
 Default: `outline`-Rahmen 1 px, `radiusMedium`, Label außerhalb (floating). Focus: 2 px `primary`-Rahmen. Error:
-1 px `alarm`-Rahmen + Fehlertext in `alarm` unter dem Feld + Icon. Disabled: `surfaceVariant`-Füllung, Text
+1 px `warning`-Rahmen + Fehlertext in `warning` unter dem Feld + Icon (niemals `alarm`-Rot — ein Formularfehler
+ist kein Alarm, siehe Grundprinzip 1 und Abschnitt 2.1). Disabled: `surfaceVariant`-Füllung, Text
 `onSurfaceVariant` bei 60 %.
 
 ### 5.3 Tabellen/Listen
@@ -203,7 +243,8 @@ Dunkel-/Monitor-Theme kein Schatten (nur Fläche). Titel `titleLarge`, Meta-Info
 
 Pille (`radiusFull`), Mindesthöhe 24 dp (Web/App) bzw. 56 px (Monitor), Fläche = FMS-Token, Text/Icon-Farbe
 nach Tabelle 2.4, immer mit Status-Nummer + Kurzlabel, nie nur Farbfläche (Farbenblindheit). Fahrzeugname davor
-in `onSurface`.
+in `onSurface`. Auf dunklem Grund (Monitor, App-Dark) erhält jede Pille zusätzlich einen 1 px Rahmen in
+`onSurface` bei 24 % Deckkraft (s. Begründung Abschnitt 2.4) — auf hellem Grund (Admin-Web) kein Rahmen.
 
 ### 5.6 Dialoge
 
@@ -235,8 +276,8 @@ Touch-Ziel 56 dp Höhe, Badge-Punkt (`alarm`) für ungelesene Durchsagen/aktive 
 - **Laden:** `CircularProgressIndicator` (`primary`), zentriert, bei Listen: Skeleton-Zeilen (`surfaceVariant`-
   Balken, dezent pulsierend) statt Spinner, wenn Layout bereits bekannt ist.
 - **Leer:** Icon 48 px + `titleMedium`-Text + `bodyMedium`-Erklärung + optionale Primäraktion.
-- **Fehler:** Icon „warning“ (nicht `alarm`-Farbe — Fehler sind kein Alarm, sondern `onSurfaceVariant`/Icon in
-  `fms3`-ähnlichem Warnton, also Orange/Gelb-Familie `#B45309`), Kurztext + „Erneut versuchen“-Button.
+- **Fehler:** Icon „warning“ in `warning`-Farbe (nicht `alarm` — ein Lade-/Serverfehler ist kein Alarm, siehe
+  Grundprinzip 1 und Abschnitt 2.1), Kurztext + „Erneut versuchen“-Button.
 - **Offline/Reconnecting:** schmales Banner oben (Web/Monitor) bzw. unter der AppBar (App), `surfaceVariant`-
   Fläche, Icon „cloud_off“, Text „Verbindung verloren — verbinde erneut …“, kein Rot (ist kein Alarm).
 
@@ -341,8 +382,9 @@ class BftagAlarmColors extends ThemeExtension<BftagAlarmColors> {
 class BftagSpacing extends ThemeExtension<BftagSpacing> {
   const BftagSpacing({
     this.xs = 4, this.sm = 8, this.md = 12, this.lg = 16, this.xl = 24, this.xxl = 32, this.xxxl = 48,
+    this.huge = 64,
   });
-  final double xs, sm, md, lg, xl, xxl, xxxl;
+  final double xs, sm, md, lg, xl, xxl, xxxl, huge;
   @override
   BftagSpacing copyWith({ ... });
   @override
@@ -377,6 +419,10 @@ class BftagMonitorTextStyles extends ThemeExtension<BftagMonitorTextStyles> {
 Zugriff überall per `Theme.of(context).extension<BftagStatusColors>()!` usw. `ColorScheme` deckt Primär-/Oberflächen-
 rollen ab (`ColorScheme.fromSeed` entfällt zugunsten expliziter `ColorScheme(...)`-Konstruktion aus Tabelle 2.1,
 damit die Hex-Werte exakt den hier dokumentierten entsprechen statt algorithmisch abgeleitet zu werden).
+`ColorScheme.error`/`onError`/`errorContainer` werden auf die `warning`-Tokens aus Tabelle 2.1 gemappt (Formular-/
+Validierungsfehler) — `alarm`/`onAlarm`/`alarmContainer` existieren ausschließlich in `BftagAlarmColors` und
+werden von keinem Standard-Widget automatisch verwendet, damit ein versehentliches `ColorScheme.error`-Rot für
+Alarm ausgeschlossen ist (Grundprinzip 1).
 `fontFamily: 'Inter'` global über `ThemeData.textTheme`/`fontFamily`, `TextTheme` aus Tabelle 3.1 (Monitor:
 zusätzlich `BftagMonitorTextStyles`, NICHT über `TextTheme`, da Monitor keine eigene `MaterialApp`-Instanz mit
 anderer `TextTheme`-Semantik braucht, sondern dieselbe App in einem dritten Modus).

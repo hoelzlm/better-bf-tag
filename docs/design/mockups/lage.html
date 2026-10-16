@@ -8,6 +8,7 @@
   @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
   @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
   @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
 
   :root{
     --surface:#FFFFFF; --surface-variant:#F1F3F5; --surface-container:#E8EAED;
@@ -19,6 +20,9 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--surface-variant);font-family:'Inter',sans-serif;color:var(--on-surface);}
   .app{display:flex;width:1440px;height:900px;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;font-size:20px;
+    line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;
+    word-wrap:normal;direction:ltr;}
 
   /* Sidebar */
   .sidebar{width:240px;flex:0 0 240px;background:var(--surface-variant);border-right:1px solid var(--outline);
@@ -27,7 +31,7 @@
   .brand .mark{width:28px;height:28px;border-radius:8px;background:var(--primary);display:inline-block;}
   .nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;font-size:14px;font-weight:500;color:var(--on-surface-variant);
     border-left:3px solid transparent;cursor:default;}
-  .nav-item .dot{width:20px;height:20px;}
+  .nav-item .msym{font-size:20px;width:20px;}
   .nav-item.active{background:var(--primary-container);color:var(--primary);border-left:3px solid var(--primary);font-weight:600;}
   .nav-spacer{flex:1;}
   .nav-user{padding:14px 20px;border-top:1px solid var(--outline);font-size:13px;color:var(--on-surface-variant);}
@@ -58,8 +62,10 @@
   .incident-card .badge{background:var(--alarm);color:var(--on-alarm);font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;margin-right:10px;}
   .incident-card .since{font-size:13px;color:var(--on-surface-variant);}
   .actions{display:flex;gap:12px;margin:16px 0;}
-  .btn{padding:10px 18px;border-radius:var(--radius-m);font-weight:600;font-size:14px;cursor:default;border:1px solid transparent;}
-  .btn-primary{background:var(--primary);color:var(--on-primary);}
+  .btn{padding:10px 18px;border-radius:var(--radius-m);font-weight:600;font-size:14px;cursor:default;border:1px solid transparent;
+    display:inline-flex;align-items:center;gap:8px;}
+  .btn .msym{font-size:18px;}
+  .btn-alarm{background:var(--alarm);color:var(--on-alarm);}
   .btn-secondary{background:transparent;border:1px solid var(--outline);color:var(--on-surface);}
   .meta{font-size:13px;color:var(--on-surface-variant);margin:8px 0;}
   .ack-list{margin-top:12px;border-top:1px solid #F3B9B3;padding-top:12px;}
@@ -73,16 +79,16 @@
 <div class="app">
   <div class="sidebar">
     <div class="brand"><span class="mark"></span>BF-Tag</div>
-    <div class="nav-item active">🏠 Lage</div>
-    <div class="nav-item">🕐 BF-Tage</div>
-    <div class="nav-item">📋 Schichten</div>
-    <div class="nav-item">👥 Personen</div>
-    <div class="nav-item">🚒 Fahrzeuge</div>
-    <div class="nav-item">🚨 Einsätze</div>
-    <div class="nav-item">📢 Durchsagen</div>
-    <div class="nav-item">🗓 Tagesablauf</div>
-    <div class="nav-item">🖼 Folien</div>
-    <div class="nav-item">🖥 Monitore</div>
+    <div class="nav-item active"><span class="msym">home</span>Lage</div>
+    <div class="nav-item"><span class="msym">calendar_month</span>BF-Tage</div>
+    <div class="nav-item"><span class="msym">schedule</span>Schichten</div>
+    <div class="nav-item"><span class="msym">group</span>Personen</div>
+    <div class="nav-item"><span class="msym">local_shipping</span>Fahrzeuge</div>
+    <div class="nav-item"><span class="msym">local_fire_department</span>Einsätze</div>
+    <div class="nav-item"><span class="msym">campaign</span>Durchsagen</div>
+    <div class="nav-item"><span class="msym">event_note</span>Tagesablauf</div>
+    <div class="nav-item"><span class="msym">image</span>Folien</div>
+    <div class="nav-item"><span class="msym">desktop_windows</span>Monitore</div>
     <div class="nav-spacer"></div>
     <div class="nav-user"><b>Administrator</b>Administrator · Abmelden</div>
   </div>
@@ -106,7 +112,7 @@
           <div class="since">seit 0 min</div>
         </div>
         <div class="actions">
-          <div class="btn btn-primary">Nachalarmieren</div>
+          <div class="btn btn-alarm"><span class="msym">notification_important</span>Nachalarmieren</div>
           <div class="btn btn-secondary">Einsatz schließen</div>
         </div>
         <div class="meta">0 quittiert · 1 ausstehend · 2 kein Gerät &nbsp;·&nbsp; Push: 0 zugestellt · 0 abgelehnt</div>

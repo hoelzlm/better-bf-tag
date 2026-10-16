@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Monochrome Variante (Android 13+ themed icons, Favicon dark mode): nur Pfad, transparenter Grund. -->
-  <g fill="currentColor">
-    <path d="M512 140 L790 230 V520 C790 702 664 834 512 884 C360 834 234 702 234 520 V230 Z" fill="none" stroke="currentColor" stroke-width="28"/>
-    <rect x="412" y="330" width="60" height="360" rx="16"/>
-    <rect x="412" y="330" width="230" height="64" rx="16"/>
-    <rect x="412" y="470" width="190" height="64" rx="16"/>
-  </g>
+  <!-- Monochrome Variante (Android 13+ themed icons, Favicon dark mode): ein Pfad, transparenter Grund.
+       Gefuellte Schildflaeche mit dem "F" als Negativraum (fill-rule evenodd, zwei nicht ueberlappende
+       Teilpfade: Schild aussen, F-Umriss innen als Loch), damit Launcher die Form beliebig einfaerben
+       koennen, ohne eine zweite Farbe zu brauchen. -->
+  <path fill-rule="evenodd" fill="currentColor" d="
+    M512 150 L774 236 V516 C774 690 658 814 512 862 C366 814 250 690 250 516 V236 Z
+    M422 328 L682 328 L682 420 L502 420 L502 488 L632 488 L632 580 L502 580 L502 708 L422 708 Z
+  "/>
 </svg>
