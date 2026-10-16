@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-BfDay _bfDay({
-  String id = 'd1',
-  BfDayState state = BfDayState.running,
-}) {
+BfDay _bfDay({String id = 'd1', BfDayState state = BfDayState.running}) {
   return BfDay(
     id: id,
     name: 'BF-Tag 2026',
@@ -48,8 +45,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     required String name,
     required DateTime startsAt,
     required DateTime endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> update(
@@ -57,8 +53,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     String? name,
     DateTime? startsAt,
     DateTime? endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> start(String id) => throw UnimplementedError();
@@ -88,9 +83,9 @@ class _FakeProgramItemRepository implements ProgramItemRepository {
   List<ProgramItem> items;
   final List<String> listCalls = [];
   final List<(String, String, ProgramItemType, DateTime, DateTime)>
-      createCalls = [];
+  createCalls = [];
   final List<(String, String?, ProgramItemType?, DateTime?, DateTime?)>
-      updateCalls = [];
+  updateCalls = [];
   final List<String> deleteCalls = [];
   Object? createError;
   Object? updateError;
@@ -145,7 +140,10 @@ class _FakeProgramItemRepository implements ProgramItemRepository {
       startsAt: startsAt ?? existing.startsAt,
       endsAt: endsAt ?? existing.endsAt,
     );
-    items = [for (final i in items) if (i.id == id) updated else i];
+    items = [
+      for (final i in items)
+        if (i.id == id) updated else i,
+    ];
     return updated;
   }
 
@@ -163,6 +161,9 @@ Future<_FakeProgramItemRepository> _pump(
   List<BfDay> days = const [],
   List<ProgramItem> items = const [],
 }) async {
+  tester.view.physicalSize = const Size(1600, 900);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   final repository = _FakeProgramItemRepository(items);
   await tester.pumpWidget(
     ProviderScope(
@@ -180,65 +181,78 @@ Future<_FakeProgramItemRepository> _pump(
 }
 
 void main() {
-  testWidgets('shows the Programmpunkte of the default BF-Tag sorted by time', (
+  testWidgets(
+    'Tagesablauf AC1: shows the Programmpunkte of the default BF-Tag sorted '
+    'by time',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        items: [
+          _item(
+            id: 'p2',
+            title: 'Ausbildung',
+            type: ProgramItemType.training,
+            startsAt: DateTime.utc(2026, 10, 11, 14),
+            endsAt: DateTime.utc(2026, 10, 11, 15),
+          ),
+          _item(
+            id: 'p1',
+            title: 'Mittagessen',
+            type: ProgramItemType.meal,
+            startsAt: DateTime.utc(2026, 10, 11, 12),
+            endsAt: DateTime.utc(2026, 10, 11, 13),
+          ),
+        ],
+      );
+
+      final titles = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byKey(const Key('program-list')),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((t) => t.data)
+          .whereType<String>()
+          .toList();
+
+      expect(
+        titles.indexOf('Mittagessen') < titles.indexOf('Ausbildung'),
+        true,
+      );
+    },
+  );
+
+  testWidgets(
+    'Tagesablauf AC2: create dialog calls the repository with the entered '
+    'data',
+    (tester) async {
+      final repository = await _pump(tester, days: [_bfDay()], items: const []);
+
+      await tester.tap(find.byKey(const Key('program-add')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('program-form-title')),
+        'Abendessen',
+      );
+      await tester.tap(find.byKey(const Key('program-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.createCalls, hasLength(1));
+      final (bfDayId, title, type, startsAt, endsAt) =
+          repository.createCalls.single;
+      expect(bfDayId, 'd1');
+      expect(title, 'Abendessen');
+      expect(type, ProgramItemType.other);
+      expect(endsAt.isAfter(startsAt), true);
+    },
+  );
+
+  testWidgets('Tagesablauf AC3: edit dialog calls update with the item id', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      items: [
-        _item(
-          id: 'p2',
-          title: 'Ausbildung',
-          type: ProgramItemType.training,
-          startsAt: DateTime.utc(2026, 10, 11, 14),
-          endsAt: DateTime.utc(2026, 10, 11, 15),
-        ),
-        _item(
-          id: 'p1',
-          title: 'Mittagessen',
-          type: ProgramItemType.meal,
-          startsAt: DateTime.utc(2026, 10, 11, 12),
-          endsAt: DateTime.utc(2026, 10, 11, 13),
-        ),
-      ],
-    );
-
-    final titles = tester
-        .widgetList<Text>(find.descendant(
-          of: find.byKey(const Key('program-list')),
-          matching: find.byType(Text),
-        ))
-        .map((t) => t.data)
-        .whereType<String>()
-        .toList();
-
-    expect(titles.indexOf('Mittagessen') < titles.indexOf('Ausbildung'), true);
-  });
-
-  testWidgets('create dialog calls the repository with the entered data', (
-    tester,
-  ) async {
-    final repository = await _pump(tester, days: [_bfDay()], items: const []);
-
-    await tester.tap(find.byKey(const Key('program-add')));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byKey(const Key('program-form-title')),
-      'Abendessen',
-    );
-    await tester.tap(find.byKey(const Key('program-form-submit')));
-    await tester.pumpAndSettle();
-
-    expect(repository.createCalls, hasLength(1));
-    final (bfDayId, title, type, _, _) = repository.createCalls.single;
-    expect(bfDayId, 'd1');
-    expect(title, 'Abendessen');
-    expect(type, ProgramItemType.other);
-  });
-
-  testWidgets('edit dialog calls update with the item id', (tester) async {
     final repository = await _pump(
       tester,
       days: [_bfDay()],
@@ -263,7 +277,9 @@ void main() {
     expect(title, 'Mittagessen (verschoben)');
   });
 
-  testWidgets('delete asks for confirmation before deleting', (tester) async {
+  testWidgets('Tagesablauf AC4: delete asks for confirmation before deleting', (
+    tester,
+  ) async {
     final repository = await _pump(
       tester,
       days: [_bfDay()],
@@ -282,40 +298,32 @@ void main() {
     expect(repository.deleteCalls, ['p1']);
   });
 
-  testWidgets('an ended BF-Tag is read-only: no add/edit/delete buttons', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      days: [_bfDay(state: BfDayState.ended)],
-      items: [_item(id: 'p1')],
-    );
+  testWidgets(
+    'Tagesablauf AC5: an ended BF-Tag is read-only: no add/edit/delete '
+    'buttons',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay(state: BfDayState.ended)],
+        items: [_item(id: 'p1')],
+      );
 
-    expect(find.byKey(const Key('program-add')), findsOneWidget);
-    final addButton = tester.widget<FilledButton>(
-      find.byKey(const Key('program-add')),
-    );
-    expect(addButton.onPressed, isNull);
+      expect(find.byKey(const Key('program-add')), findsOneWidget);
+      final addButton = tester.widget<FilledButton>(
+        find.byKey(const Key('program-add')),
+      );
+      expect(addButton.onPressed, isNull);
 
-    expect(find.byKey(const Key('program-edit-p1')), findsNothing);
-    expect(find.byKey(const Key('program-delete-p1')), findsNothing);
-  });
+      expect(find.byKey(const Key('program-edit-p1')), findsNothing);
+      expect(find.byKey(const Key('program-delete-p1')), findsNothing);
+      expect(
+        find.text('Dieser BF-Tag ist beendet — nur lesend'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('Leerzustand: no BF-Tage shows a message', (tester) async {
-    await _pump(tester, days: const [], items: const []);
-
-    expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
-  });
-
-  testWidgets('Leerzustand: no Programmpunkte shows a message', (
-    tester,
-  ) async {
-    await _pump(tester, days: [_bfDay()], items: const []);
-
-    expect(find.text('Keine Programmpunkte vorhanden.'), findsOneWidget);
-  });
-
-  testWidgets('Fehlerzustand: BF-Tage load error shows a message', (
+  testWidgets('Tagesablauf AC6: BF-Tage load error shows a message', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -333,13 +341,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('BF-Tage konnten nicht geladen werden.'),
-      findsOneWidget,
-    );
+    expect(find.text('BF-Tage konnten nicht geladen werden.'), findsOneWidget);
   });
 
-  testWidgets('Fehlerzustand: create error shows a SnackBar', (tester) async {
+  testWidgets('Tagesablauf AC6: create error shows a SnackBar', (tester) async {
     final repository = await _pump(tester, days: [_bfDay()], items: const []);
     repository.createError = Exception('boom');
 
@@ -355,7 +360,7 @@ void main() {
     expect(find.byType(SnackBar), findsOneWidget);
   });
 
-  testWidgets('Fehlerzustand: delete error shows a SnackBar', (tester) async {
+  testWidgets('Tagesablauf AC6: delete error shows a SnackBar', (tester) async {
     final repository = await _pump(
       tester,
       days: [_bfDay()],
@@ -370,6 +375,40 @@ void main() {
 
     expect(find.byType(SnackBar), findsOneWidget);
   });
+
+  testWidgets('Tagesablauf AC7: no BF-Tage shows a message', (tester) async {
+    await _pump(tester, days: const [], items: const []);
+
+    expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
+  });
+
+  testWidgets('Tagesablauf AC7: no Programmpunkte shows a message', (
+    tester,
+  ) async {
+    await _pump(tester, days: [_bfDay()], items: const []);
+
+    expect(find.text('Keine Programmpunkte vorhanden.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Tagesablauf AC8: each Programmpunkt shows its type icon in a colored '
+    'tile',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        items: [_item(id: 'p1', type: ProgramItemType.meal)],
+      );
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('program-item-p1')),
+          matching: find.byIcon(Icons.restaurant),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
 class _ThrowingBfDayAdminRepository implements BfDayAdminRepository {
@@ -381,8 +420,7 @@ class _ThrowingBfDayAdminRepository implements BfDayAdminRepository {
     required String name,
     required DateTime startsAt,
     required DateTime endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> update(
@@ -390,8 +428,7 @@ class _ThrowingBfDayAdminRepository implements BfDayAdminRepository {
     String? name,
     DateTime? startsAt,
     DateTime? endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> start(String id) => throw UnimplementedError();

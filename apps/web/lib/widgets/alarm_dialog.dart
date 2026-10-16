@@ -1,5 +1,6 @@
 import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../admin/api_errors.dart';
@@ -51,12 +52,21 @@ class AlarmDialog extends ConsumerStatefulWidget {
     required this.title,
     this.alreadyAlarmedVehicleIds = const <String>{},
     this.hasFirstAlarm = false,
+    this.onTriggered,
   });
 
   final String incidentId;
   final String title;
   final Set<String> alreadyAlarmedVehicleIds;
   final bool hasFirstAlarm;
+
+  /// Called exactly once a Sofort-Alarmierung actually went through
+  /// (`trigger()` succeeded, not the idempotent "bereits alarmiert" case)
+  /// -- before the dialog pops with `true`. Lets the caller distinguish
+  /// a real Erstalarm from a Nachalarmierung/Planung/no-op for the
+  /// kritischer-Pfad filter switch (concept §3.4c, AC19) without changing
+  /// this dialog's `pop<bool>` contract that other call sites rely on.
+  final VoidCallback? onTriggered;
 
   @override
   ConsumerState<AlarmDialog> createState() => _AlarmDialogState();
@@ -74,15 +84,24 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
   bool _submitting = false;
   String? _error;
 
+  /// §3.4b/AC17: initial keyboard focus lands on the first vehicle
+  /// checkbox when the dialog opens.
+  final FocusNode _firstVehicleFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _idempotencyId = newIdempotencyId();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _firstVehicleFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _offsetController.dispose();
+    _firstVehicleFocusNode.dispose();
     super.dispose();
   }
 
@@ -142,6 +161,7 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
             .read(alarmRepositoryProvider)
             .trigger(widget.incidentId, _selected.toList(), id: _idempotencyId);
         if (!mounted) return;
+        widget.onTriggered?.call();
         Navigator.of(context).pop(true);
         for (final d in result.doubleCrewed) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -205,210 +225,240 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
     final shift = currentShift(shifts, DateTime.now());
     final doubleCrewed = doubleCrewedIn(shift, _selected);
     final scheduledAt = _scheduledAtLocal;
+    final alarmColors = theme.extension<BftagAlarmColors>()!;
 
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Fahrzeuge auswählen'),
-            const SizedBox(height: 8),
-            for (final vehicle in vehicles)
-              CheckboxListTile(
-                key: Key('alarm-vehicle-${vehicle.id}'),
-                title: Text(
-                  widget.alreadyAlarmedVehicleIds.contains(vehicle.id)
-                      ? '${vehicle.shortName} (${vehicle.callSign}) – bereits alarmiert'
-                      : '${vehicle.shortName} (${vehicle.callSign})',
+    return CallbackShortcuts(
+      // §3.4b/AC18: Enter triggers the same submit as a click on the
+      // submit button, but only once _canSubmit is true -- an invalid
+      // Enter (e.g. no vehicle selected yet) does nothing.
+      bindings: {
+        LogicalKeySet(LogicalKeyboardKey.enter): () {
+          if (_canSubmit) _submit();
+        },
+      },
+      child: AlertDialog(
+        title: Text(widget.title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Fahrzeuge auswählen'),
+              const SizedBox(height: 8),
+              for (final (index, vehicle) in vehicles.indexed)
+                CheckboxListTile(
+                  key: Key('alarm-vehicle-${vehicle.id}'),
+                  focusNode: index == 0 ? _firstVehicleFocusNode : null,
+                  title: Text(
+                    widget.alreadyAlarmedVehicleIds.contains(vehicle.id)
+                        ? '${vehicle.shortName} (${vehicle.callSign}) – bereits alarmiert'
+                        : '${vehicle.shortName} (${vehicle.callSign})',
+                  ),
+                  value:
+                      widget.alreadyAlarmedVehicleIds.contains(vehicle.id) ||
+                      _selected.contains(vehicle.id),
+                  onChanged:
+                      (_submitting ||
+                          widget.alreadyAlarmedVehicleIds.contains(vehicle.id))
+                      ? null
+                      : (checked) {
+                          setState(() {
+                            if (checked == true) {
+                              _selected.add(vehicle.id);
+                            } else {
+                              _selected.remove(vehicle.id);
+                            }
+                          });
+                        },
                 ),
-                value:
-                    widget.alreadyAlarmedVehicleIds.contains(vehicle.id) ||
-                    _selected.contains(vehicle.id),
-                onChanged:
-                    (_submitting ||
-                        widget.alreadyAlarmedVehicleIds.contains(vehicle.id))
-                    ? null
-                    : (checked) {
-                        setState(() {
-                          if (checked == true) {
-                            _selected.add(vehicle.id);
-                          } else {
-                            _selected.remove(vehicle.id);
-                          }
-                        });
-                      },
-              ),
-            if (doubleCrewed.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                key: const Key('alarm-double-crewed-warning'),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer,
-                  border: Border.all(color: theme.colorScheme.error),
-                  borderRadius: BorderRadius.circular(radii.medium),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber,
-                          color: theme.colorScheme.error,
-                        ),
-                        const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            'Doppelbesetzung',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+              if (doubleCrewed.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  key: const Key('alarm-double-crewed-warning'),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    border: Border.all(color: theme.colorScheme.error),
+                    borderRadius: BorderRadius.circular(radii.medium),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber,
+                            color: theme.colorScheme.error,
                           ),
-                        ),
-                      ],
-                    ),
-                    for (final d in doubleCrewed)
-                      Text(
-                        key: Key('alarm-double-crewed-${d.personId}'),
-                        '${d.displayName} sitzt auf mehreren ausgewählten '
-                        'Fahrzeugen – wird nur einmal alarmiert.',
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Doppelbesetzung',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
+                      for (final d in doubleCrewed)
+                        Text(
+                          key: Key('alarm-double-crewed-${d.personId}'),
+                          '${d.displayName} sitzt auf mehreren ausgewählten '
+                          'Fahrzeugen – wird nur einmal alarmiert.',
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              const Text(
+                'Wann?',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              // Note: RadioListTile's groupValue/onChanged are deprecated
+              // in favor of RadioGroup, but migrating would lose the
+              // per-tile enabled/disabled distinction needed here
+              // (immediate/scheduled vs. relative without Erstalarm) --
+              // ignored below instead.
+              RadioListTile<AlarmDialogMode>(
+                key: const Key('alarm-mode-immediate'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Sofort'),
+                value: AlarmDialogMode.immediate,
+                // ignore: deprecated_member_use
+                groupValue: _mode,
+                // ignore: deprecated_member_use
+                onChanged: _submitting
+                    ? null
+                    : (value) => setState(() => _mode = value!),
+              ),
+              RadioListTile<AlarmDialogMode>(
+                key: const Key('alarm-mode-scheduled'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Zeitpunkt'),
+                value: AlarmDialogMode.scheduled,
+                // ignore: deprecated_member_use
+                groupValue: _mode,
+                // ignore: deprecated_member_use
+                onChanged: _submitting
+                    ? null
+                    : (value) => setState(() => _mode = value!),
+              ),
+              RadioListTile<AlarmDialogMode>(
+                key: const Key('alarm-mode-relative'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Relativ zum Erstalarm'),
+                subtitle: widget.hasFirstAlarm
+                    ? null
+                    : const Text(
+                        'Erst verfügbar, sobald es einen Erstalarm gibt.',
+                      ),
+                value: AlarmDialogMode.relative,
+                // ignore: deprecated_member_use
+                groupValue: _mode,
+                // ignore: deprecated_member_use
+                onChanged: (_submitting || !widget.hasFirstAlarm)
+                    ? null
+                    : (value) => setState(() => _mode = value!),
+              ),
+              if (_mode == AlarmDialogMode.scheduled) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const Key('alarm-pick-date'),
+                        onPressed: _submitting ? null : _pickDate,
+                        child: Text(
+                          _scheduledDate == null
+                              ? 'Datum wählen'
+                              : '${_scheduledDate!.day.toString().padLeft(2, '0')}.'
+                                    '${_scheduledDate!.month.toString().padLeft(2, '0')}.'
+                                    '${_scheduledDate!.year}',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const Key('alarm-pick-time'),
+                        onPressed: _submitting ? null : _pickTime,
+                        child: Text(
+                          _scheduledTime == null
+                              ? 'Uhrzeit wählen'
+                              : _scheduledTime!.format(context),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            const Text('Wann?', style: TextStyle(fontWeight: FontWeight.bold)),
-            // Note: RadioListTile's groupValue/onChanged are deprecated in
-            // favor of RadioGroup, but migrating would lose the per-tile
-            // enabled/disabled distinction needed here (immediate/scheduled
-            // vs. relative without Erstalarm) -- ignored below instead.
-            RadioListTile<AlarmDialogMode>(
-              key: const Key('alarm-mode-immediate'),
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Sofort'),
-              value: AlarmDialogMode.immediate,
-              // ignore: deprecated_member_use
-              groupValue: _mode,
-              // ignore: deprecated_member_use
-              onChanged: _submitting
-                  ? null
-                  : (value) => setState(() => _mode = value!),
-            ),
-            RadioListTile<AlarmDialogMode>(
-              key: const Key('alarm-mode-scheduled'),
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Zeitpunkt'),
-              value: AlarmDialogMode.scheduled,
-              // ignore: deprecated_member_use
-              groupValue: _mode,
-              // ignore: deprecated_member_use
-              onChanged: _submitting
-                  ? null
-                  : (value) => setState(() => _mode = value!),
-            ),
-            RadioListTile<AlarmDialogMode>(
-              key: const Key('alarm-mode-relative'),
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Relativ zum Erstalarm'),
-              subtitle: widget.hasFirstAlarm
-                  ? null
-                  : const Text(
-                      'Erst verfügbar, sobald es einen Erstalarm gibt.',
-                    ),
-              value: AlarmDialogMode.relative,
-              // ignore: deprecated_member_use
-              groupValue: _mode,
-              // ignore: deprecated_member_use
-              onChanged: (_submitting || !widget.hasFirstAlarm)
-                  ? null
-                  : (value) => setState(() => _mode = value!),
-            ),
-            if (_mode == AlarmDialogMode.scheduled) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      key: const Key('alarm-pick-date'),
-                      onPressed: _submitting ? null : _pickDate,
-                      child: Text(
-                        _scheduledDate == null
-                            ? 'Datum wählen'
-                            : '${_scheduledDate!.day.toString().padLeft(2, '0')}.'
-                                  '${_scheduledDate!.month.toString().padLeft(2, '0')}.'
-                                  '${_scheduledDate!.year}',
-                      ),
+                if (scheduledAt != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'geplant für ${scheduledAt.day.toString().padLeft(2, '0')}.'
+                      '${scheduledAt.month.toString().padLeft(2, '0')}.'
+                      '${scheduledAt.year} '
+                      '${scheduledAt.hour.toString().padLeft(2, '0')}:'
+                      '${scheduledAt.minute.toString().padLeft(2, '0')} Uhr',
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      key: const Key('alarm-pick-time'),
-                      onPressed: _submitting ? null : _pickTime,
-                      child: Text(
-                        _scheduledTime == null
-                            ? 'Uhrzeit wählen'
-                            : _scheduledTime!.format(context),
-                      ),
-                    ),
+              ],
+              if (_mode == AlarmDialogMode.relative) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  key: const Key('alarm-offset-minutes'),
+                  controller: _offsetController,
+                  enabled: !_submitting,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minuten nach Erstalarm',
                   ),
-                ],
-              ),
-              if (scheduledAt != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'geplant für ${scheduledAt.day.toString().padLeft(2, '0')}.'
-                    '${scheduledAt.month.toString().padLeft(2, '0')}.'
-                    '${scheduledAt.year} '
-                    '${scheduledAt.hour.toString().padLeft(2, '0')}:'
-                    '${scheduledAt.minute.toString().padLeft(2, '0')} Uhr',
-                  ),
+                  onChanged: (_) => setState(() {}),
                 ),
-            ],
-            if (_mode == AlarmDialogMode.relative) ...[
-              const SizedBox(height: 8),
-              TextField(
-                key: const Key('alarm-offset-minutes'),
-                controller: _offsetController,
-                enabled: !_submitting,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Minuten nach Erstalarm',
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-                onChanged: (_) => setState(() {}),
-              ),
+              ],
             ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _submitting
-              ? null
-              : () => Navigator.of(context).pop(false),
-          child: const Text('Abbrechen'),
-        ),
-        FilledButton(
-          key: const Key('alarm-dialog-submit'),
-          onPressed: _canSubmit ? _submit : null,
-          child: Text(
-            _mode == AlarmDialogMode.immediate ? 'Jetzt alarmieren' : 'Planen',
           ),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: _submitting
+                ? null
+                : () => Navigator.of(context).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            key: const Key('alarm-dialog-submit'),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.disabled)
+                    ? null
+                    : alarmColors.alarm,
+              ),
+              foregroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.disabled)
+                    ? null
+                    : alarmColors.onAlarm,
+              ),
+            ),
+            onPressed: _canSubmit ? _submit : null,
+            child: Text(
+              _mode == AlarmDialogMode.immediate
+                  ? 'Jetzt alarmieren'
+                  : 'Planen',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -107,12 +107,16 @@ async function clickByText(re) {
 }
 
 async function typeInto(index, text) {
-  const box = await evalJs(`(() => {
+  // Polls like clickByText (the dialog this targets often hasn't finished
+  // its open animation/render yet when the preceding click returns).
+  const expr = `(() => {
     const e = [...document.querySelectorAll('input, textarea, flt-semantics[role=textbox], [role=textbox]')][${index}];
     if (!e) return null;
     const r = e.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return null;
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  })()`);
+  })()`;
+  const box = await waitFor(async () => (await evalJs(expr)) ?? undefined, 5000, 150);
   if (!box) return false;
   for (const type of ['mousePressed', 'mouseReleased']) {
     await send('Input.dispatchMouseEvent', { type, x: box.x, y: box.y, button: 'left', clickCount: 1 });
@@ -156,6 +160,161 @@ async function ensureVehicle(token) {
     body: { call_sign: `UI E2E ${Date.now()}`, short_name: 'UI-E2E', type: 'HLF' },
   });
   return created.json?.id;
+}
+
+// Always creates a fresh vehicle with a distinctive, regex-safe short_name
+// so the UI critical-path step (below) can click its checkbox by text.
+async function ensureNamedVehicle(token, shortName) {
+  const created = await call('POST', '/vehicles', {
+    token,
+    body: { call_sign: `${shortName} Einsatzfahrzeug`, short_name: shortName, type: 'HLF' },
+  });
+  await check(created.status === 201 && !!created.json?.id, `crit-path: created vehicle ${shortName}`, created);
+  return created.json;
+}
+
+// Ends any currently running BF-Tag and starts a fresh one so the UI
+// critical-path step has an active, non-ended day to create an Einsatz in.
+async function ensureRunningBfDay(token, namePrefix) {
+  const iso = (offsetMin) => new Date(Date.now() + offsetMin * 60000).toISOString();
+  const days = await call('GET', '/bf-days', { token });
+  const dayList = Array.isArray(days.json) ? days.json : (days.json?.bf_days ?? days.json?.items ?? []);
+  for (const d of dayList) {
+    if (d.state === 'running') await call('POST', `/bf-days/${d.id}/end`, { token });
+  }
+  const dayRes = await call('POST', '/bf-days', {
+    token,
+    body: { name: `${namePrefix} ${Date.now()}`, starts_at: iso(-60), ends_at: iso(600) },
+  });
+  await check(dayRes.status === 201 && !!dayRes.json?.id, `crit-path: created BF-Tag (${namePrefix})`, dayRes);
+  const day = dayRes.json;
+  const startRes = await call('POST', `/bf-days/${day.id}/start`, { token });
+  await check(startRes.status === 200, `crit-path: started BF-Tag (${namePrefix})`, startRes);
+  return day;
+}
+
+const UI_CRIT_KEYWORD = `Kritischer Pfad E2E ${Date.now()}`;
+
+// Einsätze kritischer Pfad (concept docs/design/screens/web-einsaetze.md
+// §3.4, AC15-19): Einsatz anlegen (Topbar) -> Speichern -> the filter auto-
+// switches to "Entwurf" and keyboard focus lands on the new card's
+// Alarmieren button -> Enter opens the AlarmDialog (focus already on the
+// first vehicle checkbox) -> pick a vehicle -> "Jetzt alarmieren" -> the
+// alarmed incident is visible again under filter "laufend" (no manual
+// filter click needed -- that is the point of the auto-switch).
+// [vehicle] is created well before this runs (see main()) so its realtime
+// snapshot has had the rest of the UI suite's wall-clock time to propagate
+// -- opening the AlarmDialog should never race the websocket reconnect.
+async function uiCriticalPathAlarm(token, vehicle) {
+  await ensureRunningBfDay(token, 'UI Kritischer Pfad');
+
+  await nav(`${BASE}/admin/einsaetze`);
+  await waitForSemantics();
+  await stepShot('crit-path-before-create');
+
+  await check(await clickByText('^\\s*einsatz anlegen\\s*$'), 'crit-path: clicked Einsatz anlegen');
+  await waitForSemantics();
+  await check(await typeInto(0, UI_CRIT_KEYWORD), 'crit-path: typed Stichwort');
+  await check(await typeInto(1, 'Teststr. 42'), 'crit-path: typed Adresse');
+  await stepShot('crit-path-form-filled');
+
+  await check(await clickByText('^\\s*speichern\\s*$'), 'crit-path: clicked Speichern');
+
+  const createdText = await waitFor(async () => {
+    await enableSemantics();
+    const t = await bodyText();
+    return t.includes(UI_CRIT_KEYWORD) ? t : undefined;
+  }, 8000, 200);
+  await stepShot('crit-path-after-create');
+  await check(
+    !!createdText,
+    'crit-path: new card visible after create (filter auto-switched to Entwurf, AC15)',
+    createdText?.slice(0, 300),
+  );
+
+  // AC16/AC17/AC18: keyboard focus landed on the new card's Alarmieren
+  // button -- Enter opens the AlarmDialog without any click.
+  await pressEnter();
+  const dialogText = await waitFor(async () => {
+    await enableSemantics();
+    const t = await bodyText();
+    return /alarmieren/i.test(t) ? t : undefined;
+  }, 5000, 200);
+  await stepShot('crit-path-alarm-dialog');
+  await check(
+    !!dialogText,
+    'crit-path: AlarmDialog opened via Enter on the focused Alarmieren button (AC16/AC17/AC18)',
+    dialogText?.slice(0, 300),
+  );
+
+  // The vehicle created just above arrives via the realtime snapshot, not
+  // instantly -- poll for its checkbox instead of clicking immediately.
+  const vehicleVisible = await waitFor(async () => {
+    await enableSemantics();
+    const t = await bodyText();
+    return t.includes(vehicle.short_name) ? t : undefined;
+  }, 15000, 200);
+  await check(!!vehicleVisible, 'crit-path: vehicle checkbox appeared in the AlarmDialog', vehicleVisible?.slice(0, 300));
+  await check(await clickByText(vehicle.short_name), 'crit-path: selected a vehicle checkbox');
+  // Selecting a vehicle can trigger an async rebuild (double-crewed check
+  // against shiftsProvider) that reflows the dialog's action row a moment
+  // later -- give it time to settle before clicking the submit button so
+  // the click doesn't land on a position that has since shifted.
+  await sleep(300);
+  await check(await clickByText('^\\s*jetzt alarmieren\\s*$'), 'crit-path: clicked Jetzt alarmieren');
+
+  // Wait for the AlarmDialog to actually close before reading the list
+  // behind it -- otherwise the dialog's own "... alarmieren" title text
+  // satisfies the UI_CRIT_KEYWORD check below without the trigger having
+  // taken effect yet. Retry the click once in case it missed the button.
+  let dialogClosed = await waitFor(async () => {
+    await enableSemantics();
+    const t = await bodyText();
+    return /jetzt alarmieren/i.test(t) ? undefined : true;
+  }, 4000, 200);
+  if (!dialogClosed) {
+    await clickByText('^\\s*jetzt alarmieren\\s*$');
+    dialogClosed = await waitFor(async () => {
+      await enableSemantics();
+      const t = await bodyText();
+      return /jetzt alarmieren/i.test(t) ? undefined : true;
+    }, 8000, 200);
+  }
+  await check(!!dialogClosed, 'crit-path: AlarmDialog closed after Jetzt alarmieren');
+
+  const runningText = await waitFor(async () => {
+    await enableSemantics();
+    const t = await bodyText();
+    return t.includes(UI_CRIT_KEYWORD) ? t : undefined;
+  }, 8000, 200);
+  await stepShot('crit-path-running');
+  await check(
+    !!runningText,
+    'crit-path: alarmed incident still visible right after trigger, filter auto-switched (AC19)',
+    runningText?.slice(0, 300),
+  );
+
+  // Strengthen the AC19 check: confirm the incident actually left the
+  // Entwurf filter (not just still showing there because the dialog
+  // silently failed) -- then restore the laufend tab for a clean state.
+  await check(await clickByText('^\\s*entwurf\\s*$'), 'crit-path: clicked Entwurf tab to verify the incident left it');
+  await sleep(500);
+  const entwurfText = norm(await bodyText());
+  await stepShot('crit-path-entwurf-after-trigger');
+  await check(
+    !entwurfText.includes(norm(UI_CRIT_KEYWORD)),
+    'crit-path: alarmed incident no longer listed under Entwurf (AC19)',
+    entwurfText.slice(0, 300),
+  );
+  await check(await clickByText('^\\s*laufend\\s*$'), 'crit-path: switched back to laufend');
+  await sleep(500);
+  const laufendText = await bodyText();
+  await stepShot('crit-path-laufend-confirmed');
+  await check(
+    laufendText.includes(UI_CRIT_KEYWORD),
+    'crit-path: alarmed incident visible under filter laufend (AC19)',
+    laufendText.slice(0, 300),
+  );
 }
 
 async function triggerUiAlarm(token) {
@@ -223,6 +382,13 @@ async function main() {
   await stepShot('after-login');
   await check(!!loggedInPath && !/login/.test(loggedInPath), 'logged in, left login page', loggedInPath);
 
+  // Create the critical-path vehicle as early as possible so its realtime
+  // snapshot has the whole admin-pages loop below (several seconds of real
+  // wall time) to propagate before the AlarmDialog needs it.
+  const earlyToken = await apiLogin();
+  await check(!!earlyToken, 'crit-path: admin API login works');
+  const critPathVehicle = await ensureNamedVehicle(earlyToken, `UIKP${Date.now() % 100000}`);
+
   // --- the 8 admin pages ----------------------------------------------
   for (const [p, name] of ADMIN_PAGES) {
     await nav(`${BASE}${p}`);
@@ -232,6 +398,9 @@ async function main() {
     await stepShot(name);
     await check(pathname === p && text.length > 0, `page ${p} renders`, { pathname, text: text.slice(0, 200) });
   }
+
+  // --- Einsätze kritischer Pfad (concept §3.4, AC15-19) -----------------
+  await uiCriticalPathAlarm(earlyToken, critPathVehicle);
 
   // --- monitor pairing (fresh browser context) -------------------------
   await evalJs('localStorage.clear()');

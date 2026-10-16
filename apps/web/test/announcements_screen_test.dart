@@ -6,10 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-BfDay _bfDay({
-  String id = 'd1',
-  BfDayState state = BfDayState.running,
-}) {
+BfDay _bfDay({String id = 'd1', BfDayState state = BfDayState.running}) {
   return BfDay(
     id: id,
     name: 'BF-Tag 2026',
@@ -106,7 +103,8 @@ Future<_FakeAnnouncementRepository> _pump(
 
 void main() {
   testWidgets(
-    'shows the hint and a disabled form when no BF-Tag is running',
+    'Durchsagen AC1: shows the hint and a disabled form when no BF-Tag is '
+    'running',
     (tester) async {
       await _pump(tester, bfDay: null);
 
@@ -114,7 +112,13 @@ void main() {
         find.byKey(const Key('announcements-no-running-day')),
         findsOneWidget,
       );
-      expect(find.text('Kein laufender BF-Tag'), findsOneWidget);
+      expect(
+        find.text(
+          'Kein laufender BF-Tag — Durchsagen sind nur während eines '
+          'laufenden BF-Tags möglich.',
+        ),
+        findsOneWidget,
+      );
 
       final textField = tester.widget<TextField>(
         find.byKey(const Key('announcement-text')),
@@ -129,9 +133,86 @@ void main() {
   );
 
   testWidgets(
-    'sends a create with the selected shift id',
+    'Durchsagen AC2: whitespace-only text keeps Senden disabled, real text '
+    'enables it',
     (tester) async {
-      final repository = await _pump(
+      await _pump(tester, bfDay: _bfDay());
+
+      final initialSendButton = tester.widget<FilledButton>(
+        find.byKey(const Key('announcement-send')),
+      );
+      expect(initialSendButton.onPressed, isNull);
+
+      await tester.enterText(find.byKey(const Key('announcement-text')), '   ');
+      await tester.pump();
+      final whitespaceSendButton = tester.widget<FilledButton>(
+        find.byKey(const Key('announcement-send')),
+      );
+      expect(whitespaceSendButton.onPressed, isNull);
+
+      await tester.enterText(
+        find.byKey(const Key('announcement-text')),
+        'Text',
+      );
+      await tester.pump();
+      final filledSendButton = tester.widget<FilledButton>(
+        find.byKey(const Key('announcement-send')),
+      );
+      expect(filledSendButton.onPressed, isNotNull);
+    },
+  );
+
+  testWidgets('Durchsagen AC3: sends a create with the selected shift id', (
+    tester,
+  ) async {
+    final repository = await _pump(
+      tester,
+      bfDay: _bfDay(),
+      shifts: [_shift(id: 's1', name: 'Tagschicht')],
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('announcement-text')),
+      'Mittagessen ist fertig',
+    );
+    await tester.tap(find.byKey(const Key('announcement-target')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tagschicht').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('announcement-send')));
+    await tester.pumpAndSettle();
+
+    expect(repository.createCalls, hasLength(1));
+    final (bfDayId, text, shiftId) = repository.createCalls.single;
+    expect(bfDayId, 'd1');
+    expect(text, 'Mittagessen ist fertig');
+    expect(shiftId, 's1');
+  });
+
+  testWidgets('Durchsagen AC3: sends a create with shiftId null for "Alle"', (
+    tester,
+  ) async {
+    final repository = await _pump(tester, bfDay: _bfDay());
+
+    await tester.enterText(
+      find.byKey(const Key('announcement-text')),
+      'Für alle',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('announcement-send')));
+    await tester.pumpAndSettle();
+
+    expect(repository.createCalls, hasLength(1));
+    final (_, _, shiftId) = repository.createCalls.single;
+    expect(shiftId, isNull);
+  });
+
+  testWidgets(
+    'Durchsagen AC4: after a successful send the text field is empty and '
+    'the target is back to "Alle"',
+    (tester) async {
+      await _pump(
         tester,
         bfDay: _bfDay(),
         shifts: [_shift(id: 's1', name: 'Tagschicht')],
@@ -149,34 +230,18 @@ void main() {
       await tester.tap(find.byKey(const Key('announcement-send')));
       await tester.pumpAndSettle();
 
-      expect(repository.createCalls, hasLength(1));
-      final (bfDayId, text, shiftId) = repository.createCalls.single;
-      expect(bfDayId, 'd1');
-      expect(text, 'Mittagessen ist fertig');
-      expect(shiftId, 's1');
-    },
-  );
-
-  testWidgets(
-    'sends a create with shiftId null for "Alle"',
-    (tester) async {
-      final repository = await _pump(tester, bfDay: _bfDay());
-
-      await tester.enterText(
+      final textField = tester.widget<TextField>(
         find.byKey(const Key('announcement-text')),
-        'Für alle',
       );
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('announcement-send')));
-      await tester.pumpAndSettle();
-
-      expect(repository.createCalls, hasLength(1));
-      final (_, _, shiftId) = repository.createCalls.single;
-      expect(shiftId, isNull);
+      expect(textField.controller!.text, isEmpty);
+      final dropdown = tester.widget<DropdownButton<String?>>(
+        find.byKey(const Key('announcement-target')),
+      );
+      expect(dropdown.value, isNull);
     },
   );
 
-  testWidgets('shows the list of announcements, newest first', (
+  testWidgets('Durchsagen AC6: shows the list of announcements, newest first', (
     tester,
   ) async {
     await _pump(
@@ -204,7 +269,7 @@ void main() {
     expect(find.textContaining('10:00 · Tagschicht'), findsOneWidget);
   });
 
-  testWidgets('delete asks for confirmation before deleting', (
+  testWidgets('Durchsagen AC7: delete asks for confirmation before deleting', (
     tester,
   ) async {
     final repository = await _pump(
@@ -225,9 +290,8 @@ void main() {
     expect(repository.deleteCalls, ['a1']);
   });
 
-  testWidgets('cancelling the delete confirmation does not delete', (
-    tester,
-  ) async {
+  testWidgets('Durchsagen AC7: cancelling the delete confirmation does not '
+      'delete', (tester) async {
     final repository = await _pump(
       tester,
       bfDay: _bfDay(),
@@ -243,7 +307,8 @@ void main() {
   });
 
   testWidgets(
-    'Fehlerzustand: a failed send shows the error message in a SnackBar',
+    'Durchsagen AC5: a failed send shows the error message in a SnackBar '
+    'and keeps the entered text',
     (tester) async {
       final repository = await _pump(tester, bfDay: _bfDay());
       repository.createError = Exception('bf_day_not_running');
@@ -257,11 +322,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
+      final textField = tester.widget<TextField>(
+        find.byKey(const Key('announcement-text')),
+      );
+      expect(textField.controller!.text, 'Text');
     },
   );
 
   testWidgets(
-    'Fehlerzustand: a failed delete shows the error message in a SnackBar',
+    'Durchsagen AC5: a failed delete shows the error message in a SnackBar',
     (tester) async {
       final repository = await _pump(
         tester,
@@ -280,7 +349,7 @@ void main() {
   );
 
   testWidgets(
-    'Echtzeit-Updates: a new announcementsProvider event updates the list',
+    'Durchsagen AC8: a new announcementsProvider event updates the list',
     (tester) async {
       final controller = StreamController<List<Announcement>>();
       final repository = _FakeAnnouncementRepository();
@@ -304,6 +373,15 @@ void main() {
 
       expect(find.text('Erste Durchsage'), findsOneWidget);
       await controller.close();
+    },
+  );
+
+  testWidgets(
+    'Durchsagen AC9: an empty Durchsagenliste shows "Noch keine Durchsagen."',
+    (tester) async {
+      await _pump(tester, bfDay: _bfDay(), announcements: const []);
+
+      expect(find.text('Noch keine Durchsagen.'), findsOneWidget);
     },
   );
 }
