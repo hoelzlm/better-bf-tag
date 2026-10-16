@@ -31,6 +31,8 @@ Fachbegriffe (Glossar): [CONTEXT.md](../CONTEXT.md)
 | [0023](adr/0023-e2e-suite.md) | E2E-Suite gegen den Produktions-Stack (`just e2e`) | Angenommen |
 | [0024](adr/0024-durchsage.md) | Durchsage: Sichtbarkeit, Echtzeit, Push, Monitor-Banner | Angenommen |
 | [0025](adr/0025-tagesablauf.md) | Tagesablauf: Programmpunkte, Echtzeit, Monitor-Standby, App | Angenommen |
+| [0026](adr/0026-karte.md) | Karte: Einsatzort, Geocoding-Proxy, Wache, Kartenanzeige | Angenommen |
+| [0027](adr/0027-designsystem-umsetzung.md) | Designsystem: Umsetzung in Flutter und Ticket-Schnitt | Angenommen |
 
 Neue ADRs nach dem Muster `adr/NNNN-titel.md` anlegen (Kontext → Entscheidung → Konsequenzen).
 
