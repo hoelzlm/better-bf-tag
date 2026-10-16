@@ -37,22 +37,39 @@ startled/rennend, eine Hand, ggf. grelles Sonnenlicht oder Dunkelheit.
 Beide bestehenden Mockups überarbeitet und neu gerendert:
 `docs/design/mockups/app-alarm-light.html`/`.png` und `docs/design/mockups/app-alarm-dark.html`/`.png`
 (390×844). Änderungen gegenüber ux-02a: Hintergrund exakt `alarm`-Token (`#D32F2F` hell / `#FF5449` dunkel)
-statt `Colors.red.shade800`; klare Typo-Hierarchie nach Designsystem 3.1 (`displaySmall` 32/40 SemiBold nur
-für „ALARM", `headlineSmall`/eigene 28px für das Stichwort, `titleMedium` für Fahrzeuglisten-Label,
-`bodyLarge` für Werte); „Dein Fahrzeug"-Block zusätzlich in eine eigene, abgesetzte Karte
-(`onAlarm`-bei-12%-Fläche, nicht transparent) direkt UNTER dem Stichwort verschoben (vor „Alarmierte
-Fahrzeuge"), damit er auch bei langem Lagebericht nicht wegscrollt; Nachalarmierung bekommt ein eigenes Icon
-(`add_alert`/Doppel-Glocke) neben dem Label „NACHALARMIERT" statt nur Text — Farbe bleibt identisch zu
-Erstalarm (Designsystem 5.11: Unterscheidung NIE über Rotton, nur Label+Icon).
+statt `Colors.red.shade800`; klare Typo-Hierarchie: `displaySmall` (32/40 SemiBold, Designsystem 3.1) nur
+für „ALARM"; für das Sequenz-Label eine eigene, hier dokumentierte Caps-Variante namens `alarmSequenceCaps`
+(ausdrücklich NICHT der Token `labelLarge`, da dessen Gewicht Medium statt Bold ist; auch nicht zu verwechseln
+mit der Dart-Funktion `alarmSequenceLabel`, die nur den Textinhalt liefert): **14px Schriftgröße /
+20px Zeilenhöhe, Inter Bold (700), Buchstabenabstand 2px**; für das Stichwort gilt EINE hier dokumentierte, screen-eigene Override-Variante namens `alarmKeyword` (ausdrücklich
+KEIN `headlineSmall` und kein Mischbegriff): **28px Schriftgröße / 34px Zeilenhöhe, Inter Bold (700)** — nicht
+Teil der allgemeinen Skala in Designsystem 3.1, weil dort kein Token so groß/fett für Fließtext-Länge gedacht
+ist; `titleMedium` für Fahrzeuglisten-Label, `bodyLarge` für Werte. „Dein Fahrzeug"-Block zusätzlich in eine
+eigene, abgesetzte Karte (`onAlarm`-bei-12%-Fläche, nicht transparent) direkt UNTER dem Stichwort verschoben
+(vor „Alarmierte Fahrzeuge"), damit er auch bei langem Lagebericht nicht wegscrollt.
+
+Icon neben dem Sequenz-Label (Designsystem 5.11: Unterscheidung NIE über Rotton, nur Label+Icon), alle drei
+Zustände aus der Mein Fahrzeug Nachalarmierungs-Logik (`alarmSequenceLabel`, siehe Abschnitt 4) bekommen ein
+festes, eigenes Material-Icon aus der bereits gebündelten `Material Icons Outlined`-Schrift (keine neue
+Icon-Familie, kein Warndreieck — das würde mit der `warning`-Token-Semantik kollidieren):
+
+| `alarmSequenceLabel(...)` liefert | Anzeige (Großschreibung nur visuell) | Icon (Material, outlined) |
+|---|---|---|
+| `Erstalarm`                | ERSTALARM            | `notifications_active` |
+| `<n>. Nachalarmierung`     | `<N>`. NACHALARMIERUNG | `add_alert`            |
+| `Alarmierung` (Fallback, geplanter Alarm ohne Sequenzposition) | ALARMIERUNG | `notifications` |
+
+Alle drei Icons sind aus derselben Glocken-Familie (verschiedene Füllungsgrade/Zustände derselben Form),
+damit sie als "zusammengehörig, aber unterscheidbar" erkennbar sind — keines davon ist ein Warnsymbol.
 
 ASCII-Wireframe (390×844, Erstalarm, mit Koordinaten):
 
 ```
 ┌──────────────────────────────────────────┐
 │  ALARM                                    │  displaySmall, Buchstabenabstand
-│  🚨 ERSTALARM                              │  labelLarge + Icon
+│  (bell) ERSTALARM                         │  Label-Caps 14/20 Bold + Icon notifications_active
 │                                            │
-│  #3 B3 Großbrand Lagerhalle               │  28px Bold (Stichwort)
+│  #3 B3 Großbrand Lagerhalle               │  alarmKeyword: 28px/34px Bold (Stichwort)
 │                                            │
 │  ┌──────────────────────────────────────┐ │  Dein-Fahrzeug-Karte: onAlarm-bei-12%-
 │  │ DEIN FAHRZEUG                         │ │  Fläche, fett, direkt unter dem Stichwort
@@ -73,8 +90,11 @@ ASCII-Wireframe (390×844, Erstalarm, mit Koordinaten):
 └──────────────────────────────────────────┘
 ```
 
-Nachalarmierungs-Variante: identischer Aufbau, „🚨 ERSTALARM" wird zu „🔔🔔 NACHALARMIERT" (Doppel-Glocke
-statt Warndreieck-artigem Icon, gleiche Rot-Fläche).
+Nachalarmierungs-Variante: identischer Aufbau, „(bell) ERSTALARM" wird zu „(bell+) 2. NACHALARMIERUNG"
+(Icon `add_alert` statt `notifications_active`, Ordinalzahl aus `alarmSequenceLabel` übernommen, gleiche
+Rot-Fläche). `app-alarm-light.html`/`.png` zeigt die Erstalarm-Variante, `app-alarm-dark.html`/`.png` zeigt
+die Nachalarmierungs-Variante (2. Nachalarmierung) im Dunkelmodus — damit sind Icon-Wechsel UND beide
+Farbmodi in den zwei Pflicht-Mockups belegt.
 
 360×640 (kritischer Fall laut Karte — „Quittieren-Button muss ohne Scrollen erreichbar bleiben"): Geprüft
 mit `/usr/bin/google-chrome --headless --window-size=360,640`: Kopfbereich (ALARM+Label+Stichwort+Dein-
@@ -91,10 +111,17 @@ das ist das entscheidende Akzeptanzkriterium, nicht "alles passt ohne Scroll".
 - **Laden** (`alarm == null`, Alarm noch nicht aus `pairedAlarmsProvider` auflösbar): zentrierter
   `CircularProgressIndicator` in `onAlarm`-Farbe auf vollflächigem `alarm`-Hintergrund (bereits heute über
   `Colors.white` auf `Colors.red.shade800`, nur Token-Umstellung).
-- **Erstalarm:** `alarmSequenceLabel` zeigt „Erstalarm" → Label „ERSTALARM" + Warndreieck-Icon.
-- **Nachalarmierung (für mich als Empfänger):** `alarmSequenceLabel` zeigt „Nachalarmierung" → Label
-  „NACHALARMIERT" + Doppel-Glocken-Icon, sonst identisches Layout — gleiche `alarm`-Flächenfarbe (Designsystem
-  5.11: Erstalarm/Nachalarmierung werden NIE über unterschiedliche Rottöne unterschieden).
+- **Erstalarm:** `alarmSequenceLabel` liefert `Erstalarm` → Label-Text „ERSTALARM" (Großschreibung rein
+  visuell, Inhalt unverändert aus dem Rückgabewert) + Icon `notifications_active`.
+- **Nachalarmierung (für mich als Empfänger):** `alarmSequenceLabel` liefert `<n>. Nachalarmierung`
+  (z. B. `1. Nachalarmierung`, `2. Nachalarmierung` — die Ordinalzahl MUSS erhalten bleiben, sie ist für die
+  Person relevant: "ist das schon die zweite Nachalarmierung?") → Label-Text „`<N>`. NACHALARMIERUNG" + Icon
+  `add_alert`, sonst identisches Layout — gleiche `alarm`-Flächenfarbe (Designsystem 5.11:
+  Erstalarm/Nachalarmierung werden NIE über unterschiedliche Rottöne unterschieden, nur über Text+Icon).
+- **Alarmierung (Fallback, `alarm` ohne Sequenzposition — z. B. noch `planned`, in der Praxis selten auf
+  diesem Screen sichtbar, da er nur bei `triggered`/pendenden Alarmen geöffnet wird, aber von
+  `alarmSequenceLabel` als dritter möglicher Rückgabewert dokumentiert):** Label-Text „ALARMIERUNG" + Icon
+  `notifications`.
 - **Nachalarmierung ohne mich als Empfänger:** Dieser Screen wird dann gar nicht erst geöffnet — geprüft über
   `alarm_screen_test.dart`: „Nachalarmierung ohne mich als Empfänger bleibt auf Einsätze". Das ist kein
   UI-Zustand DIESES Screens, sondern ein Navigationsverhalten von `AlarmNavigationListener`
@@ -141,8 +168,10 @@ das ist das entscheidende Akzeptanzkriterium, nicht "alles passt ohne Scroll".
 ## 6. Testbare Akzeptanzkriterien
 
 1. Der Hintergrund ist exakt der `alarm`-Token (`#D32F2F` hell / `#FF5449` dunkel), nicht `Colors.red.shade800`.
-2. „ERSTALARM" und „NACHALARMIERT" unterscheiden sich durch Text UND Icon, niemals durch unterschiedliche
-   Flächenfarbe.
+2. Das Sequenz-Label zeigt exakt den Text von `alarmSequenceLabel(...)` (großgeschrieben, Inhalt
+   unverändert) — „ERSTALARM", „`<N>`. NACHALARMIERUNG" (inkl. Ordinalzahl) oder „ALARMIERUNG" (Fallback) —
+   jeweils mit einem eigenen Icon (`notifications_active`/`add_alert`/`notifications`); die drei Zustände
+   unterscheiden sich NIEMALS durch unterschiedliche Flächenfarbe, nur durch Text + Icon.
 3. Der Quittieren-Button bleibt bei jeder Scrollposition des Inhalts sichtbar (fixer Footer außerhalb des
    scrollbaren Bereichs).
 4. Während `_acknowledging == true` ist der Button nicht erneut antippbar und zeigt einen Spinner.

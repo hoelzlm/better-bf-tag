@@ -42,7 +42,9 @@ Nav-Icons auf die verbindliche Zuordnung aus `app-navigation.md` korrigiert (`lo
 FMS-Statusfarben aus Designsystem 2.4 umgestellt (vorher neutrale `surfaceContainer`-Kacheln mit nur dem
 aktiven Status hervorgehoben — jetzt behalten inaktive Kacheln `surfaceContainer`, aktive Kachel bekommt
 die feste Token-Farbe des jeweiligen FMS-Status, nicht mehr nur amber/gelb für Status 3), größere
-Button-Mindesthöhe (96 statt 72 px) und größerer Spacing (`lg`=16 statt 8 px) zwischen den Kacheln.
+Button-Mindesthöhe (96 statt 72 px) und größerer Spacing (`lg`=16 statt 8 px) zwischen den Kacheln, sowie das
+Zahnrad-Icon (`settings`, `Key('settings')`) rechts in der AppBar ergänzt — im Screenshot zuvor fehlend,
+obwohl es laut `app-navigation.md` §1 der einzige Weg zu Einstellungen ist.
 
 ASCII-Wireframe (390×844):
 
