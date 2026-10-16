@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Favicon: volles Quadrat (Browser rundet selbst), gleiches Motiv wie app-icon.svg (gefuelltes Schild). -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#0B5E6B"/>
+  <path d="M512 150 L774 236 V516 C774 690 658 814 512 862 C366 814 250 690 250 516 V236 Z" fill="#FFFFFF"/>
+  <g fill="#0B5E6B">
+    <rect x="422" y="328" width="80" height="380" rx="20"/>
+    <rect x="422" y="328" width="260" height="92" rx="20"/>
+    <rect x="422" y="488" width="210" height="92" rx="20"/>
+  </g>
+</svg>
