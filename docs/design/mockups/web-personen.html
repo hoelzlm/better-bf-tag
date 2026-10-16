@@ -64,6 +64,9 @@
   .action-link .msym{font-size:18px;}
   .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--on-surface-variant);}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);}
+  .nav-section{padding:14px 20px 6px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--on-surface-variant);}
+  .switch{width:36px;height:20px;border-radius:999px;background:var(--primary);display:inline-block;position:relative;}
+  .switch .knob{width:16px;height:16px;border-radius:999px;background:#fff;position:absolute;top:2px;right:2px;}
 </style>
 </head>
 <body>
@@ -71,15 +74,16 @@
   <div class="sidebar">
     <div class="brand"><span class="mark"></span>BF-Tag</div>
     <div class="nav-item"><span class="msym">home</span>Lage</div>
-    <div class="nav-item"><span class="msym">calendar_month</span>BF-Tage</div>
-    <div class="nav-item"><span class="msym">schedule</span>Schichten</div>
-    <div class="nav-item active"><span class="msym">group</span>Personen</div>
-    <div class="nav-item"><span class="msym">local_shipping</span>Fahrzeuge</div>
     <div class="nav-item"><span class="msym">local_fire_department</span>Einsätze</div>
     <div class="nav-item"><span class="msym">campaign</span>Durchsagen</div>
     <div class="nav-item"><span class="msym">event_note</span>Tagesablauf</div>
-    <div class="nav-item"><span class="msym">image</span>Folien</div>
+    <div class="nav-item"><span class="msym">schedule</span>Schichten</div>
+    <div class="nav-item"><span class="msym">calendar_month</span>BF-Tage</div>
+    <div class="nav-section">Verwaltung</div>
+    <div class="nav-item active"><span class="msym">group</span>Personen</div>
+    <div class="nav-item"><span class="msym">local_shipping</span>Fahrzeuge</div>
     <div class="nav-item"><span class="msym">desktop_windows</span>Monitore</div>
+    <div class="nav-item"><span class="msym">image</span>Folien</div>
     <div class="nav-spacer"></div>
     <div class="nav-user">
       <b>Administrator</b>Administrator
@@ -89,12 +93,10 @@
   <div class="main">
     <div class="topbar">
       <h1>Personen</h1>
-      <div class="topbar-right">
-        <div class="topbar-controls">
-          <span>inaktive anzeigen</span>
-          <span class="toggle"><span class="knob"></span></span>
-          <span class="outline-btn"><span class="msym">print</span>Codes drucken</span>
-        </div>
+      <div class="topbar-controls">
+        <span>inaktive anzeigen</span>
+        <span class="toggle"><span class="knob"></span></span>
+        <span class="outline-btn"><span class="msym">print</span>Codes drucken</span>
         <span class="btn-primary"><span class="msym">add</span>Person anlegen</span>
       </div>
     </div>
@@ -107,7 +109,7 @@
         <div class="actions">
           <span class="action-link"><span class="msym">lock_open</span>Web-Zugang</span>
           <span class="action-link"><span class="msym">devices</span>Geräte</span>
-          <span class="status"><span class="dot"></span>aktiv</span>
+          <span class="status"><span class="switch"><span class="knob"></span></span>aktiv</span>
         </div>
       </div>
       <div class="row">
@@ -117,7 +119,7 @@
         </div>
         <div class="actions">
           <span class="action-link"><span class="msym">devices</span>Geräte</span>
-          <span class="status"><span class="dot"></span>aktiv</span>
+          <span class="status"><span class="switch"><span class="knob"></span></span>aktiv</span>
         </div>
       </div>
       <div class="row">
@@ -127,7 +129,7 @@
         </div>
         <div class="actions">
           <span class="action-link"><span class="msym">devices</span>Geräte</span>
-          <span class="status"><span class="dot"></span>aktiv</span>
+          <span class="status"><span class="switch"><span class="knob"></span></span>aktiv</span>
         </div>
       </div>
       <div class="row">
@@ -136,9 +138,8 @@
           <div class="chips"><span class="tag">Betreuer</span><span class="tag">Mannschaft</span></div>
         </div>
         <div class="actions">
-          <span class="action-link"><span class="msym">lock_open</span>Web-Zugang</span>
           <span class="action-link"><span class="msym">devices</span>Geräte</span>
-          <span class="status"><span class="dot"></span>aktiv</span>
+          <span class="status"><span class="switch"><span class="knob"></span></span>aktiv</span>
         </div>
       </div>
       <div class="row">
@@ -149,7 +150,7 @@
         <div class="actions">
           <span class="action-link"><span class="msym">lock_open</span>Web-Zugang</span>
           <span class="action-link"><span class="msym">devices</span>Geräte</span>
-          <span class="status"><span class="dot"></span>aktiv</span>
+          <span class="status"><span class="switch"><span class="knob"></span></span>aktiv</span>
         </div>
       </div>
     </div>

@@ -87,6 +87,11 @@ Drop-Zonen unübersichtlich groß machen).
   „a 409 error from setCrew shows a SnackBar“).
 - **Echtzeit-Update (ein `shiftsProvider`-Event):** Board aktualisiert sich automatisch (`_reloadSelectedDay`),
   unverändert.
+- **Offline/Verbindung verloren:** Kein eigener Zustand auf dieser Karte — das gemeinsame `connection-banner`
+  der `AdminShell` zeigt den Verbindungsverlust einheitlich für alle `/admin/*`-Screens (s. `web-navigation.md`
+  Abschnitt 4/6 AK 12). Schichten haben kein eigenes Realtime-Abo für Drag & Drop selbst (`shiftsProvider`
+  liefert nur Reload-Trigger, s. o.); während das Banner sichtbar ist, scheitert Drag & Drop/Dialoge bei
+  fehlender Verbindung weiterhin über die bestehende SnackBar-Fehlerbehandlung (unverändert).
 - **Dialoge:** Schicht anlegen/bearbeiten (Name, Start, Ende) und Funktion wählen (Chips + Freitext) nach
   design-system 5.6; Funktion-Chips (`standardCrewFunctions`) als `ActionChip`-Grid.
 - **Validierungsfehler:** Funktion-Freitextfeld hat `maxLength: 16` (unverändert, zeigt Flutters
@@ -139,3 +144,19 @@ Aus `shifts_screen.dart` (`grep -n "Key("`): `confirm-dialog-confirm`, `bf-day-d
 Keine funktionale Flow-Änderung. Alle Interaktionen (Drag & Drop, Funktionswahl, Schicht-CRUD,
 Teilnehmer-Zuordnung) bleiben exakt erhalten — ausschließlich Farben/Flächen/Abstände werden auf das
 Designsystem umgestellt, um die in Abschnitt 2 beschriebenen Lesbarkeits-/Konsistenzprobleme zu beheben.
+
+## 9. Zuordnung zum Regressionsinventar
+
+Tabelle „Schichten“ (`docs/testing/regression-inventory.md`, Abschnitt „### Schichten (`shifts_screen.dart`)“):
+
+| Funktion (Inventar) | Test | Ort im neuen Layout |
+|---|---|---|
+| anzeigen | `shifts_screen_test.dart`: renders shifts as tabs and crew per vehicle | BF-Tag-Dropdown + Schicht-Tabs + Fahrzeugkarten-Board (Abschnitt 3), gleiche Keys. |
+| anlegen | `shifts_screen_test.dart`: create shift dialog calls createShift | `create-shift`-Button in der Tabs-Zeile (Abschnitt 3), Dialog unverändert. |
+| bearbeiten | `shifts_screen_test.dart`: edit-shift calls updateShift with the new values | `edit-shift`-Icon neben den Tabs, Dialog unverändert. |
+| löschen | `shifts_screen_test.dart`: delete-shift calls deleteShift only after confirm (+ Abbrechen) | `delete-shift`-Icon neben den Tabs, Bestätigungsdialog unverändert. |
+| Navigation | n/a (BF-Tag/Schicht-Auswahl ist Teil des Screens) | n/a |
+| Echtzeit-Updates | `shifts_screen_test.dart`: a shiftsProvider event reloads the shift list | Board aktualisiert sich automatisch (Abschnitt 4 „Echtzeit-Update“), unverändert. |
+| Fehlerzustand | `shifts_screen_test.dart`: a 409 error from setCrew shows a SnackBar | SnackBar unverändert (Abschnitt 4). |
+| Leerzustand | `shifts_screen_test.dart`: no shifts / no BF-Tage zeigt Meldung | Leerzustände „Keine BF-Tage“/„Keine Schicht vorhanden“ (Abschnitt 4), visuell nach 5.10 aufgewertet. |
+| Offline | n/a (keine eigene UI) | Jetzt zusätzlich abgedeckt durch das gemeinsame `connection-banner` der `AdminShell` (Abschnitt 4), keine neue Schichten-spezifische Funktion. |

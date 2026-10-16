@@ -105,3 +105,16 @@ bleibt unverändert.
 
 Keine Flow-Änderung. Gleiche Felder, gleicher Submit-Pfad, gleiche Fehlerbehandlung — nur visuell neu gerahmt
 (Card statt frei schwebender Felder) und mit App-Icon versehen.
+
+## 9. Zuordnung zum Regressionsinventar
+
+Tabelle „Login“ (`docs/testing/regression-inventory.md`, Abschnitt „### Login (`login_screen.dart`)“):
+
+| Funktion (Inventar) | Test | Ort im neuen Layout |
+|---|---|---|
+| anzeigen | n/a | n/a |
+| anlegen/bearbeiten/löschen | n/a | n/a |
+| Navigation | `login_test.dart`: valid/invalid login, logout | Gleicher Submit-Pfad/Redirect zu `/admin` (Abschnitt 6 AK 4), Logout bleibt in der Sidebar (`web-navigation.md`). |
+| Echtzeit-Updates | n/a | n/a |
+| Fehlerzustand | `login_test.dart`: invalid login shows the error text | `login-error` mit `warning`-Icon statt reinem Text (Abschnitt 3/4). |
+| Leerzustand/Offline | n/a | Offline-Fall nutzt weiterhin denselben `login-error`-Slot (Abschnitt 4 „Offline/Server nicht erreichbar“), kein separates Banner nötig, da die Login-Seite keine `AdminShell` lädt (vor der Session, s. `web-navigation.md` Abschnitt 4). |

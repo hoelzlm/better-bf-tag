@@ -79,6 +79,10 @@ design-system 5.1), Bestätigungsdialog unverändert mit Vorschau.
 - **Validierungsfehler im Anlege-/Bearbeiten-Dialog:** aktuell keine serverseitige Client-Validierung vor
   Submit — das bleibt so (keine neue Funktion); falls Backend einen Fehler zurückgibt, erscheint er als
   SnackBar wie heute.
+- **Offline/Verbindung verloren:** Kein eigener Zustand auf dieser Karte — das gemeinsame `connection-banner`
+  der `AdminShell` zeigt den Verbindungsverlust einheitlich für alle `/admin/*`-Screens (s. `web-navigation.md`
+  Abschnitt 4/6 AK 12). BF-Tage hat kein eigenes Realtime-Abo (unverändert); Start/Ende/Anonymisieren
+  scheitern bei fehlender Verbindung weiterhin über die bestehende SnackBar-Fehlerbehandlung (`_showError`).
 
 ## 5. Interaktionen
 
@@ -128,3 +132,18 @@ Desktop-Seite ungenutzten Raum suggeriert statt Teil eines Formularkopfs zu sein
 (Dialog öffnen, `create()` aufrufen) ist identisch — nur der Auslöser wechselt den Ort. Gleiche Änderung analog
 in `web-personen.md` (dort ebenfalls FAB → Header-Button), für konsistente Wahrnehmung über alle Listen-Screens
 hinweg.
+
+## 9. Zuordnung zum Regressionsinventar
+
+Tabelle „BF-Tage“ (`docs/testing/regression-inventory.md`, Abschnitt „### BF-Tage (`bf_days_screen.dart`)“):
+
+| Funktion (Inventar) | Test | Ort im neuen Layout |
+|---|---|---|
+| anzeigen | `bf_days_screen_test.dart`: lists BF-Tage mit Zeitraum und Zustand-Chip | Tabellenzeilen Name/Zeitraum/Zustand-Chip (Abschnitt 3), gleicher Key `bf-days-list`. |
+| anlegen | `bf_days_screen_test.dart`: create dialog calls the API with the entered values | `create-bf-day`-Button im Seitenkopf statt FAB (Abschnitt 8), Dialog unverändert. |
+| bearbeiten | `bf_days_screen_test.dart`: edit dialog calls update with the new values | Zeilen-Klick (nur `isPlanning && isAdmin`) öffnet Bearbeiten-Dialog, unverändert. |
+| löschen | n/a (Anonymisierung ersetzt Löschen, ADR 0020) | n/a |
+| Navigation | `bf_days_screen_test.dart`: participants dialog | `bf-day-participants-{id}` in der zweiten Zeile der Tabellenzeile (Abschnitt 3). |
+| Echtzeit-Updates | n/a (kein Realtime-Abo, by design) | n/a |
+| Fehlerzustand | `bf_days_screen_test.dart`: starting shows the backend error message on failure | SnackBar unverändert (Abschnitt 4). |
+| Leerzustand/Offline | n/a (keine eigene UI) | Leerzustand jetzt mit Icon + Primäraktion (Abschnitt 4); Offline zusätzlich über das gemeinsame `connection-banner` der `AdminShell` (Abschnitt 4, neu ergänzt), keine neue BF-Tage-spezifische Funktion. |

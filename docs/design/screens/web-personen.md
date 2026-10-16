@@ -37,10 +37,9 @@ Rendertes Mockup: `docs/design/mockups/web-personen.html`/`.png`.
 
 ```
 ┌──────────┬────────────────────────────────────────────────────────────┐
-│ Sidebar  │ Personen         inaktive anzeigen ⚪  🖨 Codes drucken      │
-│ (aktiv:  │                                           [+ Person anlegen]│
-│ Personen)├────────────────────────────────────────────────────────────┤
-│          │ Anna Jugend              [Jugendlicher] [Mannschaft]        │
+│ Sidebar  │ Personen   inaktive anzeigen ⚪ 🖨 Codes drucken [+ Person] │
+│ (aktiv:  ├────────────────────────────────────────────────────────────┤
+│ Personen)│ Anna Jugend              [Jugendlicher] [Mannschaft]        │
 │          │                                          📱 Geräte  ⬤ aktiv │
 │          │ ──────────────────────────────────────────────────────────│
 │          │ Leitstelle screenshots   [Betreuer] [Leitstelle]            │
@@ -55,12 +54,16 @@ Zeilen als `ListTile`-Nachfolger im Tabellenstil (design-system 5.3), Name `titl
 `·`-getrenntem Fließtext — schneller scanbar, und Berechtigung „Administrator“ bekommt zusätzlich einen
 `primaryContainer`-Chip (hebt die mächtigste Rolle optisch ab). Benutzername bleibt als dritter, unauffälliger
 Text (`bodyMedium`/`onSurfaceVariant`) hinter den Chips, nicht als weiterer Chip (ist kein Status, sondern ein
-Datenfeld). Aktionen rechts gruppiert: Web-Zugang (nur sichtbar wenn `permission != crew`, wie heute) und
-Geräte als Icon-Buttons mit sichtbarem Label daneben (nicht nur Tooltip, da nur 2 Icons, genug Platz), Aktiv-
-Switch mit Statuswort davor (⬤ aktiv / ⬤ deaktiviert in `onSurfaceVariant`, nicht grün/rot — ist kein
-FMS-/Alarmstatus). Kopfzeile: „inaktive anzeigen“-Schalter links wie heute, „Codes drucken“ als sichtbar
-beschrifteter `OutlinedButton.icon` statt alleinstehendem Icon, „Person anlegen“ als `FilledButton.icon` im
-Seitenkopf (gleiche Begründung wie BF-Tage, Abschnitt 8).
+Datenfeld). Aktionen rechts gruppiert: Web-Zugang (nur sichtbar wenn `permission != crew`, wie heute, siehe
+`persons_screen.dart:258` — eine Person mit Personentyp „Betreuer“ aber Berechtigung „Mannschaft“ sieht also
+**kein** „Web-Zugang“) und Geräte als Icon-Buttons mit sichtbarem Label daneben (nicht nur Tooltip, da nur 2
+Icons, genug Platz), Aktiv-Switch (`Switch`-Komponente, `active-switch-{id}`, design-system 5.2 Auswahl-
+Komponenten) mit Statuswort davor (⬤ aktiv / ⬤ deaktiviert in `onSurfaceVariant`, nicht grün/rot — ist kein
+FMS-/Alarmstatus) — der Switch selbst muss sichtbar bleiben, nicht nur der Statuspunkt. Kopfzeile: Titel
+links, rechts in einer Zeile „inaktive anzeigen“-Schalter wie heute, „Codes drucken“ als sichtbar
+beschrifteter `OutlinedButton.icon` statt alleinstehendem Icon, „Person anlegen“ als `FilledButton.icon` ganz
+rechts (gleiches Muster wie BF-Tage, Abschnitt 8 — eine Kopfzeile, keine zweite Zeile nur für den
+Anlegen-Button).
 
 Dialog (design-system 5.6): Breite 420 px (statt gefühlt zu schmal im Screenshot bei zu viel Rand drumherum),
 `surfaceContainer`-Fläche, `radiusLarge`. Feldgruppen „Personentyp“/„Berechtigung“ mit `titleMedium`-Label und
@@ -93,6 +96,11 @@ Dialog (design-system 5.6): Breite 420 px (statt gefühlt zu schmal im Screensho
   rechten Spalte, Name-Spalte ist die flexible).
 - **Ohne Berechtigung:** die gesamte Seite ist nur für `Permission.admin` erreichbar (Router-Redirect
   unverändert); kein In-Screen-„ohne Berechtigung“-Zustand nötig.
+- **Offline/Verbindung verloren:** Kein eigener Zustand auf dieser Karte — das gemeinsame `connection-banner`
+  der `AdminShell` zeigt den Verbindungsverlust einheitlich für alle `/admin/*`-Screens (s. `web-navigation.md`
+  Abschnitt 4/6 AK 12). Personen hat kein eigenes Realtime-Abo (einmaliges `GET /persons`, unverändert);
+  Aktionen, die während eines Verbindungsverlusts fehlschlagen, zeigen weiterhin SnackBar/Ladefehler wie
+  heute.
 
 ## 5. Interaktionen
 
@@ -140,3 +148,18 @@ Eine Vereinfachung, analog zu `web-bf-tage.md`: **„Person anlegen“ wandert v
 (Begründung dort, gilt identisch hier — konsistentes Desktop-Pattern über alle Listen-Admin-Screens). Keine
 weitere Flow-Änderung: Anlegen/Bearbeiten/Deaktivieren, Web-Zugang, Geräte, Kopplungscode-Erzeugung und
 -Druck bleiben in Anzahl und Reihenfolge der Schritte exakt erhalten.
+
+## 9. Zuordnung zum Regressionsinventar
+
+Tabelle „Personen“ (`docs/testing/regression-inventory.md`, Abschnitt „### Personen (`persons_screen.dart`)“):
+
+| Funktion (Inventar) | Test | Ort im neuen Layout |
+|---|---|---|
+| anzeigen | `persons_screen_test.dart`: lists persons from the fake response | Zeilenliste mit Chips statt Fließtext (Abschnitt 3), gleicher Key `persons-list`. |
+| anlegen | `persons_screen_test.dart`: creating a person calls createPerson with the entered fields | `create-person`-Button im Seitenkopf statt FAB (Abschnitt 8), Dialog unverändert. |
+| bearbeiten | `persons_screen_test.dart`: editing a person calls updatePerson with the entered fields; toggling active calls updatePerson | Zeilen-Klick → Dialog; `active-switch-{id}` sichtbar als echter Switch (Abschnitt 3, behebt Problem 3). |
+| löschen | n/a (Aktiv-Switch statt Löschen) | n/a |
+| Navigation | n/a | n/a |
+| Echtzeit-Updates | n/a (einmaliges `GET /persons`, kein Abo) | n/a |
+| Fehlerzustand | `persons_screen_test.dart`: load error shows the error message instead of the list | Fehlertext + Retry-Button (Abschnitt 4). |
+| Leerzustand/Offline | n/a (keine eigene UI) | Leerzustand jetzt mit Icon (Abschnitt 4); Offline zusätzlich über das gemeinsame `connection-banner` der `AdminShell` (Abschnitt 4), keine neue Personen-spezifische Funktion. |
