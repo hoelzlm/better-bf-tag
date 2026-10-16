@@ -165,8 +165,9 @@ Future<_FakeAlarmRepository> _pump(
           (ref) => Stream.value(DateTime.now()),
         ),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: ScheduledAlarmsSection()),
+      child: MaterialApp(
+        theme: bftagLightTheme(),
+        home: const Scaffold(body: ScheduledAlarmsSection()),
       ),
     ),
   );
@@ -340,4 +341,63 @@ void main() {
     expect(repository.updateCalls.single.id, 'a1');
     expect(repository.updateCalls.single.offsetMinutes, 42);
   });
+
+  testWidgets(
+    'AC9 (web-lage.md): scheduled-alarm-countdown ticks within 2 seconds',
+    (tester) async {
+      final incident = _incident();
+      final scheduled = ScheduledAlarm(
+        incident: incident,
+        alarm: Alarm(
+          id: 'a1',
+          incidentId: incident.id,
+          state: AlarmState.planned,
+          scheduledAt: DateTime.now().add(const Duration(minutes: 5)),
+          vehicleIds: const ['v1'],
+          recipients: const [],
+        ),
+      );
+      final clockController = StreamController<DateTime>();
+      addTearDown(clockController.close);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            scheduledAlarmsProvider.overrideWith(
+              (ref) => Stream.value([scheduled]),
+            ),
+            vehiclesProvider.overrideWith(
+              (ref) => Stream.value([_vehicle()]),
+            ),
+            sessionControllerProvider.overrideWith(
+              () => _FakeSessionController(
+                const SessionSignedIn(_dispatchPerson, 'token'),
+              ),
+            ),
+            alarmRepositoryProvider.overrideWithValue(_FakeAlarmRepository()),
+            monitorClockProvider.overrideWith((ref) => clockController.stream),
+          ],
+          child: MaterialApp(
+            theme: bftagLightTheme(),
+            home: const Scaffold(body: ScheduledAlarmsSection()),
+          ),
+        ),
+      );
+      clockController.add(DateTime.now());
+      await tester.pumpAndSettle();
+
+      final before = tester
+          .widget<Text>(find.byKey(const Key('scheduled-alarm-countdown-a1')))
+          .data;
+
+      clockController.add(DateTime.now().add(const Duration(seconds: 2)));
+      await tester.pumpAndSettle();
+
+      final after = tester
+          .widget<Text>(find.byKey(const Key('scheduled-alarm-countdown-a1')))
+          .data;
+
+      expect(after, isNot(equals(before)));
+    },
+  );
 }

@@ -222,7 +222,10 @@ Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
     ProviderScope(
       child: ProviderScope(
         overrides: env.overrides,
-        child: const MaterialApp(home: MonitorScreen()),
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const MonitorScreen(),
+        ),
       ),
     ),
   );

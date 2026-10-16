@@ -171,15 +171,18 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
     }
 
     try {
-      await ref.read(alarmRepositoryProvider).plan(
+      await ref
+          .read(alarmRepositoryProvider)
+          .plan(
             widget.incidentId,
             _selected.toList(),
             id: _idempotencyId,
             scheduledAt: _mode == AlarmDialogMode.scheduled
                 ? _scheduledAtLocal!.toUtc()
                 : null,
-            offsetMinutes:
-                _mode == AlarmDialogMode.relative ? _offsetMinutes : null,
+            offsetMinutes: _mode == AlarmDialogMode.relative
+                ? _offsetMinutes
+                : null,
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -194,7 +197,10 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final vehicles = ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
+    final theme = Theme.of(context);
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
+    final vehicles =
+        ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
     final shifts = ref.watch(shiftsProvider).valueOrNull ?? const <Shift>[];
     final shift = currentShift(shifts, DateTime.now());
     final doubleCrewed = doubleCrewedIn(shift, _selected);
@@ -217,9 +223,11 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
                       ? '${vehicle.shortName} (${vehicle.callSign}) – bereits alarmiert'
                       : '${vehicle.shortName} (${vehicle.callSign})',
                 ),
-                value: widget.alreadyAlarmedVehicleIds.contains(vehicle.id) ||
+                value:
+                    widget.alreadyAlarmedVehicleIds.contains(vehicle.id) ||
                     _selected.contains(vehicle.id),
-                onChanged: (_submitting ||
+                onChanged:
+                    (_submitting ||
                         widget.alreadyAlarmedVehicleIds.contains(vehicle.id))
                     ? null
                     : (checked) {
@@ -238,16 +246,19 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
                 key: const Key('alarm-double-crewed-warning'),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.15),
-                  border: Border.all(color: Colors.orange.shade800),
-                  borderRadius: BorderRadius.circular(8),
+                  color: theme.colorScheme.errorContainer,
+                  border: Border.all(color: theme.colorScheme.error),
+                  borderRadius: BorderRadius.circular(radii.medium),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.warning_amber, color: Colors.orange.shade800),
+                        Icon(
+                          Icons.warning_amber,
+                          color: theme.colorScheme.error,
+                        ),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
@@ -306,7 +317,9 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
               title: const Text('Relativ zum Erstalarm'),
               subtitle: widget.hasFirstAlarm
                   ? null
-                  : const Text('Erst verfügbar, sobald es einen Erstalarm gibt.'),
+                  : const Text(
+                      'Erst verfügbar, sobald es einen Erstalarm gibt.',
+                    ),
               value: AlarmDialogMode.relative,
               // ignore: deprecated_member_use
               groupValue: _mode,
@@ -327,8 +340,8 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
                         _scheduledDate == null
                             ? 'Datum wählen'
                             : '${_scheduledDate!.day.toString().padLeft(2, '0')}.'
-                                '${_scheduledDate!.month.toString().padLeft(2, '0')}.'
-                                '${_scheduledDate!.year}',
+                                  '${_scheduledDate!.month.toString().padLeft(2, '0')}.'
+                                  '${_scheduledDate!.year}',
                       ),
                     ),
                   ),
@@ -373,14 +386,19 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
             ],
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting
+              ? null
+              : () => Navigator.of(context).pop(false),
           child: const Text('Abbrechen'),
         ),
         FilledButton(

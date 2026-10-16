@@ -27,10 +27,12 @@ String formatElapsedSince(DateTime since, DateTime now) {
 String? scheduledAlarmsWarningFragment(
   List<ScheduledAlarm> scheduledAlarmsOfIncident,
 ) {
-  final planned =
-      scheduledAlarmsOfIncident.where((sa) => sa.alarm.isPlanned).length;
-  final missed =
-      scheduledAlarmsOfIncident.where((sa) => sa.alarm.isMissed).length;
+  final planned = scheduledAlarmsOfIncident
+      .where((sa) => sa.alarm.isPlanned)
+      .length;
+  final missed = scheduledAlarmsOfIncident
+      .where((sa) => sa.alarm.isMissed)
+      .length;
   final parts = <String>[
     if (planned > 0) '$planned geplante Alarmierung${planned == 1 ? '' : 'en'}',
     if (missed > 0) '$missed verpasste Alarmierung${missed == 1 ? '' : 'en'}',
@@ -50,14 +52,14 @@ IconData _ackIcon(AckState state) {
   }
 }
 
-Color _ackColor(AckState state) {
+Color _ackColor(ThemeData theme, AckState state) {
   switch (state) {
     case AckState.acknowledged:
-      return Colors.green;
+      return theme.colorScheme.primary;
     case AckState.pending:
-      return Colors.orange;
+      return theme.colorScheme.error;
     case AckState.noDevice:
-      return Colors.grey;
+      return theme.colorScheme.onSurfaceVariant;
   }
 }
 
@@ -92,9 +94,10 @@ class RunningIncidentsSection extends ConsumerWidget {
     final vehiclesById = {for (final v in vehicles) v.id: v};
     final closeSuggestedIds =
         ref.watch(closeSuggestedIncidentIdsProvider).valueOrNull ??
-            const <String>{};
+        const <String>{};
     final scheduledAlarms =
-        ref.watch(scheduledAlarmsProvider).valueOrNull ?? const <ScheduledAlarm>[];
+        ref.watch(scheduledAlarmsProvider).valueOrNull ??
+        const <ScheduledAlarm>[];
     final session = ref.watch(sessionControllerProvider);
     final permission = switch (session) {
       SessionSignedIn(person: final person) => person.permission,
@@ -104,7 +107,10 @@ class RunningIncidentsSection extends ConsumerWidget {
         permission == Permission.dispatch || permission == Permission.admin;
 
     if (incidents.isEmpty) {
-      return const Center(child: Text('Keine laufenden Einsätze'));
+      return const BftagStateView.empty(
+        icon: Icons.local_fire_department_outlined,
+        title: 'Keine laufenden Einsätze',
+      );
     }
 
     final now = DateTime.now();
@@ -178,9 +184,9 @@ class _IncidentCard extends ConsumerWidget {
         content: Text(
           warning != null
               ? 'Einsatz #${incident.number} "${incident.keyword}" wird '
-                  'abgeschlossen. $warning werden verworfen.'
+                    'abgeschlossen. $warning werden verworfen.'
               : 'Einsatz #${incident.number} "${incident.keyword}" wird '
-                  'abgeschlossen.',
+                    'abgeschlossen.',
         ),
         actions: [
           TextButton(
@@ -212,6 +218,9 @@ class _IncidentCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final alarmColors = theme.extension<BftagAlarmColors>()!;
+    final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
     final triggerTimes = [
       for (final alarm in alarms)
         if (alarm.triggeredAt != null) alarm.triggeredAt!,
@@ -224,7 +233,8 @@ class _IncidentCard extends ConsumerWidget {
     }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      color: alarmColors.alarmContainer,
+      margin: EdgeInsets.only(bottom: spacing.xl),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -235,7 +245,7 @@ class _IncidentCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     '#${incident.number} ${incident.keyword} – ${incident.address}',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: theme.textTheme.titleMedium,
                   ),
                 ),
                 if (firstTriggeredAt != null)
@@ -252,7 +262,7 @@ class _IncidentCard extends ConsumerWidget {
                   key: Key('close-suggested-${incident.id}'),
                   avatar: const Icon(Icons.task_alt, size: 18),
                   label: const Text('Abschluss vorgeschlagen'),
-                  backgroundColor: Colors.green.withValues(alpha: 0.15),
+                  backgroundColor: theme.colorScheme.primaryContainer,
                 ),
               ),
             if (canDispatch)
@@ -261,8 +271,16 @@ class _IncidentCard extends ConsumerWidget {
                 child: Wrap(
                   spacing: 8,
                   children: [
-                    OutlinedButton.icon(
+                    FilledButton.icon(
                       key: Key('nachalarmieren-incident-${incident.id}'),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(
+                          alarmColors.alarm,
+                        ),
+                        foregroundColor: WidgetStatePropertyAll(
+                          alarmColors.onAlarm,
+                        ),
+                      ),
                       icon: const Icon(Icons.campaign),
                       label: const Text('Nachalarmieren'),
                       onPressed: () => _openNachalarmierenDialog(context),
@@ -302,17 +320,29 @@ class _AlarmSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final summary = alarm.summary;
-    final errorColor = Theme.of(context).colorScheme.error;
+    final errorColor = theme.colorScheme.error;
+    final alarmColors = theme.extension<BftagAlarmColors>()!;
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            key: Key('alarm-label-${alarm.id}'),
-            label,
-            style: Theme.of(context).textTheme.titleSmall,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: alarmColors.alarm,
+              borderRadius: BorderRadius.circular(radii.full),
+            ),
+            child: Text(
+              key: Key('alarm-label-${alarm.id}'),
+              label,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: alarmColors.onAlarm,
+              ),
+            ),
           ),
           Text(
             key: Key('alarm-summary-${alarm.id}'),
@@ -322,9 +352,7 @@ class _AlarmSection extends StatelessWidget {
           Text(
             key: Key('alarm-push-summary-${alarm.id}'),
             'Push: ${alarm.pushDelivered} zugestellt · ${alarm.pushRejected} abgelehnt',
-            style: alarm.pushRejected > 0
-                ? TextStyle(color: errorColor)
-                : null,
+            style: alarm.pushRejected > 0 ? TextStyle(color: errorColor) : null,
           ),
           const SizedBox(height: 4),
           for (final recipient in alarm.recipients)
@@ -343,6 +371,7 @@ class _RecipientRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final state = recipient.ackState;
     final vehicle = vehiclesById[recipient.vehicleId];
     final vehicleLabel = vehicle?.shortName ?? recipient.vehicleId;
@@ -355,7 +384,7 @@ class _RecipientRow extends StatelessWidget {
             _ackIcon(state),
             key: Key('ack-icon-${recipient.personId}'),
             size: 18,
-            color: _ackColor(state),
+            color: _ackColor(theme, state),
           ),
           const SizedBox(width: 6),
           Expanded(
