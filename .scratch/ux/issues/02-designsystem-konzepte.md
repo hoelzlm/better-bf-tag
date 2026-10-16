@@ -9,22 +9,22 @@ Danach schreibt der Architekt die Umsetzungs-Tickets. Details und vorab getroffe
 
 **Owner:** Architekt (zerlegt in Designer-Karten, reviewt sie), Designer
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `docs/design/design-system.md`: Farben (hell, dunkel, Monitor), Rot nur für Alarm/destruktiv,
+- [x] `docs/design/design-system.md`: Farben (hell, dunkel, Monitor), Rot nur für Alarm/destruktiv,
       FMS-Statusfarben, Typografie-Skala, Abstände, Radien, Komponenten mit Zuständen, Icons, Bewegung,
       Barrierefreiheit, App-Icon/Favicon-Entwurf, Abbildung auf Flutter `ThemeData`/Theme-Extensions
-- [ ] Konzept je Screen unter `docs/design/screens/` (Admin-Web, Monitor, App; Liste in der Spec): Zweck,
+- [x] Konzept je Screen unter `docs/design/screens/` (Admin-Web, Monitor, App; Liste in der Spec): Zweck,
       gefundene Usability-Probleme mit Screenshot-Beleg, neues Layout (Wireframe oder HTML-Mockup), alle
       Zustände, Interaktionen, testbare Akzeptanzkriterien, zu erhaltende `Key`s
-- [ ] Mockups der Schlüssel-Screens (mindestens Lage, Monitor-Standby, Monitor-Alarm, App-Alarm,
+- [x] Mockups der Schlüssel-Screens (mindestens Lage, Monitor-Standby, Monitor-Alarm, App-Alarm,
       Mein Fahrzeug) als HTML + PNG in `docs/design/mockups/`
-- [ ] Jedes Konzept vom Architekten abgenommen (max. 2 Änderungsrunden, danach entscheidet der Architekt
+- [x] Jedes Konzept vom Architekten abgenommen (max. 2 Änderungsrunden, danach entscheidet der Architekt
       und vermerkt es im Konzept)
-- [ ] Umsetzungs-Tickets `.scratch/ux/issues/03-…` ff.: zuerst Designsystem (Theme, Schrift, Icon,
+- [x] Umsetzungs-Tickets `.scratch/ux/issues/03-…` ff.: zuerst Designsystem (Theme, Schrift, Icon,
       gemeinsame Widgets), dann je Bereich/Screen-Gruppe; letztes Ticket Abschluss-Regression (Tester).
       Jedes mit „Blocked by“, Verweis auf das Konzept und „Keys + Semantics bleiben erhalten“
-- [ ] Epics der Umsetzungs-Tickets auf dem Board angelegt, sequenziell verkettet; jedes Epic endet mit einer
+- [x] Epics der Umsetzungs-Tickets auf dem Board angelegt, sequenziell verkettet; jedes Epic endet mit einer
       Tester-Verifikationskarte
 
 Spec: `.scratch/ux/spec.md` · Glossar: `CONTEXT.md`

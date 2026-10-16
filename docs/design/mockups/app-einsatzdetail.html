@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>App – Einsatzdetail</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
+  :root{
+    --surface:#FFFFFF; --surface-variant:#F1F3F5; --surface-container:#E8EAED;
+    --outline:#C9CED3; --on-surface:#1B1F23; --on-surface-variant:#4C555C;
+    --primary:#0B5E6B; --on-primary:#FFFFFF; --primary-container:#D3EEF2; --on-primary-container:#0E3A42;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:390px;height:844px;background:var(--surface);color:var(--on-surface);font-family:'Inter',sans-serif;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;font-size:20px;
+    line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;vertical-align:middle;}
+  .wrap{display:flex;flex-direction:column;height:844px;}
+  .appbar{padding:52px 20px 16px 20px;font-size:20px;font-weight:600;border-bottom:1px solid var(--outline);display:flex;align-items:center;gap:12px;}
+  .appbar .back{font-size:22px;}
+  .content{padding:20px;flex:1;overflow:hidden;}
+  .keyword{font-size:24px;font-weight:700;margin-bottom:20px;}
+  .field{margin-bottom:18px;}
+  .field .label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--on-surface-variant);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+  .field .value{font-size:16px;font-weight:500;}
+  .map-card{background:var(--surface-container);border-radius:16px;padding:0;margin:8px 0 18px 0;overflow:hidden;}
+  .map-preview{height:140px;background:linear-gradient(135deg,#CFE8DA,#AEDCC6);display:flex;align-items:center;justify-content:center;color:var(--on-surface-variant);font-size:13px;}
+  .nav-btn{margin:12px;height:48px;border-radius:12px;background:var(--primary);color:var(--on-primary);
+    display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;}
+  .script-card{background:var(--primary-container);color:var(--on-primary-container);border-radius:16px;padding:16px;}
+  .script-card .label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  .script-card .text{font-size:15px;line-height:1.4;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="appbar"><span class="back">←</span>#3 B3 Großbrand Lagerhalle</div>
+  <div class="content">
+    <div class="keyword">Großbrand Lagerhalle</div>
+    <div class="field">
+      <div class="label"><span class="msym">place</span>Adresse</div>
+      <div class="value">Industriestraße 7</div>
+    </div>
+    <div class="field">
+      <div class="label">Lagebeschreibung</div>
+      <div class="value">Starke Rauchentwicklung aus dem Dach.</div>
+    </div>
+    <div class="map-card">
+      <div class="map-preview">(Kartenausschnitt)</div>
+      <div class="nav-btn"><span class="msym">navigation</span>Navigation starten</div>
+    </div>
+    <div class="script-card">
+      <div class="label"><span class="msym">lock</span>Drehbuch – nur für dich sichtbar</div>
+      <div class="text">Aufbau: Nebelmaschine, 2 Darsteller als Verletzte am Lagereingang, Fluchtweg über Hoftor freihalten.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

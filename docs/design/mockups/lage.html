@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>BF-Tag – Lage</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'Material Icons Outlined'; src: url('fonts/MaterialIconsOutlined-Regular.otf'); }
+
+  :root{
+    --surface:#FFFFFF; --surface-variant:#F1F3F5; --surface-container:#E8EAED;
+    --outline:#C9CED3; --on-surface:#1B1F23; --on-surface-variant:#4C555C;
+    --primary:#0B5E6B; --on-primary:#FFFFFF; --primary-container:#D6EEF2;
+    --alarm:#D32F2F; --on-alarm:#FFFFFF; --alarm-container:#FBE9E7;
+    --fms1:#2E7D32; --fms2:#43A047; --fms3:#F2A900; --radius-l:16px; --radius-m:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--surface-variant);font-family:'Inter',sans-serif;color:var(--on-surface);}
+  .app{display:flex;width:1440px;height:900px;overflow:hidden;}
+  .msym{font-family:'Material Icons Outlined';font-weight:normal;font-style:normal;font-size:20px;
+    line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;
+    word-wrap:normal;direction:ltr;}
+
+  /* Sidebar */
+  .sidebar{width:240px;flex:0 0 240px;background:var(--surface-variant);border-right:1px solid var(--outline);
+    display:flex;flex-direction:column;padding:20px 0;}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 20px 20px 20px;font-weight:700;font-size:18px;}
+  .brand .mark{width:28px;height:28px;border-radius:8px;background:var(--primary);display:inline-block;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;font-size:14px;font-weight:500;color:var(--on-surface-variant);
+    border-left:3px solid transparent;cursor:default;}
+  .nav-item .msym{font-size:20px;width:20px;}
+  .nav-item.active{background:var(--primary-container);color:var(--primary);border-left:3px solid var(--primary);font-weight:600;}
+  .nav-spacer{flex:1;}
+  .nav-user{padding:14px 20px;border-top:1px solid var(--outline);font-size:13px;color:var(--on-surface-variant);}
+  .nav-user b{color:var(--on-surface);display:block;font-size:14px;font-weight:600;}
+  .nav-section{padding:14px 20px 6px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--on-surface-variant);}
+
+  /* Main */
+  .main{flex:1;background:var(--surface);overflow:auto;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--outline);}
+  .topbar h1{font-size:24px;font-weight:600;margin:0;}
+  .live{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--on-surface-variant);}
+  .live .pulse{width:8px;height:8px;border-radius:50%;background:var(--fms2);}
+
+  .content{padding:24px 32px;}
+  .section-title{font-size:16px;font-weight:600;margin:0 0 12px 0;}
+
+  .vehicle-row{display:flex;gap:16px;margin-bottom:32px;}
+  .vehicle-card{background:var(--surface-variant);border-radius:var(--radius-l);padding:16px;width:180px;text-align:center;}
+  .vehicle-card .name{font-weight:600;font-size:16px;}
+  .vehicle-card .crew{font-size:13px;color:var(--on-surface-variant);margin:2px 0 10px 0;}
+  .fms-badge{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;
+    font-weight:700;font-size:16px;color:#1B1300;}
+  .fms-badge.s3{background:var(--fms3);}
+  .fms-badge.s2{background:var(--fms2);color:#0B1F0D;}
+
+  .incident-card{background:var(--alarm-container);border:1px solid #F3B9B3;border-radius:var(--radius-l);padding:20px 24px;}
+  .incident-card .row{display:flex;justify-content:space-between;align-items:baseline;}
+  .incident-card .title{font-size:20px;font-weight:700;color:var(--on-surface);}
+  .incident-card .badge{background:var(--alarm);color:var(--on-alarm);font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;margin-right:10px;}
+  .incident-card .since{font-size:13px;color:var(--on-surface-variant);}
+  .actions{display:flex;gap:12px;margin:16px 0;}
+  .btn{padding:10px 18px;border-radius:var(--radius-m);font-weight:600;font-size:14px;cursor:default;border:1px solid transparent;
+    display:inline-flex;align-items:center;gap:8px;}
+  .btn .msym{font-size:18px;}
+  .btn-alarm{background:var(--alarm);color:var(--on-alarm);}
+  .btn-secondary{background:transparent;border:1px solid var(--outline);color:var(--on-surface);}
+  .meta{font-size:13px;color:var(--on-surface-variant);margin:8px 0;}
+  .ack-list{margin-top:12px;border-top:1px solid #F3B9B3;padding-top:12px;}
+  .ack-row{display:flex;align-items:center;gap:10px;font-size:14px;padding:6px 0;}
+  .ack-dot{width:10px;height:10px;border-radius:50%;}
+  .ack-dot.pending{background:var(--fms3);}
+  .ack-dot.none{background:var(--on-surface-variant);opacity:.4;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="brand"><span class="mark"></span>BF-Tag</div>
+    <div class="nav-item active"><span class="msym">home</span>Lage</div>
+    <div class="nav-item"><span class="msym">local_fire_department</span>Einsätze</div>
+    <div class="nav-item"><span class="msym">campaign</span>Durchsagen</div>
+    <div class="nav-item"><span class="msym">event_note</span>Tagesablauf</div>
+    <div class="nav-item"><span class="msym">schedule</span>Schichten</div>
+    <div class="nav-item"><span class="msym">calendar_month</span>BF-Tage</div>
+    <div class="nav-section">Verwaltung</div>
+    <div class="nav-item"><span class="msym">group</span>Personen</div>
+    <div class="nav-item"><span class="msym">local_shipping</span>Fahrzeuge</div>
+    <div class="nav-item"><span class="msym">desktop_windows</span>Monitore</div>
+    <div class="nav-item"><span class="msym">image</span>Folien</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-user"><b>Administrator</b>Administrator · Abmelden</div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <h1>Lage</h1>
+      <div class="live"><span class="pulse"></span>live</div>
+    </div>
+    <div class="content">
+      <div class="section-title">Fahrzeugstatus</div>
+      <div class="vehicle-row">
+        <div class="vehicle-card"><div class="name">HLF-1</div><div class="crew">Florian 46/1</div><div class="fms-badge s3">3</div></div>
+        <div class="vehicle-card"><div class="name">RTW-1</div><div class="crew">Florian 71/1</div><div class="fms-badge s2">2</div></div>
+        <div class="vehicle-card"><div class="name">DLK-1</div><div class="crew">Florian 33/1</div><div class="fms-badge s2">2</div></div>
+      </div>
+
+      <div class="section-title">Laufender Einsatz</div>
+      <div class="incident-card">
+        <div class="row">
+          <div class="title"><span class="badge">ERSTALARM</span>#1 B3 Großbrand Lagerhalle – Industriestraße 7</div>
+          <div class="since">seit 0 min</div>
+        </div>
+        <div class="actions">
+          <div class="btn btn-alarm"><span class="msym">notification_important</span>Nachalarmieren</div>
+          <div class="btn btn-secondary">Einsatz schließen</div>
+        </div>
+        <div class="meta">0 quittiert · 1 ausstehend · 2 kein Gerät &nbsp;·&nbsp; Push: 0 zugestellt · 0 abgelehnt</div>
+        <div class="ack-list">
+          <div class="ack-row"><span class="ack-dot pending"></span>Anna Jugend – HLF-1, GF (ausstehend)</div>
+          <div class="ack-row"><span class="ack-dot none"></span>Ben Jugend – HLF-1, MA (kein Gerät)</div>
+          <div class="ack-row"><span class="ack-dot none"></span>Clara Betreuer – RTW-1, MA (kein Gerät)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
