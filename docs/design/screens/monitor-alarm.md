@@ -53,7 +53,7 @@ FMS-Pillen und Quittiert-Fortschritt, passend zur Einsatzansicht-Fassung.
 │  Starke Rauchentwicklung aus dem Dach.            monitorBody 28, onAlarm     │
 │                                                                                │
 │  [ HLF-1  alarmiert ]   [ RTW-1  alarmiert ]   [ DLK-1  alarmiert ]           │
-│   onAlarm-auf-alarm-Pille, monitorHeadline 40 Name + monitorLabel 22 „alarmiert“│
+│   onAlarm-auf-alarm-Pille, monitorAlarmTitle 56 Name + monitorLabel 22 „alarmiert“│
 │                                                                                │
 │                                                                                │
 │  seit 00:08 · 0/3 quittiert                        monitorBody 28, onAlarm 90%│
@@ -67,15 +67,18 @@ Akzent auf der hellen Alarmfläche) + Icon „notification_important“, das mit
 
 Stichwort in `monitorAlarmTitle` 96 px Bold — die einzige Stelle in der gesamten Oberfläche, die diese
 Rolle nutzt (Designsystem 3.2: „Stichwort im Alarmzustand“ ist exakt dafür vorgesehen). Adresse direkt
-darunter, dann Meldebild (max. 3 Zeilen, danach Kürzung mit „…“ — in diesem Zustand ist nur das Nötigste
-wichtig, der vollständige Text ist ohnehin in `monitor-einsatz.md` nach dem Übergang zu sehen).
+darunter, dann Meldebild (**mindestens 40 px** `monitorBody`-Stufe, vorher 28 px — Review-Runde 1 Punkt 10:
+auf der lautesten, am wenigsten mit Inhalt gefüllten Fläche der App darf kein Text kleiner sein als auf den
+ruhigeren Screens; max. 3 Zeilen, danach Kürzung mit „…“ — in diesem Zustand ist nur das Nötigste wichtig,
+der vollständige Text ist ohnehin in `monitor-einsatz.md` nach dem Übergang zu sehen).
 
-Fahrzeugchips: Fahrzeugname (`monitorHeadline` 40) + Label „alarmiert“ (`monitorLabel` 22) auf
-`onAlarm`-bei-16%-Fläche-Pille (dunkler Ton auf hellem Alarmrot, wie im bestehenden Mockup) — bewusst
-**keine FMS-Pille** hier (die Fahrzeuge haben in diesem Moment typischerweise noch FMS 3 „Einsatz
-übernommen“ oder sind mitten im Statuswechsel; die FMS-Farbpalette hier einzublenden würde zwei Farbsysteme
-auf einer Fläche mischen und die Lesbarkeit aus 10 m verschlechtern) — FMS-Status erscheint erst wieder in
-der ruhigeren Einsatzansicht.
+Fahrzeugchips: Fahrzeugname **in `monitorAlarmTitle` 56 px** (vorher `monitorHeadline` 40 — Review-Runde 1
+Punkt 10, die Fläche hatte laut Mockup ca. 45 % ungenutzten Leerraum, der jetzt in größere, aus 10 m noch
+leichter lesbare Chips fließt) + Label „alarmiert“ (`monitorLabel` 22) auf `onAlarm`-bei-16%-Fläche-Pille
+(dunkler Ton auf hellem Alarmrot, wie im bestehenden Mockup) — bewusst **keine FMS-Pille** hier (die
+Fahrzeuge haben in diesem Moment typischerweise noch FMS 3 „Einsatz übernommen“ oder sind mitten im
+Statuswechsel; die FMS-Farbpalette hier einzublenden würde zwei Farbsysteme auf einer Fläche mischen und die
+Lesbarkeit aus 10 m verschlechtern) — FMS-Status erscheint erst wieder in der ruhigeren Einsatzansicht.
 
 Fußzeile: „seit mm:ss“ (Laufzeit seit `triggeredAt` **dieser** Alarmierung, nicht des Einsatzes insgesamt —
 bei einer Nachalarmierung ist das die Zeit seit der Nachalarmierung, nicht seit dem Erstalarm) + „X/Y
@@ -101,17 +104,48 @@ da in den ersten Sekunden ohnehin kaum jemand quittiert haben wird).
 - **Reduced-Motion aktiv:** kein Puls am Badge-Icon, Icon bleibt statisch sichtbar (Designsystem 7) — der
   Fade-in beim Erscheinen entfällt ebenfalls (0 ms, Fläche erscheint sofort), damit Alarmierung bei
   deaktivierten Animationen nicht verzögert wirkt.
-- **Verbindungsverlust während des Alarmzustands:** schmale `surfaceVariant`/„cloud_off“-Leiste oben
-  (32 px, dieselbe wie in den anderen Monitor-Screens) — erscheint **über** der Alarmfläche, verdrängt
-  nichts von Stichwort/Adresse (die beginnen entsprechend 32 px tiefer). Der Alarm bleibt trotz
-  Verbindungsproblem vollständig sichtbar — anders als bei Standby/Einsatzansicht hat ein Verbindungsproblem
-  hier keine Priorität vor der Alarmdarstellung selbst.
+- **Verbindungsverlust während des Alarmzustands:** dasselbe Verbindungsbanner wie in
+  `monitor-standby.md`/`monitor-einsatz.md` (Abschnitt 3 dort — volle Breite, ≥ 56 px, `surfaceVariant`,
+  Review-Runde 1 Punkt 7: eine Komponente, eine Höhe, eine Position auf allen drei Monitor-Screens) —
+  erscheint **über** der Alarmfläche, verdrängt nichts von Stichwort/Adresse (die beginnen entsprechend
+  56 px tiefer). Der Alarm bleibt trotz Verbindungsproblem vollständig sichtbar — anders als bei
+  Standby/Einsatzansicht hat ein Verbindungsproblem hier keine Priorität vor der Alarmdarstellung selbst.
 - **Alarm läuft ab, während bereits ein anderer Alarmzustand gezeigt wird** (zweiter, unabhängiger Einsatz
   wird mitten im ersten Alarmzustand ausgelöst): der neue Alarm ersetzt sofort den alten (gleiches
   Verhalten wie heute bei `_shownIncidentId`-Überschreibung durch `liveAlarmTriggeredProvider`), der alte
   Einsatz ist weiterhin über die normale Rotation der Einsatzansicht erreichbar, verliert aber keine Daten.
+- **Zwei/mehrere `alarm.triggered`-Events für denselben Einsatz kurz hintereinander, innerhalb der
+  laufenden 20-s-Anzeigedauer** (Review-Runde 1 Punkt 11, Randfall des 20-s-Timers — bisher nicht
+  spezifiziert): der laufende 20-s-Timer **wird neu gestartet** (nicht verlängert/addiert, nicht ignoriert)
+  — jede neue Alarmierung verdient volle 20 s eigene Sichtbarkeit, sonst könnte eine schnell aufeinander
+  folgende Nachalarmierung bei schlechtem Timing weniger als die vollen 20 s zu sehen bekommen. Badge-Text/
+  Fahrzeugliste aktualisieren sich dabei sofort auf den neuesten Stand (wie im bestehenden Verhalten „neuer
+  Alarm ersetzt den alten“ oben).
+- **`alarm.triggered` für einen komplett anderen Einsatz, während der 20-s-Timer für Einsatz A noch läuft**
+  (Randfall, Abgrenzung zum vorherigen Punkt): wie im bereits bestehenden Zustand „Alarm läuft ab, während
+  bereits ein anderer Alarmzustand gezeigt wird“ oben beschrieben — der neue Einsatz B ersetzt sofort die
+  Anzeige, bekommt seine eigenen vollen 20 s, Einsatz A bleibt über die Rotation der Einsatzansicht
+  erreichbar.
+- **Monitor koppelt/lädt neu, während serverseitig ein `alarm.triggered` im Snapshot-Fenster liegt** (Randfall
+  der bestehenden Snapshot-Ausnahme aus Abschnitt 5 „Auslöser“): zeigt **nicht** den lauten Alarmzustand
+  (kein Timer startet), sondern direkt `MonitorIncidentScreen` — konsistent mit der bestehenden Regel
+  „Alarms arriving via the initial snapshot never ring the gong“, hier erweitert um „... und lösen auch
+  keinen visuellen Alarmzustand aus“, da beide Signale (Ton + Vollflächen-Alarm) dieselbe Bedingung teilen
+  (ein frisch koppelnder Monitor darf nicht rückwirkend für längst erfolgte Alarmierungen alarmieren).
+- **Browser-Tab/Gerät verliert währenddessen den Fokus/wird minimiert** (kein praktischer Fall auf einem
+  fest verbauten Monitor-TV, aber zur Vollständigkeit): der 20-s-Timer läuft serverseitig/im App-State
+  unverändert weiter (`Timer`, kein `AnimationController`, der bei fehlendem Vsync pausieren könnte) — beim
+  Zurückkehren in den Vordergrund zeigt der Screen korrekt den Zustand, der zur verstrichenen Zeit passt
+  (Alarm oder bereits die ruhige Einsatzansicht), kein Nachholen/Wiederholen der 20 s.
 
 ## 5. Interaktionen/Übergänge
+
+**Lebenszyklus des 20-s-Alarmzustands (Review-Runde 1 Punkt 11, Zusammenfassung aller Randfälle):**
+jedes `alarm.triggered` außerhalb des initialen Snapshots startet (oder **neu startet**, falls bereits
+einer läuft) einen 20-s-Timer und zeigt die Vollflächen-Alarmfläche für genau diesen Einsatz/diese
+Alarmierung; läuft der Timer ab, ohne dass ein neueres Event ihn zurückgesetzt hat, folgt der automatische
+Cross-Fade zu `MonitorIncidentScreen`. Es existiert zu jedem Zeitpunkt höchstens ein aktiver 20-s-Timer.
+Details/Randfälle siehe Abschnitt 4.
 
 - **Auslöser:** jedes live empfangene `alarm.triggered`-Event (Erstalarm oder Nachalarmierung) — **nicht**
   Alarme, die bereits im initialen Snapshot enthalten waren (bestehende Unterscheidung bleibt: „Alarms
@@ -156,6 +190,11 @@ da in den ersten Sekunden ohnehin kaum jemand quittiert haben wird).
    unterschiedlicher `vehicleIds`-Mengen für denselben Einsatz.
 8. Gong (`alarmSoundProvider.play()`) wird weiterhin genau einmal pro `alarm.triggered` aufgerufen,
    unabhängig vom neuen visuellen Zustand — bestehender Test „rings the gong exactly once“ bleibt grün.
+9. Trifft ein zweites `alarm.triggered` für denselben Einsatz ein, während der 20-s-Timer noch läuft, startet
+   der Timer neu bei 20 s (Fake-Timer-Test: nach 15 s zweites Event, danach muss der Übergang erst bei
+   `15+20=35` s Gesamtzeit erfolgen, nicht bei den ursprünglichen 20 s) — Abschnitt 4/5 „Lebenszyklus“.
+10. Meldebild-Text im Alarmzustand ist ≥ 40 px, Fahrzeugchip-Name ≥ 56 px (Layout-/Schriftgrößen-Test gegen
+    die `TextStyle`-Werte) — Review-Runde 1 Punkt 10.
 
 ## 7. Zu erhaltende Keys + Semantics
 

@@ -9,8 +9,16 @@ Quelle: `apps/web/lib/screens/monitor_pairing_screen.dart`.
 Erster Bildschirm nach dem Öffnen von `/monitor` auf einem neuen/entkoppelten Gerät. Ein Betreuer steht
 vor dem TV (oder bedient es per Fernbedienung/Tastatur) und trägt einen 8-stelligen Kopplungscode ein, den
 er zuvor in der Admin-Web unter „Monitore“ erzeugt hat. Danach läuft der Monitor unbeaufsichtigt weiter
-(Standby/Einsatzansicht/Alarm) — Kopplung ist die einzige Interaktion, die je auf diesem Gerät stattfindet,
-außer einer erneuten Kopplung nach Sperrung.
+(Standby/Einsatzansicht/Alarm).
+
+**Korrektur Review-Runde 1:** „Kopplung ist die einzige Interaktion“ war falsch — vor der Kopplung (und bei
+jedem Neustart/Browser-Reload des Geräts) zeigt `monitor_screen.dart:117/204–231` zunächst ein
+**Aktivierungs-Overlay** (`_ActivationOverlay`, Key `monitor-activation-overlay`): ein Tap irgendwo auf die
+Fläche aktiviert WakeLock + Vollbild und schaltet die Audiowiedergabe des Browsers für den Rest der Sitzung
+frei (ADR 0017 — ohne diesen einen Tap als „genuine user gesture“ bleibt der Alarm-Gong stumm, Browser-
+Autoplay-Policy). Das ist die **einzige** Interaktion, die auf jedem Monitor-Gerät garantiert stattfinden
+muss, Kopplung ist die zweite. Dieses Dokument behandelt daher beide Schritte: Aktivierung (§3/§4 erster
+Zustand) und Kopplung (§3/§4 übrige Zustände).
 
 ## 2. Usability-Probleme heute (Screenshot `docs/design/screenshots/before/monitor/kopplung-1920x1080.png`)
 
@@ -30,8 +38,40 @@ außer einer erneuten Kopplung nach Sperrung.
    zum Format außer dem Platzhalter `ABCD-EFGH` (verschwindet beim Tippen, kein Label bleibt stehen).
 7. Lade-/Offline-Zustand während der Kopplung (bei Verbindungsverlust, laut Regressionsnetz bereits getestet)
    hat aktuell keine sichtbar eigene Gestaltung — nur der generische Fehlertext.
+8. **Aktivierungs-Overlay ohne jede Erklärung** (`_ActivationOverlay`, `monitor_screen.dart:204–231`): reiner
+   Fließtext „Zum Aktivieren tippen“, 48 px Weiß auf Schwarz, kein Icon, keine Markenidentität, kein Hinweis
+   *warum* ein Tap nötig ist. Ein Betreuer, der das Gerät zum ersten Mal einrichtet, versteht nicht, dass genau
+   dieser Tap später den Alarm-Gong freischaltet — tippt er stattdessen direkt den Kopplungscode über eine
+   angeschlossene Tastatur ein (ohne vorher irgendwo zu *klicken*), bleibt der Gong im Ernstfall stumm, ohne
+   dass irgendeine UI das je sichtbar gemacht hätte. Zweiter, eigenständiger Zustand desselben Grundproblems
+   wie 1–6: Information fehlt bzw. ist zu klein/unauffällig für die Tragweite.
 
 ## 3. Neues Layout
+
+### 3.1 Aktivierung (vorgelagerter Zustand, eigene PNG `monitor-aktivierung.png`)
+
+Pixelraster 1920×1080, Grund bleibt bewusst reines Schwarz (nicht `surface` #14181C) — das ist die einzige
+Fläche der gesamten App, die absichtlich *vor* dem Theme liegt: Sie muss funktionieren, noch bevor irgendein
+Font/Theme geladen hat, und signalisiert „hier passiert noch nichts, bis du tippst“, nicht „das ist schon der
+Monitor“. Ganze Fläche ist die Tap-Zone (`Key('monitor-activation-overlay')`), kein kleiner Button.
+
+```
+┌──────────────────────────────── 1920×1080 ────────────────────────────────┐
+│                                   (Schwarz)                                │
+│                              [Icon-Marke 96×96]            y≈420          │
+│                                                                            │
+│                         Zum Aktivieren tippen              monitorAlarmTitle-Stufe 48, Bold, Weiß │
+│                                                                            │
+│              Aktiviert Vollbild und Ton für Alarmdurchsagen.               monitorBody 28, Weiß 70 %│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+Icon-Marke (dasselbe `app-icon-mono.svg`, Weiß statt `primary` — auf Schwarz vor Theme-Laden gibt es noch
+keine Tokens) stiftet Wiedererkennung mit dem Kopplungsbildschirm direkt danach. Zweite Zeile „Aktiviert
+Vollbild und Ton für Alarmdurchsagen.“ ist **neu** (behebt Problem 8): macht genau das sichtbar, was der Tap
+bewirkt, ohne technisches Vokabular („WakeLock“/„Autoplay-Policy“) zu verwenden.
+
+### 3.2 Kopplung
 
 Pixelraster 1920×1080, dunkler Grund (`surface` #14181C, identisch zu Standby/Einsatz — ein Monitor hat
 genau eine visuelle Basis in allen Zuständen). Zentrierte Karte, kein Vollbild-Formular ohne Kontext.
@@ -67,6 +107,9 @@ Icon-Marke: `app-icon-mono.svg` aus `docs/design/icon/`, 96×96, Farbe `primary`
 
 ## 4. Alle Zustände
 
+- **Aktivierung (vor allem anderen, bei jedem Start/Reload):** siehe Abschnitt 3.1 — ganze Fläche tappbar,
+  kein Timeout, kein automatisches Weiterschalten (muss ein echter Nutzer-Tap sein, sonst bleibt die
+  Audiofreigabe des Browsers aus). Verschwindet sofort nach dem Tap, kein Bestätigungs-Zwischenschritt.
 - **Leer (Erstbesuch):** wie oben, Feld leer, Fokus automatisch im Feld (`autofocus`, bleibt erhalten),
   kein Fehlertext, kein Revoked-Hinweis.
 - **Eingabe:** Zeichen erscheinen in `monitorDisplay` 64 px mit Tracking 4 px (wie heute), Groß-Umwandlung
@@ -86,12 +129,28 @@ Icon-Marke: `app-icon-mono.svg` aus `docs/design/icon/`, 96×96, Farbe `primary`
   „Dieser Monitor wurde gesperrt oder neu gekoppelt.“
 - **Viele/lange Fehlermeldungen:** Fehlertext max. 2 Zeilen, zentriert, `monitorBody` 28 px — Texte aus dem
   Code sind kurze Sätze, das reicht immer aus (keine Kürzung nötig).
-- **Verbinden/Restore (`_MonitorConnectingScreen`, eigener Screen, kein Teil der Kopplung selbst):** bleibt
-  wie heute als eigener Zwischenzustand, aber Text „Verbinde …“ wächst auf `monitorHeadline` 40 px
-  (Key `monitor-connecting` bleibt), zentriert, mit derselben Icon-Marke darüber für Konsistenz.
+- **`MonitorUnknown` (Sitzung wird wiederherstellt, `MonitorSessionController.restore()` noch nicht
+  abgeschlossen):** eigener Zwischenzustand (`_MonitorConnectingScreen`, kein Teil der Kopplung selbst),
+  Text „Verbinde …“ wächst auf `monitorHeadline` 40 px (Key `monitor-connecting` bleibt), zentriert, mit
+  derselben Icon-Marke darüber für Konsistenz.
+- **`MonitorOffline` (Netzwerkfehler beim Restore/Reconnect, gespeichertes Pairing-Token bleibt erhalten):**
+  **Review-Runde 1 — Entscheidung:** zeigt denselben Screen/Text wie `MonitorUnknown` (identischer
+  `_MonitorConnectingScreen`, derselbe Key `monitor-connecting`). Begründung: Beide Zustände verlangen von
+  einem unbeaufsichtigten Gerät exakt dieselbe Handlung — nichts tun, automatisch weiter versuchen — ein
+  unterschiedlicher Text („Verbindung verloren“ vs. „Verbinde …“) würde einem zufällig vorbeigehenden
+  Betreuer eine Fehlersituation suggerieren, die keine Handlung von ihm erfordert und sich selbst behebt,
+  sobald das Netz zurückkommt (anders als bei Standby/Einsatz/Alarm, wo die einheitliche
+  Verbindungsbanner-Komponente aus Abschnitt 5/7 der anderen Dokumente läuft, *während* bereits Inhalte
+  sichtbar sind — hier gibt es noch keinen Inhalt, den ein Banner ergänzen könnte, der ganze Screen *ist*
+  der Wartezustand). Das gespeicherte Token bleibt erhalten, kein Rückfall auf `MonitorPairingScreen`
+  (ein gültiges Pairing darf durch einen vorübergehenden Netzwerkfehler nicht verloren gehen).
 
 ## 5. Interaktionen/Übergänge
 
+- **Aktivierung:** ganze Fläche ist Tap-Ziel, kein `onSubmitted`/Tastatur-Pfad nötig (Fernbedienung „OK“
+  zählt als Tap). Nach dem Tap sofortiger, ungedämpfter Wechsel (kein Fade, Designsystem 7: Statuswechsel
+  ohne inhaltliche Dringlichkeit dürfen schnell/ohne Animation sein) zu Kopplung oder Standby, je nach
+  `MonitorSessionState`.
 - Vollständig tastatur-/fernbedienungsbedienbar: Autofocus im Feld, Enter/OK sendet (`onSubmitted`, bleibt),
   Tab/Pfeiltasten wechseln zum Button.
 - Erfolgreiche Kopplung: kein Zwischenbildschirm/Bestätigungstoast — direkter, 200 ms Fade-in-Übergang
@@ -100,34 +159,45 @@ Icon-Marke: `app-icon-mono.svg` aus `docs/design/icon/`, 96×96, Farbe `primary`
 
 ## 6. Testbare Akzeptanzkriterien
 
-1. `Key('monitor-pairing-code')` ist ein Textfeld mit Label „Kopplungscode“, Platzhalter `ABCD-EFGH`,
+1. `Key('monitor-activation-overlay')` deckt die volle Fläche ab, ist tappbar, und wechselt nach einem Tap
+   zu Kopplung/Standby (bestehender Test „unpaired -> pairing screen“ ergänzt um den vorausgehenden Tap);
+   `enableWakeLock()`, `requestFullscreen()` und `alarmSoundProvider.unlock()` werden genau einmal pro Tap
+   aufgerufen (bestehendes Verhalten, nur jetzt dokumentiert/getestet).
+2. Vor dem ersten Tap ist weder das Kopplungsfeld noch die Standby-Ansicht im Widget-Baum vorhanden (Fake-
+   Verify, dass `_activated == false` den gesamten übrigen Baum ersetzt, nicht nur überlagert).
+3. `MonitorOffline` und `MonitorUnknown` rendern beide `Key('monitor-connecting')` mit identischem Text
+   „Verbinde …“ — Widget-Test mit beiden States prüft denselben Finder/Text für beide.
+4. `Key('monitor-pairing-code')` ist ein Textfeld mit Label „Kopplungscode“, Platzhalter `ABCD-EFGH`,
    `autofocus: true`, akzeptiert weiterhin `[A-Za-z0-9\-\s]`.
-2. `Key('monitor-pairing-submit')` ist bei leerem Feld und während des Sendens deaktiviert; zeigt während
+5. `Key('monitor-pairing-submit')` ist bei leerem Feld und während des Sendens deaktiviert; zeigt während
    des Sendens einen `CircularProgressIndicator` statt des Texts „Koppeln“, bleibt in derselben Größe.
-3. Bei einem Fehler zeigt `Key('monitor-pairing-error')` den Fehlertext in `BftagAlarmColors`-unabhängiger,
+6. Bei einem Fehler zeigt `Key('monitor-pairing-error')` den Fehlertext in `BftagAlarmColors`-unabhängiger,
    `warning`-Farbe (Kontraststprüfung: nicht `alarm`/`onAlarm`-Token) — Snapshot-/Pixelvergleich oder
    Farbwert-Assertion im Widget-Test.
-4. Kein Widget auf diesem Screen verwendet `Colors.red*`/`Colors.orange*` direkt — nur Theme-Tokens
+7. Kein Widget auf diesem Screen verwendet `Colors.red*`/`Colors.orange*` direkt — nur Theme-Tokens
    (`ColorScheme`, `BftagAlarmColors`, `BftagStatusColors`). Grep-Test: keine `Colors.red`/`Colors.orange`
    in `monitor_pairing_screen.dart` nach Umsetzung.
-5. `Key('monitor-revoked-hint')` erscheint nur, wenn `revokedHint == true`, Text unverändert
+8. `Key('monitor-revoked-hint')` erscheint nur, wenn `revokedHint == true`, Text unverändert
    „Dieser Monitor wurde gesperrt oder neu gekoppelt.“, Farbe `onSurfaceVariant` statt `orangeAccent`.
-6. Größter Text auf dem Screen (`monitorDisplay`, Codefeld) ≥ 64 px, kleinster Fließtext (Fußzeile) ≥ 22 px
+9. Größter Text auf dem Screen (`monitorDisplay`, Codefeld) ≥ 64 px, kleinster Fließtext (Fußzeile) ≥ 22 px
    (Designsystem 3.2 Mindestgröße 22 px) — Layout-Test oder manuelle Prüfung am gerenderten Mockup.
-7. Bei erfolgreicher Kopplung navigiert der Screen weiterhin zu `MonitorStandbyScreen` (bestehendes
-   Verhalten aus `monitor_screen_test.dart`: „unpaired -> pairing screen; entering a code pairs ... and
-   shows standby“ bleibt grün, ggf. mit angepassten Finder-Strings für neue Labels).
+10. Bei erfolgreicher Kopplung navigiert der Screen weiterhin zu `MonitorStandbyScreen` (bestehendes
+    Verhalten aus `monitor_screen_test.dart`: „unpaired -> pairing screen; entering a code pairs ... and
+    shows standby“ bleibt grün, ggf. mit angepassten Finder-Strings für neue Labels).
 
 ## 7. Zu erhaltende Keys + Semantics
 
-Aus `apps/web/lib/screens/monitor_pairing_screen.dart` (grep-geprüft, keine `Semantics(...)` auf diesem
-Screen vorhanden — reine Text-/Eingabe-Keys):
+Aus `apps/web/lib/screens/monitor_pairing_screen.dart` und `monitor_screen.dart` (grep-geprüft, keine
+`Semantics(...)` auf diesen Screens vorhanden — reine Text-/Eingabe-Keys):
 
+- `Key('monitor-activation-overlay')` (in `monitor_screen.dart`, `_ActivationOverlay` — neu in diesem
+  Dokument aufgenommen, Review-Runde 1 Punkt 1)
 - `Key('monitor-revoked-hint')`
 - `Key('monitor-pairing-code')`
 - `Key('monitor-pairing-error')`
 - `Key('monitor-pairing-submit')`
-- `Key('monitor-connecting')` (in `monitor_screen.dart`, `_MonitorConnectingScreen` — gehört zum selben Flow)
+- `Key('monitor-connecting')` (in `monitor_screen.dart`, `_MonitorConnectingScreen` — deckt sowohl
+  `MonitorUnknown` als auch `MonitorOffline` ab, siehe Abschnitt 4)
 
 Neu empfohlen (nicht zwingend, erleichtert Tests für das neue Label/den Fehler-Icon-Zustand):
 `Key('monitor-pairing-code-label')` für das stehende Feld-Label, falls der Coder es als eigenes Text-Widget
@@ -137,12 +207,14 @@ umsetzt statt als `InputDecoration.labelText` (dann reicht der bestehende Key am
 
 | Funktion (Inventar) | Bleibt erhalten als |
 |---|---|
-| anzeigen (Code-Eingabe-UI) | Abschnitt 3, Zustand „Leer“ — gleiches Feld, gleicher Key, zusätzlich Label |
+| anzeigen (Code-Eingabe-UI) | Abschnitt 3.2, Zustand „Leer“ — gleiches Feld, gleicher Key, zusätzlich Label |
 | Navigation (Erfolg → Standby) | Abschnitt 5 — unverändertes Verhalten, nur neuer Übergangs-Fade |
 | Fehlerzustand (ungültiger Code) | Abschnitt 4 „Fehler“ — Text/Key unverändert, nur Farbe `warning` statt Rot |
-| Offline/Verbindungsverlust | Abschnitt 4 „Verbindungsverlust beim Senden“ — Text „Server nicht erreichbar.“ unverändert |
+| Offline/Verbindungsverlust | Abschnitt 4 „`MonitorOffline`“ + „Verbindungsverlust beim Senden“ — Text/Keys unverändert |
+| Aktivierung (WakeLock/Vollbild/Audiofreigabe) | Abschnitt 3.1/4/6 — bisher nicht dokumentiert, Verhalten unverändert, nur jetzt mit Begründungstext und ACs versehen |
 | anlegen/bearbeiten/löschen/Echtzeit-Updates | n/a (gilt hier wie im Inventar, keine Änderung) |
 
-Keine Funktion entfällt. Einzige Abweichung vom bisherigen Verhalten: Farben folgen jetzt den Tokens
-(kein Rot/Orange mehr außerhalb von Alarm/FMS), das Feld bekommt ein stehendes Label statt reinem
-Platzhalter — beides ausdrücklich als Usability-Verbesserung begründet (Abschnitt 2, Punkte 3–6).
+Keine Funktion entfällt. Abweichungen vom bisherigen Verhalten: Farben folgen jetzt den Tokens (kein
+Rot/Orange mehr außerhalb von Alarm/FMS), das Feld bekommt ein stehendes Label statt reinem Platzhalter,
+das Aktivierungs-Overlay bekommt eine erklärende zweite Zeile — alle drei ausdrücklich als
+Usability-Verbesserung begründet (Abschnitt 2, Punkte 3–6, 8).

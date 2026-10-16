@@ -40,33 +40,32 @@ denselben Screen, da heute kein eigener Alarmzustand existiert — siehe `monito
 
 ## 3. Neues Layout
 
-Gleiches Grundraster wie Standby (Kopfzeile fix 140 px), damit der Übergang zwischen beiden Screens sich wie
-derselbe Monitor anfühlt, nicht wie ein Appwechsel.
+Gleiches Grundraster wie Standby (Kopfzeile fix 140 px, Verbindungsbanner-Slot wie in `monitor-standby.md`
+Abschnitt 3 — Review-Runde 1 Punkt 7, identische Komponente/Position/Höhe auf allen drei Monitor-Screens),
+damit der Übergang zwischen beiden Screens sich wie derselbe Monitor anfühlt, nicht wie ein Appwechsel.
 
 ```
 ┌───────────────────────────────── 1920×1080 ──────────────────────────────────┐
-│ Kopfzeile y:0–140  (surface)                                                 │
-│  EINSATZ 3 · B2 Kellerbrand         08:34:40      seit 00:42   [2/5 quittiert]│
-│  monitorHeadline 40     keyword in `alarm` monitorHeadline 40   monitorLabel 22│
-│  (kleiner, ruhiger Status-Chip statt lautem Badge, s.u.)                      │
+│ Verbindungsbanner  y:0–56   (nur sichtbar, wenn nicht live — surfaceVariant) │
+├────────────────────────────────────────────────────────────────────────────┤
+│ Kopfzeile y:56–196 (bzw. 0–140 ohne Banner)                                  │
+│  EINSATZ 3 · B2 Kellerbrand         08:34:40      seit 00:42                 │
+│  monitorHeadline 40     keyword in `alarm` monitorHeadline 40                │
+│  Hauptstraße 1                           [ERSTALARM] (neutral)  [2/5 quittiert]│
+│  monitorBody 28                          monitorLabel 22         monitorLabel 22│
 ├───────────────────────────────┬──────────────────────────────────────────────┤
-│ Meldebild  (x:0–960)          │ Karte  (x:960–1920, y:140–760, 620 px hoch)   │
-│ y:140–460                      │ echte Kartenkachel + Marker Einsatzort,      │
-│ monitorBody 28, max 6 Zeilen,  │ Marker Station (falls bekannt), Fallback s.u.│
-│ danach Scroll-Indikator „⌄“    │                                              │
-│ (kein echtes Scrollen, nur     │                                              │
-│  Hinweis, dass mehr Text da ist│                                              │
-│  — s. Abschnitt 4)             │                                              │
+│ Meldebild  (x:0–960)          │ Karte  (x:960–1920, y:196–930, ≈734 px hoch)  │
+│ y:196–516                      │ lokale, stilisierte Kartengrafik (SVG) +     │
+│ monitorBody 28, max 6 Zeilen,  │ Marker Einsatzort, Marker Station (falls     │
+│ danach Scroll-Indikator „⌄“    │ bekannt), Fallback s. u.                     │
 ├───────────────────────────────┤                                              │
-│ Quittiert  y:460–760           │                                              │
+│ Quittiert  y:516–930           │                                              │
 │ Fortschritt „2/5 quittiert“     │                                              │
-│ (groß, monitorHeadline 40)      │                                              │
-│ Namenliste darunter, 2-spaltig,│                                              │
-│ Icon je Person, monitorBody 28 │                                              │
+│ Namenliste darunter, 2-spaltig│                                              │
 ├───────────────────────────────┴──────────────────────────────────────────────┤
-│ Fahrzeuge  y:760–1080 (volle Breite, surfaceVariant-Flächenkarten)            │
-│  [HLF-1  FMS 4 ●]   [RTW-1  FMS 3 ●]   [DLK-1  FMS 2 ●]   ...                 │
-│  monitorHeadline 40 Name, FMS-Pille 56px nach Designsystem 5.5 (Tokens!)      │
+│ Fahrzeuge  y:930–1080 (150 px, volle Breite, surfaceVariant-Flächenkarten)    │
+│  [HLF-1 · Florian 46/1  FMS 4 ●]  [RTW-1 · Florian 71/1  FMS 3 ●]  ...        │
+│  monitorHeadline 40 Name + monitorLabel 22 Rufname, FMS-Pille 56px (5.5)      │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,28 +73,48 @@ derselbe Monitor anfühlt, nicht wie ein Appwechsel.
 dunklem `surface` — bewusst die einzige Stelle außerhalb des Alarmzustands, an der Alarmrot als *Text*
 erscheint: markiert „dies ist ein alarmierter Einsatz“, ohne die Fläche zu fluten, siehe Designsystem
 Grundprinzip 1 — Textfarbe, nicht Vollflächen-Alarm). Adresse direkt darunter in `onSurfaceVariant`
-`monitorBody` 28 (heute separat als dritte Zeile, bleibt). Uhrzeit + Laufzeit rechtsbündig. Der bisherige
-laute Alarm-Badge (`monitor-incident-alarm-label`) wird zu einem **ruhigen Status-Chip** „2/5 quittiert“ in
-`primaryContainer` (behebt Problem 4 und 6 gleichzeitig: ersetzt den dauerhaften „ERSTALARM“-Look durch den
-tatsächlich relevanten Fortschritt; das laute Label existiert weiterhin, aber nur im separaten
-Alarmzustand kurz nach dem Auslösen, siehe `monitor-alarm.md`).
+`monitorBody` 28 (heute separat als dritte Zeile, bleibt). Uhrzeit + Laufzeit rechtsbündig oben.
 
-**Karte**: 620 px hoch (vorher 160 px), rechte Bildschirmhälfte — der mit Abstand größte Zugewinn an
-Nutzwert, da „wohin muss das Fahrzeug fahren“ visuell der Kern der Einsatzansicht ist. Marker für
-Einsatzort (Stecknadel, `alarm`-Farbe) und optional Wache (Hausmarker, `primary`-Farbe), `interactive: false`
-bleibt (kein Touch/Zoom auf dem Monitor). **Fallback, wenn Kacheln nicht laden oder `incident.location`
-fehlt**: neutrale `surfaceVariant`-Fläche mit Icon „location_off“ 48 px + Text „Karte nicht verfügbar“ bzw.
+**Zwei getrennte Chips (Review-Runde 1 Punkt 8 — Korrektur gegenüber der ersten Fassung dieses Dokuments):**
+Die erste Fassung hatte `monitor-incident-alarm-label` zu einem reinen Quittiert-Fortschritts-Chip
+umgebaut — das hätte die Information „ERSTALARM“/„N. NACHALARMIERUNG“ verloren (Funktionsverlust,
+`alarmSequenceLabel` wäre nirgends mehr sichtbar). **Entscheidung:** es gibt stattdessen zwei unabhängige,
+ruhige Chips nebeneinander in der Kopfzeile:
+
+- `Key('monitor-incident-alarm-label')` (**bestehender Key, Inhalt unverändert** — zeigt weiterhin
+  `alarmSequenceLabel(...)`, also „ERSTALARM“/„1. NACHALARMIERUNG“/…) wird nur **visuell** auf einen
+  ruhigen, neutralen Chip umgestellt: `surfaceVariant`-Fläche, `onSurfaceVariant`-Text, `monitorLabel` 22,
+  **kein** Amber, **kein** Rot — der laute, pulsierende Amber-Badge-Look existiert ab jetzt ausschließlich
+  im separaten Alarmzustand (`monitor-alarm.md`), hier ist er nur noch ein ruhiger Kontext-Hinweis
+  „welche Alarmierung war die letzte“, passend zur generellen Ruhe dieses Screens (behebt Problem 4).
+- `Key('monitor-incident-ack-progress')` (**neu**) zeigt „2/5 quittiert“ in `primaryContainer`,
+  `monitorLabel` 22 — das ersetzt, was die erste Fassung versehentlich in `monitor-incident-alarm-label`
+  gepackt hatte, jetzt als eigener Key ohne eine bestehende Funktion zu verdrängen (behebt Problem 6
+  gleichzeitig: ein Betreuer muss die Ack-Icons nicht mehr einzeln zählen).
+
+**Karte**: ≈734 px hoch (y:196–930, vorher 160 px) — der mit Abstand größte Zugewinn an Nutzwert, da „wohin
+muss das Fahrzeug fahren“ visuell der Kern der Einsatzansicht ist. **Keine externen Kartenkacheln im
+Mockup** (Review-Runde 1 Punkt 9 — das vorherige Mockup zeigte nur den Fallback, nie die eigentliche Karte):
+Die gerenderte PNG `monitor-einsatz.png` zeigt ein **lokales, stilisiertes SVG-Kartenbild** (Straßenraster,
+Blockflächen, Marker) als Platzhalter für echte Kartenkacheln zur Laufzeit — kein Netzwerkzugriff beim
+Rendern des Mockups, aber visuell demonstriert, wie die Karte mit Marker aussieht, statt nur den
+Fehlerzustand zu zeigen. Marker für Einsatzort (Stecknadel, `alarm`-Farbe) und optional Wache (Hausmarker,
+`primary`-Farbe), `interactive: false` bleibt (kein Touch/Zoom auf dem Monitor). **Fallback, wenn Kacheln
+nicht laden oder `incident.location` fehlt** (separat gerendert als `monitor-einsatz-fallback.png`):
+neutrale `surfaceVariant`-Fläche mit Icon „location_off“ 48 px + Text „Karte nicht verfügbar“ bzw.
 „Keine Standortdaten“ (zwei unterschiedliche Texte für die zwei Ursachen) — niemals die rohe
 Tile-Provider-Fehlermeldung anzeigen (behebt Problem 2/3).
 
-**Meldebild+Quittiert**: linke Spalte jetzt in zwei Zeilen übereinander (nicht mehr nebeneinander) —
-Meldebild oben (meist kurz), Quittiert-Fortschritt+Liste darunter, damit beide den tatsächlich benötigten
-Raum bekommen statt beide auf volle Höhe gestreckt zu werden (behebt Problem 1). Flächentrennung über
+**Meldebild+Quittiert**: linke Spalte in zwei Zeilen übereinander (nicht mehr nebeneinander) — Meldebild
+oben (meist kurz), Quittiert-Fortschritt+Liste darunter, damit beide den tatsächlich benötigten Raum
+bekommen statt beide auf volle Höhe gestreckt zu werden (behebt Problem 1). Flächentrennung über
 `surfaceVariant`-Hintergrund der Quittiert-Karte statt nur einer Linie (behebt Problem 7).
 
-**Fahrzeugkarten** unten: volle Fahrzeugkurzname + Rufname + FMS-Pille (Token+Rahmen, Designsystem 5.5,
-nicht mehr der kleine Zahlenkreis) — identische Pillen-Komponente wie im Standby-Panel, ein Betreuer lernt
-die FMS-Darstellung nur einmal.
+**Fahrzeugkarten** unten: jetzt **150 px** statt 320 px hoch (Review-Runde 1 Punkt 9 — die alte Höhe war zu
+≈70 % leer; der freiwerdende Platz geht an Karte/linke Spalte, s. o.): volle Fahrzeugkurzname **+ Rufname**
+(`vehicle.callSign`, z. B. „Florian 46/1“, `monitorLabel` 22, `onSurfaceVariant`, bisher im Mockup fehlend)
++ FMS-Pille (Token+Rahmen, Designsystem 5.5, nicht mehr der kleine Zahlenkreis) — identische Pillen-
+Komponente wie im Standby-Panel, ein Betreuer lernt die FMS-Darstellung nur einmal.
 
 ## 4. Alle Zustände
 
@@ -123,8 +142,10 @@ die FMS-Darstellung nur einmal.
 - **Einsatz wird geschlossen (`incident.closed`):** Screen verschwindet (Übergabe an `MonitorScreen`-Logik,
   Rotation zur nächsten Einsatz oder zurück zu Standby) — unverändert.
 - **Verbindungsverlust während des Einsatzes:** Einsatzdaten bleiben sichtbar (bestehender Test „connection
-  loss ... does not drop the Einsatz“ bleibt grün), zusätzlich erscheint dieselbe neutrale
-  `surfaceVariant`/„cloud_off“-Leiste wie im Standby oben in der Kopfzeile (schmal, 32 px, verdrängt nichts).
+  loss ... does not drop the Einsatz“ bleibt grün), zusätzlich erscheint dasselbe Verbindungsbanner wie im
+  Standby (`monitor-standby.md` Abschnitt 3 — volle Breite, ≥ 56 px, oben, identische Komponente/Position
+  auf allen drei Monitor-Screens, Review-Runde 1 Punkt 7), schiebt Kopfzeile+Inhalt um 56 px nach unten,
+  verdrängt nichts.
 
 ## 5. Interaktionen/Übergänge
 
@@ -144,15 +165,19 @@ die FMS-Darstellung nur einmal.
    Widget-Test prüft, dass dieser Platzhalter-Key bei `location: null` existiert.
 3. Kein Widget in `monitor_incident_screen.dart` verwendet `Colors.red`/`Colors.amberAccent` direkt für FMS-
    oder Alarm-Label-Flächen mehr — nur `BftagStatusColors`/`BftagAlarmColors` (Grep-Test).
-4. `Key('monitor-incident-recipients')` wird von einem sichtbaren Fortschrittstext begleitet, der Format
-   „X/Y quittiert“ zeigt und sich live aktualisiert, wenn ein `alarm.acknowledged`-Event eintrifft
-   (bestehender Live-Test „a live alarm.acknowledged event updates the recipient ack icon“ erweitert um
-   eine Prüfung des Fortschrittstexts).
-5. `Key('monitor-incident-vehicles')`-Chips zeigen Fahrzeugname **und** FMS-Pille mit Status-Nummer+Text-
-   Kontrast ≥ AA (nicht nur Farbe) — Accessibility-Test/manuelle Kontrollliste.
+4. `Key('monitor-incident-alarm-label')` zeigt weiterhin `alarmSequenceLabel(...)` (z. B. „ERSTALARM“),
+   gerendert als neutraler `surfaceVariant`-Chip (Farbwert-Assertion ≠ `BftagAlarmColors.alarm`). Daneben
+   zeigt `Key('monitor-incident-ack-progress')` den Text „X/Y quittiert“ und aktualisiert sich live, wenn
+   ein `alarm.acknowledged`-Event eintrifft (bestehender Live-Test „a live alarm.acknowledged event updates
+   the recipient ack icon“ erweitert um eine Prüfung dieses zweiten, neuen Chips).
+5. `Key('monitor-incident-vehicles')`-Chips zeigen Fahrzeugname, Rufname (`vehicle.callSign`) **und**
+   FMS-Pille mit Status-Nummer+Text-Kontrast ≥ AA (nicht nur Farbe) — Accessibility-Test/manuelle
+   Kontrollliste, zusätzlich Widget-Test, dass der Rufname-Text im Chip vorhanden ist.
 6. Meldebild-Text wird bei > 6 Zeilen auf 6 Zeilen begrenzt und zeigt den Mehr-Indikator — Widget-Test mit
    künstlich langem `incident.report`.
-7. Bestehende Tests bleiben grün (ggf. mit angepassten Finder-Strings für neue Layout-Positionen, Verhalten
+7. `Key('connection-banner-reconnecting')` erscheint auf diesem Screen identisch zu `monitor-standby.md`
+   (gleicher Test-Helper, siehe dortiges AC 4) — oben, ≥ 56 px, `surfaceVariant`.
+8. Bestehende Tests bleiben grün (ggf. mit angepassten Finder-Strings für neue Layout-Positionen, Verhalten
    unverändert): `monitor_incident_screen_test.dart`, `monitor_incident_test.dart` inkl. „a live
    alarm.acknowledged event updates the recipient ack icon“ und „connection loss (reconnecting) ... does
    not drop the Einsatz“.
@@ -166,21 +191,23 @@ Aus `apps/web/lib/screens/monitor_incident_screen.dart` (grep-geprüft, keine `S
 - `Key('monitor-incident-recipients')`, `Key('incident-recipient-${recipient.personId}')`,
   `Key('incident-ack-icon-${recipient.personId}')`
 - `Key('monitor-incident-vehicles')`, `Key('incident-vehicle-${vehicle.id}')`
-- `Key('monitor-incident-alarm-label')` — **bleibt als Key erhalten**, wandert aber inhaltlich/visuell in den
-  ruhigen Fortschritts-Chip der Kopfzeile (Abschnitt 3); der laute „ERSTALARM“-Badge-Look existiert weiterhin,
-  nur nicht mehr auf diesem Screen (siehe `monitor-alarm.md`).
+- `Key('monitor-incident-alarm-label')` — **bleibt als Key erhalten, Inhalt unverändert**
+  (`alarmSequenceLabel(...)`), wird nur visuell auf einen ruhigen `surfaceVariant`-Chip umgestellt (Abschnitt
+  3, Review-Runde 1 Punkt 8 — keine Funktion verliert sich, siehe Abschnitt 8).
 
-Neu empfohlen: `Key('monitor-incident-map-placeholder')` (Kriterium 2), `Key('monitor-incident-ack-progress')`
-für den Fortschrittstext.
+Neu: `Key('monitor-incident-map-placeholder')` (Kriterium 2), `Key('monitor-incident-ack-progress')` (neuer,
+eigenständiger Fortschritts-Chip, Kriterium 4).
 
 ## 8. Funktionsabgleich vs. `docs/testing/regression-inventory.md`
 
 | Funktion (Inventar) | Bleibt erhalten als |
 |---|---|
-| anzeigen (Einsatzdaten + Karte) | Abschnitt 3, alle Felder vorhanden, Karte deutlich größer + mit Fallback |
-| Echtzeit-Updates (`alarm.acknowledged`) | Abschnitt 4 „Einsatz wird quittiert“, Ack-Icon + neuer Fortschrittstext |
-| Fehlerzustand/Offline | Abschnitt 4 „Verbindungsverlust während des Einsatzes“, unverändertes Kernverhalten |
+| anzeigen (Einsatzdaten + Karte) | Abschnitt 3, alle Felder vorhanden, Karte deutlich größer + mit Fallback, Fahrzeugchips zusätzlich mit Rufname |
+| Echtzeit-Updates (`alarm.acknowledged`) | Abschnitt 4 „Einsatz wird quittiert“, Ack-Icon + neuer `monitor-incident-ack-progress`-Chip |
+| Fehlerzustand/Offline | Abschnitt 4 „Verbindungsverlust während des Einsatzes“, jetzt das gemeinsame Verbindungsbanner (Position/Höhe geändert, Text/Kernverhalten unverändert) |
 
-Keine Funktion entfällt. `monitor-incident-alarm-label` bleibt als Key bestehen, zeigt aber inhaltlich den
-Quittierungs-Fortschritt statt dauerhaft „ERSTALARM“ — begründet in Abschnitt 2 Punkt 4/6 (ein Label, das die
-ganze Einsatzdauer über „ERSTALARM“ zeigt, ist irreführend und verdrängt die eigentlich relevante Information).
+Keine Funktion entfällt. `monitor-incident-alarm-label` bleibt als Key bestehen und zeigt weiterhin die
+Alarmierungsstufe (korrigiert gegenüber einer früheren Entwurfsfassung dieses Dokuments, die diesen Key
+versehentlich zum Quittierungs-Fortschritt umgewidmet und damit `alarmSequenceLabel` verloren hätte — siehe
+Review-Runde 1 Punkt 8); der Quittierungs-Fortschritt lebt stattdessen im neuen, eigenen
+`monitor-incident-ack-progress`-Chip.

@@ -20,8 +20,8 @@
   .msym{font-family:'Material Icons Outlined';font-size:40px;line-height:1;display:inline-block;}
   .wrap{display:flex;align-items:center;justify-content:center;height:1080px;}
   .card{width:900px;text-align:center;padding:64px;}
-  .mark{width:96px;height:96px;border-radius:24px;border:3px solid var(--primary);margin:0 auto 32px auto;
-    display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--primary);}
+  .mark{width:96px;height:96px;margin:0 auto 32px auto;color:var(--primary);}
+  .mark svg{width:96px;height:96px;display:block;}
   h1{font-size:40px;font-weight:600;margin:0 0 16px 0;}
   .sub{font-size:28px;color:var(--on-surface-variant);margin:0 0 40px 0;}
   .hint{display:flex;align-items:center;justify-content:center;gap:12px;font-size:24px;color:var(--on-surface-variant);
@@ -42,7 +42,10 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <div class="mark">F</div>
+    <div class="mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path fill-rule="evenodd" fill="currentColor" d="
+      M512 150 L774 236 V516 C774 690 658 814 512 862 C366 814 250 690 250 516 V236 Z
+      M422 328 L682 328 L682 420 L502 420 L502 488 L632 488 L632 580 L502 580 L502 708 L422 708 Z
+    "/></svg></div>
     <h1>Monitor koppeln</h1>
     <div class="sub">Kopplungscode aus „Monitore“ in der Admin-Web eingeben</div>
     <div class="hint"><span class="msym">info</span>Dieser Monitor wurde gesperrt oder neu gekoppelt.</div>
