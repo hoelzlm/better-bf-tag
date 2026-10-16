@@ -251,22 +251,43 @@ Future<void> _loadRealFonts() async {
   if (flutterRoot == null) {
     // ignore: avoid_print
     print('NOTE: FLUTTER_ROOT not found, screenshots will use Ahem boxes.');
-    return;
+  } else {
+    final fontsDir = Directory(
+      '$flutterRoot/bin/cache/artifacts/material_fonts',
+    );
+    if (!fontsDir.existsSync()) {
+      // ignore: avoid_print
+      print('NOTE: $fontsDir missing, screenshots will use Ahem boxes.');
+    } else {
+      for (final file in fontsDir.listSync()) {
+        if (file is! File || !file.path.endsWith('.ttf')) continue;
+        final bytes = await file.readAsBytes();
+        final loader = FontLoader(
+          file.path.contains('MaterialIcons') ? 'MaterialIcons' : 'Roboto',
+        );
+        loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+        await loader.load();
+      }
+    }
   }
-  final fontsDir = Directory(
-    '$flutterRoot/bin/cache/artifacts/material_fonts',
-  );
+  await _loadInterFonts();
+}
+
+/// Loads Inter (Designsystem §3) under the same
+/// `packages/bftag_core/Inter` family Flutter resolves
+/// `TextStyle(fontFamily: 'Inter', package: 'bftag_core')` to, so app
+/// screenshots render the real typeface instead of Ahem boxes (ADR 0027).
+Future<void> _loadInterFonts() async {
+  final fontsDir = Directory('../../packages/core/assets/fonts');
   if (!fontsDir.existsSync()) {
     // ignore: avoid_print
-    print('NOTE: $fontsDir missing, screenshots will use Ahem boxes.');
+    print('NOTE: $fontsDir missing, screenshots will use Ahem for Inter.');
     return;
   }
   for (final file in fontsDir.listSync()) {
     if (file is! File || !file.path.endsWith('.ttf')) continue;
     final bytes = await file.readAsBytes();
-    final loader = FontLoader(
-      file.path.contains('MaterialIcons') ? 'MaterialIcons' : 'Roboto',
-    );
+    final loader = FontLoader('packages/bftag_core/Inter');
     loader.addFont(Future.value(ByteData.view(bytes.buffer)));
     await loader.load();
   }
@@ -289,11 +310,7 @@ Future<String?> _flutterRootFromWhich() async {
 
 final _repaintKey = GlobalKey();
 
-Future<void> _capture(
-  WidgetTester tester,
-  String name,
-  Size size,
-) async {
+Future<void> _capture(WidgetTester tester, String name, Size size) async {
   if (_screenshotDir.isEmpty) {
     fail('SCREENSHOT_DIR dart-define is required for screenshot_test.');
   }
@@ -307,8 +324,8 @@ Future<void> _capture(
   });
   await tester.pumpAndSettle();
 
-  final boundary = _repaintKey.currentContext!.findRenderObject()
-      as RenderRepaintBoundary;
+  final boundary =
+      _repaintKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 1);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -316,9 +333,8 @@ Future<void> _capture(
     dir.createSync(recursive: true);
     final w = size.width.round();
     final h = size.height.round();
-    File('${dir.path}/$name-${w}x$h.png').writeAsBytesSync(
-      bytes!.buffer.asUint8List(),
-    );
+    File('${dir.path}/$name-${w}x$h.png')
+        .writeAsBytesSync(bytes!.buffer.asUint8List());
   });
 }
 
@@ -329,10 +345,7 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     RepaintBoundary(
       key: _repaintKey,
-      child: ProviderScope(
-        overrides: overrides,
-        child: const BftagMobileApp(),
-      ),
+      child: ProviderScope(overrides: overrides, child: const BftagMobileApp()),
     ),
   );
   await tester.pumpAndSettle();
@@ -359,9 +372,7 @@ void main() {
           pairedRealtimeClientProvider.overrideWith((ref) => null),
           myCrewAssignmentsProvider.overrideWithValue(const []),
           pairedAlarmsProvider.overrideWith((ref) => Stream.value(const [])),
-          pairedIncidentsProvider.overrideWith(
-            (ref) => Stream.value(const []),
-          ),
+          pairedIncidentsProvider.overrideWith((ref) => Stream.value(const [])),
           pairedVehiclesProvider.overrideWith((ref) => Stream.value(const [])),
           alarmSoundProvider.overrideWithValue(_FakeAlarmSound()),
         ],
@@ -401,12 +412,8 @@ void main() {
           ),
           pairedRealtimeClientProvider.overrideWith((ref) => null),
           pairedAlarmsProvider.overrideWith((ref) => Stream.value(const [])),
-          pairedIncidentsProvider.overrideWith(
-            (ref) => Stream.value(const []),
-          ),
-          pairedVehiclesProvider.overrideWith(
-            (ref) => Stream.value([vehicle]),
-          ),
+          pairedIncidentsProvider.overrideWith((ref) => Stream.value(const [])),
+          pairedVehiclesProvider.overrideWith((ref) => Stream.value([vehicle])),
           myCrewAssignmentsProvider.overrideWithValue([
             MyCrewAssignment(
               shift: Shift(
@@ -563,9 +570,7 @@ void main() {
           ),
           pairedRealtimeClientProvider.overrideWith((ref) => null),
           pairedAlarmsProvider.overrideWith((ref) => Stream.value(const [])),
-          pairedIncidentsProvider.overrideWith(
-            (ref) => Stream.value(const []),
-          ),
+          pairedIncidentsProvider.overrideWith((ref) => Stream.value(const [])),
           pairedVehiclesProvider.overrideWith(
             (ref) => Stream.value([_vehicle()]),
           ),
@@ -614,9 +619,7 @@ void main() {
           ),
           pairedRealtimeClientProvider.overrideWith((ref) => null),
           pairedAlarmsProvider.overrideWith((ref) => Stream.value(const [])),
-          pairedIncidentsProvider.overrideWith(
-            (ref) => Stream.value(const []),
-          ),
+          pairedIncidentsProvider.overrideWith((ref) => Stream.value(const [])),
           pairedVehiclesProvider.overrideWith(
             (ref) => Stream.value([_vehicle()]),
           ),
@@ -653,9 +656,7 @@ void main() {
           ),
           pairedRealtimeClientProvider.overrideWith((ref) => null),
           pairedAlarmsProvider.overrideWith((ref) => Stream.value(const [])),
-          pairedIncidentsProvider.overrideWith(
-            (ref) => Stream.value(const []),
-          ),
+          pairedIncidentsProvider.overrideWith((ref) => Stream.value(const [])),
           pairedVehiclesProvider.overrideWith(
             (ref) => Stream.value([_vehicle()]),
           ),

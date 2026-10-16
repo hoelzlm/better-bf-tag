@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'router.dart';
 import 'url_strategy_stub.dart'
     if (dart.library.js_interop) 'url_strategy_web.dart'
-    if (dart.library.html) 'url_strategy_web.dart' as url_strategy;
+    if (dart.library.html) 'url_strategy_web.dart'
+    as url_strategy;
 
 void main() {
   url_strategy.configureUrlStrategy();
@@ -33,7 +34,7 @@ class _BftagWebAppState extends ConsumerState<BftagWebApp> {
     final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
       title: 'BF-Tag',
-      theme: bftagTheme(),
+      theme: bftagLightTheme(),
       routerConfig: router,
     );
   }

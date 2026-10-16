@@ -53,7 +53,9 @@ class _BftagMobileAppState extends ConsumerState<BftagMobileApp> {
           child: MaterialApp.router(
             title: 'BF-Tag',
             scaffoldMessengerKey: _scaffoldMessengerKey,
-            theme: ThemeData(colorSchemeSeed: Colors.red, useMaterial3: true),
+            theme: bftagLightTheme(),
+            darkTheme: bftagDarkTheme(),
+            themeMode: ThemeMode.system,
             routerConfig: router,
           ),
         ),
