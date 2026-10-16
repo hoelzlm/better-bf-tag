@@ -236,7 +236,7 @@ Leerzustand: zentriertes Icon (48 px, `onSurfaceVariant`) + Kurztext + ggf. Prim
 
 ### 5.4 Karten
 
-`surfaceVariant`-Fläche, `radiusLarge`, Innenabstand `space24`, im hellen Theme `elevation 1`, im
+`surfaceVariant`-Fläche, `radiusLarge`, Innenabstand `xl` (24), im hellen Theme `elevation 1`, im
 Dunkel-/Monitor-Theme kein Schatten (nur Fläche). Titel `titleLarge`, Meta-Infos `bodyMedium`/`onSurfaceVariant`.
 
 ### 5.5 Status-Chip / FMS-Badge
