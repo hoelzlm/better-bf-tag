@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- BF-Tag App-Icon: primary-Hintergrund, abgerundetes Quadrat, stilisiertes "F"-Schild. -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="#0B5E6B"/>
+  <!-- Motiv in sicherer 66% Mittelzone fuer adaptive icons: ca. 170..854 -->
+  <g fill="#FFFFFF">
+    <!-- Schildform -->
+    <path d="M512 140 L790 230 V520 C790 702 664 834 512 884 C360 834 234 702 234 520 V230 Z" fill="none" stroke="#FFFFFF" stroke-width="28"/>
+    <!-- stilisiertes F, dicke Balken fuer Erkennbarkeit bei 16px -->
+    <rect x="412" y="330" width="60" height="360" rx="16"/>
+    <rect x="412" y="330" width="230" height="64" rx="16"/>
+    <rect x="412" y="470" width="190" height="64" rx="16"/>
+  </g>
+</svg>

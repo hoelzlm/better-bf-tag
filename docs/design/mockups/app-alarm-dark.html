@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>App Alarm – dunkel</title>
+<style>
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-SemiBold.ttf'); font-weight:600; }
+  @font-face { font-family:'Inter'; src: url('fonts/Inter-Bold.ttf'); font-weight:700; }
+  :root{ --alarm:#FF5449; --on-alarm:#1A0000; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:390px;height:844px;background:var(--alarm);color:var(--on-alarm);font-family:'Inter',sans-serif;overflow:hidden;}
+  .wrap{display:flex;flex-direction:column;height:844px;padding:56px 24px 32px 24px;}
+  .title{font-size:28px;font-weight:700;letter-spacing:4px;}
+  .sub{font-size:14px;font-weight:600;letter-spacing:2px;opacity:.85;margin-top:4px;}
+  .keyword{font-size:36px;font-weight:700;line-height:1.15;margin:28px 0 12px 0;}
+  .address{font-size:18px;font-weight:600;margin-bottom:4px;}
+  .report{font-size:16px;opacity:.95;margin-bottom:24px;}
+  .block{margin-bottom:20px;}
+  .block h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin:0 0 6px 0;}
+  .block .val{font-size:16px;font-weight:500;}
+  .spacer{flex:1;}
+  .ack-btn{height:64px;border-radius:999px;background:var(--on-alarm);color:var(--alarm);display:flex;align-items:center;
+    justify-content:center;font-size:18px;font-weight:700;letter-spacing:1px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><div class="title">ALARM</div><div class="sub">ERSTALARM</div></div>
+  <div class="keyword">#3 B3 Großbrand Lagerhalle</div>
+  <div class="address">Industriestraße 7</div>
+  <div class="report">Starke Rauchentwicklung aus dem Dach.</div>
+  <div class="block"><h3>Alarmierte Fahrzeuge</h3><div class="val">HLF-1</div></div>
+  <div class="block"><h3>Dein Fahrzeug</h3><div class="val">HLF-1 – MA</div></div>
+  <div class="spacer"></div>
+  <div class="ack-btn">QUITTIEREN</div>
+</div>
+</body>
+</html>
