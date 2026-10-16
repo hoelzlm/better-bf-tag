@@ -336,7 +336,7 @@ void main() {
     await tester.tap(find.byKey(const Key('nav-fahrzeuge')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fahrzeuge'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Fahrzeuge'), findsOneWidget);
   });
 
   testWidgets(
@@ -383,7 +383,7 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-bf-tage')));
       await tester.pumpAndSettle();
 
-      expect(find.text('BF-Tage'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'BF-Tage'), findsOneWidget);
     },
   );
 
@@ -406,7 +406,7 @@ void main() {
     await tester.tap(find.byKey(const Key('nav-bf-tage')));
     await tester.pumpAndSettle();
 
-    expect(find.text('BF-Tage'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'BF-Tage'), findsOneWidget);
   });
 
   testWidgets(
@@ -453,7 +453,7 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-schichten')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Schichten'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Schichten'), findsOneWidget);
     },
   );
 
@@ -476,7 +476,7 @@ void main() {
     await tester.tap(find.byKey(const Key('nav-schichten')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Schichten'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Schichten'), findsOneWidget);
   });
 
   testWidgets(
@@ -523,7 +523,7 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-durchsagen')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Durchsagen'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Durchsagen'), findsOneWidget);
     },
   );
 
@@ -571,7 +571,7 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-tagesablauf')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Tagesablauf'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Tagesablauf'), findsOneWidget);
     },
   );
 
@@ -594,6 +594,6 @@ void main() {
     await tester.tap(find.byKey(const Key('nav-tagesablauf')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Tagesablauf'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Tagesablauf'), findsOneWidget);
   });
 }
