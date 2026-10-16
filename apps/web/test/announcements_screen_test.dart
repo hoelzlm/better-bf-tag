@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_web/screens/announcements_screen.dart';
 import 'package:flutter/material.dart';
@@ -239,4 +241,69 @@ void main() {
 
     expect(repository.deleteCalls, isEmpty);
   });
+
+  testWidgets(
+    'Fehlerzustand: a failed send shows the error message in a SnackBar',
+    (tester) async {
+      final repository = await _pump(tester, bfDay: _bfDay());
+      repository.createError = Exception('bf_day_not_running');
+
+      await tester.enterText(
+        find.byKey(const Key('announcement-text')),
+        'Text',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('announcement-send')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Fehlerzustand: a failed delete shows the error message in a SnackBar',
+    (tester) async {
+      final repository = await _pump(
+        tester,
+        bfDay: _bfDay(),
+        announcements: [_announcement(id: 'a1')],
+      );
+      repository.deleteError = Exception('not found');
+
+      await tester.tap(find.byKey(const Key('delete-announcement-a1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Echtzeit-Updates: a new announcementsProvider event updates the list',
+    (tester) async {
+      final controller = StreamController<List<Announcement>>();
+      final repository = _FakeAnnouncementRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bfDayProvider.overrideWith((ref) => Stream.value(_bfDay())),
+            shiftsProvider.overrideWith((ref) => Stream.value(const [])),
+            announcementsProvider.overrideWith((ref) => controller.stream),
+            announcementRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(home: AnnouncementsScreen()),
+        ),
+      );
+      controller.add(const []);
+      await tester.pumpAndSettle();
+      expect(find.text('Erste Durchsage'), findsNothing);
+
+      controller.add([_announcement(id: 'a1', text: 'Erste Durchsage')]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erste Durchsage'), findsOneWidget);
+      await controller.close();
+    },
+  );
 }

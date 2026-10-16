@@ -285,6 +285,42 @@ void main() {
     ]);
   });
 
+  testWidgets('editing a slide calls update with the new values', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      slides: [_slide(id: 's1', title: 'Willkommen')],
+    );
+
+    await tester.tap(find.text('Willkommen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('slide-form-title')),
+      'Willkommen neu',
+    );
+    await tester.tap(find.byKey(const Key('slide-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Willkommen neu'), findsOneWidget);
+  });
+
+  testWidgets('Fehlerzustand: load error shows a message', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          slideAdminRepositoryProvider.overrideWith(
+            (ref) => _ThrowingSlideAdminRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: SlidesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Folien konnten nicht geladen werden.'), findsOneWidget);
+  });
+
   group('describeSlideImageError', () {
     test('maps image_too_large to the German message', () {
       final error = DioException(
@@ -340,4 +376,41 @@ void main() {
       expect(describeSlideImageError(error), 'Serverfehler.');
     });
   });
+}
+
+class _ThrowingSlideAdminRepository implements SlideAdminRepository {
+  @override
+  Future<List<Slide>> list() async => throw Exception('boom');
+
+  @override
+  Future<Slide> create({
+    required String title,
+    String? body,
+    int? durationSeconds,
+    bool? active,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Slide> update(
+    String id, {
+    String? title,
+    String? body,
+    int? durationSeconds,
+    bool? active,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> delete(String id) => throw UnimplementedError();
+
+  @override
+  Future<void> reorder(List<String> slideIds) => throw UnimplementedError();
+
+  @override
+  Future<Slide> uploadImage(String id, Uint8List bytes, String contentType) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> deleteImage(String id) => throw UnimplementedError();
 }
