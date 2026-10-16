@@ -137,7 +137,10 @@ Future<_FakeAlarmRepository> _pump(
         ),
         alarmRepositoryProvider.overrideWithValue(repository),
       ],
-      child: const MaterialApp(home: Scaffold(body: MissedAlarmsSection())),
+      child: MaterialApp(
+        theme: bftagLightTheme(),
+        home: const Scaffold(body: MissedAlarmsSection()),
+      ),
     ),
   );
   await tester.pumpAndSettle();

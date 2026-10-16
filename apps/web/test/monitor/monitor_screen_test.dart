@@ -168,7 +168,10 @@ Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
     ProviderScope(
       child: ProviderScope(
         overrides: env.overrides,
-        child: const MaterialApp(home: MonitorScreen()),
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const MonitorScreen(),
+        ),
       ),
     ),
   );
@@ -421,7 +424,10 @@ void main() {
       ProviderScope(
         child: UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: MonitorScreen()),
+          child: MaterialApp(
+            theme: bftagLightTheme(),
+            home: const MonitorScreen(),
+          ),
         ),
       ),
     );
@@ -493,7 +499,10 @@ void main() {
                 (ref) => Stream.value(ConnectionStatus.reconnecting),
               ),
             ],
-            child: const MaterialApp(home: MonitorScreen()),
+            child: MaterialApp(
+              theme: bftagLightTheme(),
+              home: const MonitorScreen(),
+            ),
           ),
         ),
       );
@@ -530,7 +539,10 @@ void main() {
               (ref) => Stream.value(ConnectionStatus.live),
             ),
           ],
-          child: const MaterialApp(home: MonitorScreen()),
+          child: MaterialApp(
+            theme: bftagLightTheme(),
+            home: const MonitorScreen(),
+          ),
         ),
       ),
     );
@@ -728,7 +740,10 @@ void main() {
                 (ref) => clockController.stream,
               ),
             ],
-            child: const MaterialApp(home: MonitorScreen()),
+            child: MaterialApp(
+              theme: bftagLightTheme(),
+              home: const MonitorScreen(),
+            ),
           ),
         ),
       );

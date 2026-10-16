@@ -27,15 +27,18 @@ class MissedAlarmsSection extends ConsumerWidget {
     };
     final canAct =
         permission == Permission.dispatch || permission == Permission.admin;
+    final theme = Theme.of(context);
+    final alarmColors = theme.extension<BftagAlarmColors>()!;
+    final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
 
     return Container(
       key: const Key('missed-alarms-section'),
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        border: Border.all(color: Colors.red.shade700, width: 1.5),
-        borderRadius: BorderRadius.circular(8),
+        color: alarmColors.alarmContainer,
+        border: Border.all(color: alarmColors.alarm, width: 1.5),
+        borderRadius: BorderRadius.circular(radii.medium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,14 +46,13 @@ class MissedAlarmsSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber, color: Colors.red.shade700),
+              Icon(Icons.warning_amber, color: alarmColors.alarm),
               const SizedBox(width: 8),
               Text(
                 'Verpasste Alarmierungen',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(color: Colors.red.shade700),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: alarmColors.alarm,
+                ),
               ),
             ],
           ),
@@ -84,7 +86,8 @@ class _MissedAlarmRow extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Verpasste Alarmierung auslösen?',
-      message: 'Die verpasste Alarmierung für Einsatz '
+      message:
+          'Die verpasste Alarmierung für Einsatz '
           '#${scheduledAlarm.incident.number} wird jetzt ausgelöst.',
       confirmLabel: 'Auslösen',
     );
@@ -93,9 +96,9 @@ class _MissedAlarmRow extends ConsumerWidget {
       await ref.read(alarmRepositoryProvider).triggerNow(alarm.id);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(describeAlarmTriggerError(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(describeAlarmTriggerError(error))));
     }
   }
 
@@ -104,7 +107,8 @@ class _MissedAlarmRow extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Verpasste Alarmierung verwerfen?',
-      message: 'Die verpasste Alarmierung für Einsatz '
+      message:
+          'Die verpasste Alarmierung für Einsatz '
           '#${scheduledAlarm.incident.number} wird verworfen.',
       confirmLabel: 'Verwerfen',
     );
@@ -116,7 +120,10 @@ class _MissedAlarmRow extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            describeApiError(error, 'Alarmierung konnte nicht verworfen werden.'),
+            describeApiError(
+              error,
+              'Alarmierung konnte nicht verworfen werden.',
+            ),
           ),
         ),
       );

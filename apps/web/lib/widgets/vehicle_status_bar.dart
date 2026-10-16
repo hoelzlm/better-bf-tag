@@ -15,8 +15,10 @@ class VehicleStatusBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final vehiclesAsync = ref.watch(vehiclesProvider);
-    final connection = ref.watch(realtimeConnectionProvider).valueOrNull ??
+    final connection =
+        ref.watch(realtimeConnectionProvider).valueOrNull ??
         ConnectionStatus.connecting;
     final session = ref.watch(sessionControllerProvider);
     final permission = switch (session) {
@@ -26,6 +28,32 @@ class VehicleStatusBar extends ConsumerWidget {
     final canDispatch =
         permission == Permission.dispatch || permission == Permission.admin;
     final vehicles = vehiclesAsync.valueOrNull ?? const <Vehicle>[];
+
+    Widget body;
+    if (vehiclesAsync.hasError && vehicles.isEmpty) {
+      body = SizedBox(
+        height: 140,
+        child: BftagStateView.error(
+          message: 'Fahrzeuge konnten nicht geladen werden.',
+          onRetry: () => ref.invalidate(vehiclesProvider),
+        ),
+      );
+    } else if (vehiclesAsync.isLoading && vehicles.isEmpty) {
+      body = const SizedBox(height: 140, child: BftagStateView.loading());
+    } else {
+      body = SizedBox(
+        height: 140,
+        child: ListView(
+          key: const Key('vehicle-status-bar'),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          children: [
+            for (final vehicle in vehicles)
+              _VehicleTile(vehicle: vehicle, interactive: canDispatch),
+          ],
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,51 +70,21 @@ class VehicleStatusBar extends ConsumerWidget {
                     : Icons.sync_problem,
                 size: 10,
                 color: connection == ConnectionStatus.live
-                    ? Colors.green
-                    : Colors.orange,
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 6),
               Text(
                 connection == ConnectionStatus.live ? 'live' : 'verbinde neu…',
                 key: const Key('connection-indicator'),
-                style: Theme.of(context).textTheme.bodySmall,
+                style: theme.textTheme.bodySmall,
               ),
             ],
           ),
         ),
-        SizedBox(
-          height: 140,
-          child: ListView(
-            key: const Key('vehicle-status-bar'),
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            children: [
-              for (final vehicle in vehicles)
-                _VehicleTile(vehicle: vehicle, interactive: canDispatch),
-            ],
-          ),
-        ),
+        body,
       ],
     );
-  }
-}
-
-Color _statusColor(FmsStatus status) {
-  switch (status) {
-    case FmsStatus.s1:
-    case FmsStatus.s2:
-      return Colors.green;
-    case FmsStatus.s3:
-      return Colors.orange;
-    case FmsStatus.s4:
-      return Colors.red;
-    case FmsStatus.s5:
-      return Colors.amber;
-    case FmsStatus.s6:
-      return Colors.grey;
-    case FmsStatus.s7:
-    case FmsStatus.s8:
-      return Colors.blue;
   }
 }
 
@@ -130,7 +128,7 @@ class _VehicleTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = _statusColor(vehicle.status);
+    final theme = Theme.of(context);
     final tile = Card(
       key: Key('vehicle-tile-${vehicle.id}'),
       margin: const EdgeInsets.all(2),
@@ -144,25 +142,23 @@ class _VehicleTile extends ConsumerWidget {
               vehicle.shortName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: theme.textTheme.titleMedium,
             ),
-            Text(
-              vehicle.callSign,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 4),
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: color,
+            Tooltip(
+              message: vehicle.callSign,
               child: Text(
-                '${vehicle.status.code}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                vehicle.callSign,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+            ),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: FmsBadge(status: vehicle.status),
             ),
           ],
         ),
@@ -170,12 +166,9 @@ class _VehicleTile extends ConsumerWidget {
     );
 
     return SizedBox(
-      width: 110,
+      width: 180,
       child: interactive
-          ? InkWell(
-              onTap: () => _openStatusPicker(context, ref),
-              child: tile,
-            )
+          ? InkWell(onTap: () => _openStatusPicker(context, ref), child: tile)
           : tile,
     );
   }

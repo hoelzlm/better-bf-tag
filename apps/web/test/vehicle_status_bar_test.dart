@@ -46,8 +46,7 @@ class _FakeVehicleAdminRepository implements VehicleAdminRepository {
     required String callSign,
     required String shortName,
     required String type,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Vehicle> update(
@@ -56,8 +55,7 @@ class _FakeVehicleAdminRepository implements VehicleAdminRepository {
     String? shortName,
     String? type,
     bool? active,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> reorder(List<String> vehicleIds) => throw UnimplementedError();
@@ -90,6 +88,7 @@ Future<void> _pump(
           vehicleAdminRepositoryProvider.overrideWithValue(repository),
       ],
       child: MaterialApp(
+        theme: bftagLightTheme(),
         home: Scaffold(body: const VehicleStatusBar()),
       ),
     ),
@@ -107,8 +106,9 @@ class _FixedSessionController extends SessionController {
 }
 
 void main() {
-  testWidgets('renders a tile per active vehicle from the fake stream',
-      (tester) async {
+  testWidgets('renders a tile per active vehicle from the fake stream', (
+    tester,
+  ) async {
     await _pump(
       tester,
       vehicles: Stream.value([
@@ -124,8 +124,9 @@ void main() {
     expect(find.text('DLK'), findsOneWidget);
   });
 
-  testWidgets('re-renders when the vehicles stream emits a new state',
-      (tester) async {
+  testWidgets('re-renders when the vehicles stream emits a new state', (
+    tester,
+  ) async {
     final controller = StreamController<List<Vehicle>>();
     addTearDown(controller.close);
     await _pump(
@@ -137,13 +138,13 @@ void main() {
     controller.add([_vehicle(status: 2)]);
     await tester.pump();
     await tester.pump();
-    expect(find.text('2'), findsOneWidget);
+    expect(find.textContaining('Einsatzbereit auf Wache'), findsOneWidget);
 
     controller.add([_vehicle(status: 4)]);
     await tester.pump();
     await tester.pump();
-    expect(find.text('2'), findsNothing);
-    expect(find.text('4'), findsOneWidget);
+    expect(find.textContaining('Einsatzbereit auf Wache'), findsNothing);
+    expect(find.textContaining('Am Einsatzort'), findsOneWidget);
   });
 
   testWidgets('shows the live connection indicator', (tester) async {
@@ -206,55 +207,51 @@ void main() {
     expect(find.byKey(const Key('status-option-5')), findsOneWidget);
   });
 
-  testWidgets(
-    'the status picker hides 7/8 for a non-RTW/KTW vehicle',
-    (tester) async {
-      final repository = _FakeVehicleAdminRepository();
-      await _pump(
-        tester,
-        vehicles: Stream.value([_vehicle(id: 'v1', status: 2)]),
-        permission: Permission.dispatch,
-        repository: repository,
-      );
+  testWidgets('the status picker hides 7/8 for a non-RTW/KTW vehicle', (
+    tester,
+  ) async {
+    final repository = _FakeVehicleAdminRepository();
+    await _pump(
+      tester,
+      vehicles: Stream.value([_vehicle(id: 'v1', status: 2)]),
+      permission: Permission.dispatch,
+      repository: repository,
+    );
 
-      await tester.tap(find.byKey(const Key('vehicle-tile-v1')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('vehicle-tile-v1')));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('status-option-6')), findsOneWidget);
-      expect(find.byKey(const Key('status-option-7')), findsNothing);
-      expect(find.byKey(const Key('status-option-8')), findsNothing);
-    },
-  );
+    expect(find.byKey(const Key('status-option-6')), findsOneWidget);
+    expect(find.byKey(const Key('status-option-7')), findsNothing);
+    expect(find.byKey(const Key('status-option-8')), findsNothing);
+  });
 
-  testWidgets(
-    'the status picker offers 7/8 for a RTW vehicle',
-    (tester) async {
-      final repository = _FakeVehicleAdminRepository();
-      await _pump(
-        tester,
-        vehicles: Stream.value([
-          Vehicle(
-            id: 'v1',
-            callSign: 'Rettung 1',
-            shortName: 'RTW 1',
-            type: 'RTW',
-            status: FmsStatus.fromCode(2),
-            statusChangedAt: null,
-            sortOrder: 1,
-            active: true,
-          ),
-        ]),
-        permission: Permission.dispatch,
-        repository: repository,
-      );
+  testWidgets('the status picker offers 7/8 for a RTW vehicle', (tester) async {
+    final repository = _FakeVehicleAdminRepository();
+    await _pump(
+      tester,
+      vehicles: Stream.value([
+        Vehicle(
+          id: 'v1',
+          callSign: 'Rettung 1',
+          shortName: 'RTW 1',
+          type: 'RTW',
+          status: FmsStatus.fromCode(2),
+          statusChangedAt: null,
+          sortOrder: 1,
+          active: true,
+        ),
+      ]),
+      permission: Permission.dispatch,
+      repository: repository,
+    );
 
-      await tester.tap(find.byKey(const Key('vehicle-tile-v1')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('vehicle-tile-v1')));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('status-option-7')), findsOneWidget);
-      expect(find.byKey(const Key('status-option-8')), findsOneWidget);
-    },
-  );
+    expect(find.byKey(const Key('status-option-7')), findsOneWidget);
+    expect(find.byKey(const Key('status-option-8')), findsOneWidget);
+  });
 
   testWidgets('crew cannot open the status picker', (tester) async {
     final repository = _FakeVehicleAdminRepository();
@@ -303,9 +300,56 @@ void main() {
     await tester.tap(find.byKey(const Key('status-option-3')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Status konnte nicht gesetzt werden.'),
-      findsOneWidget,
+    expect(find.text('Status konnte nicht gesetzt werden.'), findsOneWidget);
+  });
+
+  testWidgets('FMS badges use themed status colors, not hard Colors values', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      vehicles: Stream.value([
+        _vehicle(id: 'v1', status: 2),
+        _vehicle(id: 'v2', status: 3, sortOrder: 2),
+      ]),
+      permission: Permission.crew,
     );
+
+    final context = tester.element(find.byKey(const Key('vehicle-tile-v1')));
+    final statusColors = Theme.of(context).extension<BftagStatusColors>()!;
+
+    expect(statusColors.colorFor(FmsStatus.s2), isNot(Colors.green));
+    expect(statusColors.colorFor(FmsStatus.s3), isNot(Colors.orange));
+
+    final badge2 = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byKey(const Key('vehicle-tile-v1')),
+            matching: find.byType(Container),
+          )
+          .last,
+    );
+    final decoration2 = badge2.decoration as BoxDecoration;
+    expect(decoration2.color, statusColors.colorFor(FmsStatus.s2));
+  });
+
+  testWidgets('shows a Tooltip with the full crew text for a long call sign', (
+    tester,
+  ) async {
+    const longCallSign = 'Florian Musterstadt 46/1 Besonders Langer Rufname';
+    await _pump(
+      tester,
+      vehicles: Stream.value([_vehicle(id: 'v1', callSign: longCallSign)]),
+      permission: Permission.crew,
+    );
+
+    final tooltip = tester.widget<Tooltip>(
+      find.descendant(
+        of: find.byKey(const Key('vehicle-tile-v1')),
+        matching: find.byType(Tooltip),
+      ),
+    );
+    expect(tooltip.message, longCallSign);
+    expect(find.text(longCallSign), findsOneWidget);
   });
 }
