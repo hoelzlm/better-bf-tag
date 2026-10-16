@@ -77,6 +77,12 @@ Screenshot: `docs/design/screenshots/before/web/durchsagen-1440x900.png`.
   blockiert) bleibt erhalten.
 - **Offline:** kein eigener Zustand auf diesem Screen (kein Realtime-Rendering-Unterschied nötig über die
   normale Fehlermeldung hinaus).
+- **Ohne Berechtigung:** Route `/admin/durchsagen` ist für **Mannschaft und Einsatzvorbereitung** gesperrt
+  (`router.dart`: `isDurchsagenRoute && person.permission != Permission.admin && person.permission !=
+  Permission.dispatch` → Redirect nach `/admin`); nur **Leitstelle und Administrator** erreichen den Screen.
+  Die Navigation blendet den Menüpunkt für die anderen beiden Berechtigungsstufen aus (`web-navigation.md`).
+  Kein Inline-Zustand innerhalb des Screens nötig, da es keine feinere Berechtigungsgrenze gibt (anders als bei
+  Einsätze).
 
 ## 5. Interaktionen
 

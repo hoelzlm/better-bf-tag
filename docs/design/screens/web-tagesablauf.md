@@ -74,6 +74,10 @@ Screenshot: `docs/design/screenshots/before/web/tagesablauf-1440x900.png`.
   neutral, nur „Löschen“-Button `alarm`-farben.
 - **Read-only (BF-Tag beendet):** keine Anlegen-/Bearbeiten-/Löschen-Aktionen sichtbar, Hinweis im Topbar.
 - **Offline:** kein eigener Zustand (kein Realtime-Abo).
+- **Ohne Berechtigung:** Route `/admin/tagesablauf` ist für **Mannschaft und Einsatzvorbereitung** gesperrt
+  (`router.dart`: `isTagesablaufRoute && person.permission != Permission.admin && person.permission !=
+  Permission.dispatch` → Redirect nach `/admin`); nur **Leitstelle und Administrator** erreichen den Screen,
+  Navigation blendet den Menüpunkt für die anderen beiden aus (`web-navigation.md`).
 
 ## 5. Interaktionen
 

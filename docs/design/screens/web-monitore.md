@@ -75,6 +75,10 @@ Screenshot: `docs/design/screenshots/before/web/monitore-1440x900.png`.
 - **Gesperrter Monitor:** kein „Sperren“-Button mehr (bereits gesperrt), „Kopplungscode erzeugen“ bleibt
   verfügbar (Re-Pairing ist der vorgesehene Weg zurück — Funktion unverändert).
 - **Offline:** kein eigener Zustand (kein Realtime-Abo).
+- **Ohne Berechtigung:** Route `/admin/monitors` ist für **Mannschaft, Einsatzvorbereitung und Leitstelle**
+  gesperrt (`router.dart`: `isMonitorsRoute && person.permission != Permission.admin` → Redirect nach
+  `/admin`); nur **Administrator** erreicht den Screen. Navigation blendet den Menüpunkt für alle anderen drei
+  Berechtigungsstufen aus (`web-navigation.md`).
 
 ## 5. Interaktionen
 

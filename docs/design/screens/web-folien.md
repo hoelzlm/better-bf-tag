@@ -82,6 +82,10 @@ Gerenderte Fassung: `web-folien.html`/`.png` (eine Folie mit Bild, eine ohne Bil
   neutral, nur „Löschen“-Button `alarm`-farben (hier besonders wichtig hervorzuheben, da **kein** Soft-Delete
   wie bei Fahrzeugen, siehe Problem 4).
 - **Offline:** kein eigener Zustand (kein Realtime-Abo).
+- **Ohne Berechtigung:** Route `/admin/slides` ist für **Mannschaft, Einsatzvorbereitung und Leitstelle**
+  gesperrt (`router.dart`: `isSlidesRoute && person.permission != Permission.admin` → Redirect nach `/admin`);
+  nur **Administrator** erreicht den Screen. Navigation blendet den Menüpunkt für alle anderen drei
+  Berechtigungsstufen aus (`web-navigation.md`).
 
 ## 5. Interaktionen
 

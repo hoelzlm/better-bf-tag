@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>BF-Tag – Einsätze</title>
+<title>BF-Tag – Einsätze (Entwurf)</title>
 <style>
   @font-face { font-family:'Inter'; src: url('fonts/Inter-Regular.ttf'); font-weight:400; }
   @font-face { font-family:'Inter'; src: url('fonts/Inter-Medium.ttf'); font-weight:500; }
@@ -44,11 +44,13 @@
     background:transparent;padding:4px 2px;}
 
   .btn{padding:10px 18px;border-radius:var(--radius-m);font-weight:600;font-size:14px;border:1px solid transparent;
-    display:inline-flex;align-items:center;gap:8px;}
+    display:inline-flex;align-items:center;gap:8px;cursor:default;}
   .btn .msym{font-size:18px;}
   .btn-primary{background:var(--primary);color:var(--on-primary);}
   .btn-alarm{background:var(--alarm);color:var(--on-alarm);}
   .btn-text{background:transparent;color:var(--on-surface-variant);font-weight:500;}
+  .btn-sm{padding:6px 14px;font-size:13px;}
+  .focus-ring{outline:2px solid var(--primary);outline-offset:2px;}
 
   .content{padding:24px 32px;}
   .filter{display:flex;gap:0;border:1px solid var(--outline);border-radius:var(--radius-full);width:fit-content;overflow:hidden;margin-bottom:24px;}
@@ -56,20 +58,23 @@
   .filter .seg:last-child{border-right:none;}
   .filter .seg.active{background:var(--primary-container);color:var(--primary);font-weight:600;}
 
-  .incident{background:var(--surface-variant);border-radius:var(--radius-l);padding:20px 24px;margin-bottom:16px;}
-  .incident .row{display:flex;justify-content:space-between;align-items:flex-start;}
+  .incident{background:var(--surface-variant);border-radius:var(--radius-l);padding:14px 20px;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:96px;}
+  .incident.highlight{background:var(--primary-container);}
+  .incident .main-col{flex:1;min-width:0;}
+  .incident .title-row{display:flex;align-items:center;gap:10px;}
   .incident .num{display:inline-block;background:var(--surface-container);color:var(--on-surface-variant);
-    font-size:12px;font-weight:700;padding:2px 8px;border-radius:var(--radius-s);margin-right:8px;}
-  .incident .title{font-size:20px;font-weight:600;color:var(--on-surface);}
+    font-size:12px;font-weight:700;padding:2px 8px;border-radius:var(--radius-s);}
+  .incident .title{font-size:17px;font-weight:600;color:var(--on-surface);}
+  .incident .state-label{font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);
+    background:var(--surface-container);color:var(--on-surface-variant);margin-left:auto;}
   .incident .address{font-size:14px;color:var(--on-surface-variant);margin-top:4px;}
-  .incident .since{font-size:13px;color:var(--on-surface-variant);white-space:nowrap;}
-  .incident .actions{display:flex;justify-content:flex-end;gap:12px;margin-top:16px;}
-  .incident.running{border:1px solid var(--outline);}
-  .state-badge{position:absolute;}
-  .live-dot{width:8px;height:8px;border-radius:50%;background:#43A047;display:inline-block;margin-right:6px;}
+  .incident .actions{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;width:170px;flex:0 0 170px;}
 
   .empty{text-align:center;color:var(--on-surface-variant);padding:64px 0;}
   .empty .msym{font-size:48px;display:block;margin:0 auto 12px auto;}
+
+  .callout{font-size:12px;color:var(--on-surface-variant);text-align:right;margin-top:-12px;margin-bottom:16px;}
 </style>
 </head>
 <body>
@@ -95,38 +100,44 @@
     </div>
     <div class="content">
       <div class="filter">
-        <div class="seg">Entwurf</div>
-        <div class="seg active">laufend</div>
+        <div class="seg active">Entwurf</div>
+        <div class="seg">laufend</div>
         <div class="seg">abgeschlossen</div>
       </div>
 
-      <div class="incident running">
-        <div class="row">
-          <div>
-            <div class="title"><span class="num">#1</span>B3 Großbrand Lagerhalle</div>
-            <div class="address">Industriestraße 7</div>
+      <!-- Gerade neu angelegt: kurzer Highlight, Fokus auf "Alarmieren" (kritischer Pfad §3.4a) -->
+      <div class="incident highlight">
+        <div class="main-col">
+          <div class="title-row">
+            <span class="num">#3</span>
+            <span class="title">T2 Vermisste Person im Waldstück</span>
+            <span class="state-label">Entwurf</span>
           </div>
-          <div class="since"><span class="live-dot"></span>seit 12 min</div>
+          <div class="address">Waldparkplatz Nord, Zufahrt B</div>
         </div>
         <div class="actions">
-          <div class="btn btn-alarm"><span class="msym">notification_important</span>Nachalarmieren</div>
+          <div class="btn btn-text btn-sm">Verwerfen</div>
+          <div class="btn btn-alarm btn-sm focus-ring"><span class="msym">notification_important</span>Alarmieren</div>
         </div>
       </div>
 
-      <div class="incident running">
-        <div class="row">
-          <div>
-            <div class="title"><span class="num">#2</span>H1 Verkehrsunfall mit Person</div>
-            <div class="address">Kreuzung Bahnhofstraße / Ringstraße</div>
+      <div class="incident">
+        <div class="main-col">
+          <div class="title-row">
+            <span class="num">#4</span>
+            <span class="title">B2 Kleinbrand Grillplatz</span>
+            <span class="state-label">Entwurf</span>
           </div>
-          <div class="since"><span class="live-dot"></span>seit 3 min</div>
+          <div class="address">Grillplatz am Vereinsheim</div>
         </div>
         <div class="actions">
-          <div class="btn btn-alarm"><span class="msym">notification_important</span>Nachalarmieren</div>
+          <div class="btn btn-text btn-sm">Verwerfen</div>
+          <div class="btn btn-alarm btn-sm"><span class="msym">notification_important</span>Alarmieren</div>
         </div>
       </div>
 
     </div>
+    <div class="callout">Fokus liegt auf „Alarmieren“ von #3 (gerade angelegt) — Enter/Klick öffnet den AlarmDialog, siehe web-einsaetze-alarm.png</div>
   </div>
 </div>
 </body>
