@@ -229,6 +229,15 @@ async function webShots() {
     await nav(`${BASE}${p}`);
     await waitForSemantics();
     await settle();
+    if (name === 'einsaetze') {
+      // Default Filter ist "Entwurf"; die Seed-Daten enthalten keinen
+      // Einsatz im Entwurf (nur laufend/abgeschlossen) -- für den
+      // regulären Übersichts-Screenshot auf "laufend" wechseln, damit
+      // tatsächlich Daten sichtbar sind (sonst identisch zum Leerzustand).
+      await clickByText('^\\s*laufend\\s*$');
+      await waitForSemantics();
+      await settle();
+    }
     await shot(WEB_DIR, name, 1440, 900);
   }
 
@@ -241,20 +250,16 @@ async function webShots() {
   await settle();
   await shot(WEB_DIR, 'personen-dialog', 1440, 900);
 
-  // Leerzustand: Folien eines frisch angelegten, leeren BF-Tags gibt es
-  // nicht separat -- die Durchsagen-Liste eines Tages ohne Durchsage für
-  // eine andere Schicht zeigt den "Keine Durchsagen."-Leerzustand nicht
-  // (es gibt bereits eine); stattdessen nutzen wir die Monitore-Liste vor
-  // dem Anlegen irgendeines Monitors wäre nicht reproduzierbar hier (ein
-  // Monitor wurde schon für die Kopplung angelegt) -- der zuverlässige
-  // Leerzustand ist die BF-Tage-Teilnahme-Liste eines Tages ohne weitere
-  // Fahrzeuge zugeordnet; wir nutzen stattdessen schlicht die
-  // Einsätze-Liste gefiltert auf "Verworfen" (keine verworfenen Einsätze
-  // existieren) als deterministischen Leerzustand.
+  // Leerzustand: der Einsätze-Filter "Entwurf" ist voreingestellt, und die
+  // Seed-Daten legen keinen Einsatz im Entwurfsstatus an (nur
+  // laufend/abgeschlossen) -- das ist der zuverlässige, deterministische
+  // Leerzustand. (Hinweis: ein Filter "Verworfen" existiert im UI nicht --
+  // verworfene Einsätze werden laut Code-Kommentar in incidents_screen.dart
+  // komplett ausgeblendet, nicht separat gefiltert.)
   await nav(`${BASE}/admin/einsaetze`);
   await waitForSemantics();
   await settle();
-  await clickByText('verworfen');
+  await clickByText('^\\s*entwurf\\s*$');
   await waitForSemantics();
   await settle();
   await shot(WEB_DIR, 'einsaetze-empty', 1440, 900);
