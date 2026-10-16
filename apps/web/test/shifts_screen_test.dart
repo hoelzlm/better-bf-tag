@@ -625,4 +625,194 @@ void main() {
 
     expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
   });
+
+  testWidgets(
+      'AC2: drop-target highlight during a drag uses colorScheme.primary',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      shifts: {
+        'd1': [_shift()],
+      },
+      participants: {
+        'd1': [_participant()],
+      },
+      vehicles: [_vehicle()],
+    );
+
+    final draggable = find.byKey(const Key('participant-draggable-p1'));
+    final target = find.byKey(const Key('vehicle-dropzone-v1'));
+    final from = tester.getCenter(draggable);
+    final to = tester.getCenter(target);
+
+    final gesture = await tester.startGesture(from);
+    await tester.pump(const Duration(milliseconds: 50));
+    await gesture.moveTo(to);
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final card = tester.widget<Card>(find.byKey(const Key('vehicle-card-v1')));
+    final shape = card.shape! as RoundedRectangleBorder;
+    final theme = Theme.of(tester.element(target));
+    expect(shape.side.color, theme.colorScheme.primary);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+      'AC3: a double-booked person shows a warning-colored border on its '
+      'chip in both the participants panel and both vehicle cards',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay()],
+      shifts: {
+        'd1': [
+          _shift(
+            crew: const [
+              CrewAssignment(
+                vehicleId: 'v1',
+                personId: 'p1',
+                displayName: 'Max Mustermann',
+                function: 'GF',
+              ),
+              CrewAssignment(
+                vehicleId: 'v2',
+                personId: 'p1',
+                displayName: 'Max Mustermann',
+                function: 'MA',
+              ),
+            ],
+          ),
+        ],
+      },
+      participants: {
+        'd1': [_participant()],
+      },
+      vehicles: [
+        _vehicle(id: 'v1', shortName: 'HLF 1', sortOrder: 1),
+        _vehicle(id: 'v2', shortName: 'HLF 2', sortOrder: 2),
+      ],
+    );
+
+    final theme = Theme.of(tester.element(find.byKey(const Key('vehicle-cards'))));
+    final warningColor = theme.colorScheme.error;
+
+    final assignedChip = tester.widget<Chip>(
+      find.descendant(
+        of: find.byKey(const Key('assigned-participants')),
+        matching: find.byType(Chip),
+      ),
+    );
+    expect(assignedChip.side?.color, warningColor);
+
+    final crewEntryChips = tester.widgetList<Chip>(
+      find.descendant(
+        of: find.byKey(const Key('vehicle-cards')),
+        matching: find.byType(Chip),
+      ),
+    );
+    expect(crewEntryChips, hasLength(2));
+    for (final chip in crewEntryChips) {
+      expect(chip.side?.color, warningColor);
+    }
+  });
+
+  testWidgets(
+      'AC4: dayEnded disables create/edit/delete and tooltips mention '
+      '"beendet"',
+      (tester) async {
+    await _pump(
+      tester,
+      days: [_bfDay(state: BfDayState.ended)],
+      shifts: {
+        'd1': [_shift()],
+      },
+      participants: {
+        'd1': [_participant()],
+      },
+      vehicles: [_vehicle()],
+    );
+
+    final createButton =
+        tester.widget<FilledButton>(find.byKey(const Key('create-shift')));
+    expect(createButton.onPressed, isNull);
+    final createTooltip = tester.widget<Tooltip>(
+      find.ancestor(
+        of: find.byKey(const Key('create-shift')),
+        matching: find.byType(Tooltip),
+      ),
+    );
+    expect(createTooltip.message, contains('beendet'));
+
+    final editButton =
+        tester.widget<IconButton>(find.byKey(const Key('edit-shift')));
+    expect(editButton.onPressed, isNull);
+    expect(editButton.tooltip, contains('beendet'));
+
+    final deleteButton =
+        tester.widget<IconButton>(find.byKey(const Key('delete-shift')));
+    expect(deleteButton.onPressed, isNull);
+    expect(deleteButton.tooltip, contains('beendet'));
+  });
+
+  testWidgets(
+      'AC8: a shiftsProvider event keeps the BF-Tag/Schicht selection',
+      (tester) async {
+    final controller = StreamController<List<Shift>>();
+    addTearDown(controller.close);
+    final shiftRepository = _FakeShiftRepository(
+      shiftsByDay: {
+        'd1': [
+          _shift(
+            id: 's1',
+            name: 'Schicht 1',
+            startsAt: DateTime.now().subtract(const Duration(hours: 5)),
+          ),
+          _shift(
+            id: 's2',
+            name: 'Schicht 2',
+            startsAt: DateTime.now().add(const Duration(hours: 5)),
+          ),
+        ],
+      },
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bfDayAdminRepositoryProvider.overrideWithValue(
+            _FakeBfDayAdminRepository(
+              days: [_bfDay()],
+              participants: {'d1': [_participant()]},
+            ),
+          ),
+          shiftRepositoryProvider.overrideWithValue(shiftRepository),
+          vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
+          shiftsProvider.overrideWith((ref) => controller.stream),
+          bfDayProvider.overrideWith((ref) => Stream.value(null)),
+        ],
+        child: const MaterialApp(home: ShiftsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('shift-tab-s2')));
+    await tester.pumpAndSettle();
+
+    final chipBefore =
+        tester.widget<ChoiceChip>(find.byKey(const Key('shift-tab-s2')));
+    expect(chipBefore.selected, isTrue);
+
+    controller.add(const []);
+    await tester.pumpAndSettle();
+
+    final chipAfter =
+        tester.widget<ChoiceChip>(find.byKey(const Key('shift-tab-s2')));
+    expect(chipAfter.selected, isTrue);
+    expect(
+      find.byKey(const Key('bf-day-dropdown')),
+      findsOneWidget,
+    );
+  });
 }
