@@ -163,6 +163,13 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
   }
 }
 
+class _ThrowingPersonAdminRepository extends _FakePersonAdminRepository {
+  @override
+  Future<List<Person>> listPersons() async {
+    throw StateError('boom');
+  }
+}
+
 Future<_FakePersonAdminRepository> _pump(
   WidgetTester tester, {
   List<Person>? persons,
@@ -274,6 +281,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.revokeDeviceCalls, ['d1']);
+    },
+  );
+
+  testWidgets(
+    'editing a person calls updatePerson with the entered fields',
+    (tester) async {
+      final person = _person(
+        id: 'p1',
+        displayName: 'Max Mustermann',
+        personType: PersonType.youth,
+        permission: Permission.crew,
+      );
+      final repository = await _pump(tester, persons: [person]);
+
+      await tester.tap(find.byKey(const Key('person-p1')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('person-form-display-name')),
+        'Max Geändert',
+      );
+      await tester.tap(find.byKey(const Key('person-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.persons.single.displayName, 'Max Geändert');
+      expect(find.textContaining('Max Geändert'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'toggling active calls updatePerson with active after confirm',
+    (tester) async {
+      final person = _person(id: 'p1', active: true);
+      final repository = await _pump(tester, persons: [person]);
+
+      await tester.tap(find.byKey(const Key('active-switch-p1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repository.persons.single.active, isFalse);
+    },
+  );
+
+  testWidgets(
+    'load error shows the error message instead of the list',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            personAdminRepositoryProvider.overrideWithValue(
+              _ThrowingPersonAdminRepository(),
+            ),
+          ],
+          child: const MaterialApp(home: PersonsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Personen konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('persons-list')), findsNothing);
     },
   );
 
