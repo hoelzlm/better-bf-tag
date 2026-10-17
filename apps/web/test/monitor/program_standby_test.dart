@@ -336,24 +336,28 @@ void main() {
     },
   );
 
-  testWidgets('the block is absent when there are no Programmpunkte', (
-    tester,
-  ) async {
-    final env = _Env();
-    env.adapter.snapshotBody = {
-      'seq': 1,
-      'vehicles': <dynamic>[],
-      'incidents': <dynamic>[],
-      'alarms': <dynamic>[],
-      'program_items': <dynamic>[],
-    };
-    await _pumpMonitor(tester, env);
-    await _activateAndPair(tester, env);
+  testWidgets(
+    'the panel shows the empty state (icon + hint text), current/next '
+    'absent, when there are no Programmpunkte (monitor-standby.md \u00a74 '
+    '"Leer/Erststart": festes Grid, the panel itself is never hidden)',
+    (tester) async {
+      final env = _Env();
+      env.adapter.snapshotBody = {
+        'seq': 1,
+        'vehicles': <dynamic>[],
+        'incidents': <dynamic>[],
+        'alarms': <dynamic>[],
+        'program_items': <dynamic>[],
+      };
+      await _pumpMonitor(tester, env);
+      await _activateAndPair(tester, env);
 
-    expect(find.byKey(const Key('program-standby-panel')), findsNothing);
-    expect(find.byKey(const Key('monitor-program-current')), findsNothing);
-    expect(find.byKey(const Key('monitor-program-next')), findsNothing);
-  });
+      expect(find.byKey(const Key('program-standby-panel')), findsOneWidget);
+      expect(find.text('Kein Tagesablauf für heute.'), findsOneWidget);
+      expect(find.byKey(const Key('monitor-program-current')), findsNothing);
+      expect(find.byKey(const Key('monitor-program-next')), findsNothing);
+    },
+  );
 
   testWidgets(
     'a running Einsatzansicht still has precedence over the Programmpunkt block',

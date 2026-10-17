@@ -45,20 +45,28 @@ Bei einem **laufenden Einsatz**:
 └──────────────────────────────────────────────────────────┘
 ```
 
-Im **Standby**:
+Im **Standby** (Redesign `docs/design/screens/monitor-standby.md`, festes Grid statt
+content-abhängiger Höhen):
 
-- MVP: große Uhr, Fahrzeugstatus-Leiste, **aktuelle Schicht mit Besatzungen** (wer sitzt auf
-  welchem Fahrzeug), rotierende Folien
-- MVP: Banner bei neuer Durchsage (`announcement.created`, 60 s, zeigt den Text; verschwindet
-  sofort bei Löschung), danach Panel „Letzte Durchsage“ mit der neuesten Durchsage des Tags
-  (Uhrzeit + Text) aus `snapshot.announcements`, leer wenn keine vorhanden; läuft ein Einsatz
-  (Einsatzansicht), hat diese immer Vorrang – Banner und Panel werden dann nicht angezeigt
-- MVP: Block „Jetzt“ / „Danach“ (ADR 0025) aus `snapshot.program_items` bzw. `program.changed`,
-  Anzeige über `currentAndNext(programItems, now)` (`now` aus `monitorClockProvider`, rein
-  zeitgesteuert – kein Event nötig, um von einem Programmpunkt zum nächsten zu wechseln); je
-  Zeile `HH:mm–HH:mm  Titel` (Lokalzeit), fehlt „Jetzt“ oder „Danach“ wird die Zeile weggelassen;
-  ohne Programmpunkte ist der Block ganz unsichtbar; eine laufende Einsatzansicht hat weiterhin
-  Vorrang (der Block erscheint nur im Standby)
+- Kopfzeile: Uhrzeit (`HH:mm`, Sekunden kleiner daneben), Datum, Verbindungspunkt + Monitorname.
+- Linke Spalte `MonitorVehiclePanel` (vereint die frühere Fahrzeugstatus-Leiste und die
+  Schicht-Besatzung in ein Panel): vertikale, nicht scrollende Liste, eine Zeile pro Fahrzeug
+  (Kurzname, Besatzung „Funktion Name“ durch `·` getrennt in einer Zeile mit Ellipsis, FMS-Pille);
+  Panel-Überschrift „Fahrzeugstatus & Besatzung“, mit „ · Schicht N · HH:mm–HH:mm“, sobald ein
+  BF-Tag läuft und eine Schicht aktiv ist; bei mehr als 7 Fahrzeugen seitenweises Blättern (Punkte
+  unten, Wechsel alle 10 s) statt Scrollen.
+- Rechte Spalte „Tagesablauf“ (ADR 0025): immer sichtbar (kein leerer Bildschirm), zeigt „Jetzt“ /
+  „Danach“ (`currentAndNext(programItems, now)`, `now` aus `monitorClockProvider`) plus – ohne
+  aktive Folien – bis zu 4 weitere künftige Programmpunkte; nie ein Programmpunkt, dessen Ende
+  bereits vergangen ist, außer dem aktuellen; ohne Programmpunkte zeigt das Panel einen
+  Leerzustand-Hinweis „Kein Tagesablauf für heute.“ statt ganz zu verschwinden. Mit aktiven Folien
+  wird der Block kompakt (nur „Jetzt“/„Danach“) und eine Folienfläche (≥ 900×440 px) rotiert
+  darunter.
+- Fußzeile mit drei Prioritäten: 1) laufende, live empfangene Durchsage (`announcement.created`,
+  60 s, Banner in `primaryContainer`-Farbe – nie Amber/Rot, eine Durchsage ist kein Alarm), 2)
+  sonst „Letzte Durchsage“ aus `snapshot.announcements` (Uhrzeit + Text), 3) sonst eine leere,
+  dezente Leiste; läuft ein Einsatz (Einsatzansicht), hat diese immer Vorrang – Fußzeile und
+  Tagesablauf werden dann nicht angezeigt.
 
 Technik: Gong bzw. Alarmton bei `alarm.triggered` (der Browser verlangt einmal „Zum Aktivieren
 tippen“), Screen Wake Lock, rotes Banner bei Verbindungsverlust, Rotation bei mehreren laufenden
