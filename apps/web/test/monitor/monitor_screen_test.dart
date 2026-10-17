@@ -405,7 +405,8 @@ void main() {
     },
   );
 
-  testWidgets('standby shows the vehicle status bar tiles from a snapshot', (
+  testWidgets('standby shows the vehicle panel rows from a snapshot '
+      '(monitor-standby.md \u00a77: vehicle-tile-<id> -> crew-vehicle-<id>)', (
     tester,
   ) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
@@ -439,7 +440,7 @@ void main() {
     await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('vehicle-tile-v1')), findsOneWidget);
+    expect(find.byKey(const Key('crew-vehicle-v1')), findsOneWidget);
     expect(find.text('HLF 1'), findsOneWidget);
   });
 
@@ -879,27 +880,34 @@ void main() {
     },
   );
 
-  testWidgets('crew panel is hidden when no BF-Tag is running', (tester) async {
-    tester.view.physicalSize = const Size(1920, 1080);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    final env = _Env(clock: DateTime.utc(2026, 10, 9, 10, 0, 0));
-    env.adapter.pairBody = _pairResponseBody(
-      accessToken: 'at1',
-      refreshToken: 'rt1',
-      monitorId: 'mon1',
-    );
-    env.adapter.snapshotBody = {'seq': 1, 'vehicles': <dynamic>[]};
-    await _pumpMonitor(tester, env);
-    await _activate(tester);
-    await tester.enterText(
-      find.byKey(const Key('monitor-pairing-code')),
-      'ABCDEFGH',
-    );
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'crew panel heading has no Schicht-Zusatz when no BF-Tag is running '
+    '(monitor-standby.md \u00a74: the heading itself always stays, concept '
+    'moved it into MonitorVehiclePanel -- only the Schicht suffix is '
+    'conditional)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final env = _Env(clock: DateTime.utc(2026, 10, 9, 10, 0, 0));
+      env.adapter.pairBody = _pairResponseBody(
+        accessToken: 'at1',
+        refreshToken: 'rt1',
+        monitorId: 'mon1',
+      );
+      env.adapter.snapshotBody = {'seq': 1, 'vehicles': <dynamic>[]};
+      await _pumpMonitor(tester, env);
+      await _activate(tester);
+      await tester.enterText(
+        find.byKey(const Key('monitor-pairing-code')),
+        'ABCDEFGH',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('crew-panel-heading')), findsNothing);
-  });
+      expect(find.byKey(const Key('crew-panel-heading')), findsOneWidget);
+      expect(find.text('Fahrzeugstatus & Besatzung'), findsOneWidget);
+    },
+  );
 }
