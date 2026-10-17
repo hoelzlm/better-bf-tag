@@ -295,6 +295,9 @@ Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
   // Mirrors production: `main.dart`'s root ProviderScope with the
   // `/monitor` route's own scoped ProviderScope nested inside (router.dart).
   // A single flat scope hides "provider not scoped" bugs.
+  tester.view.physicalSize = const Size(1920, 1080);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       child: ProviderScope(
@@ -317,6 +320,7 @@ Future<void> _activateAndPair(WidgetTester tester, _Env env) async {
     find.byKey(const Key('monitor-pairing-code')),
     'ABCDEFGH',
   );
+  await tester.pump();
   await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
   await tester.pumpAndSettle();
 }
@@ -538,9 +542,7 @@ void main() {
         'incidents': [_incidentJson()],
         'alarms': [
           _alarmJson(
-            recipients: [
-              _recipientJson(personId: 'p1', displayName: 'Max M.'),
-            ],
+            recipients: [_recipientJson(personId: 'p1', displayName: 'Max M.')],
           ),
         ],
       };
