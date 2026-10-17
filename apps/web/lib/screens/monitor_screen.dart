@@ -77,10 +77,11 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
     List<Alarm> alarms,
   ) {
     final incidentIdsWithAlarms = alarms.map((a) => a.incidentId).toSet();
-    final withAlarms = incidents
-        .where((incident) => incidentIdsWithAlarms.contains(incident.id))
-        .toList()
-      ..sort((a, b) => a.number.compareTo(b.number));
+    final withAlarms =
+        incidents
+            .where((incident) => incidentIdsWithAlarms.contains(incident.id))
+            .toList()
+          ..sort((a, b) => a.number.compareTo(b.number));
     return withAlarms;
   }
 
@@ -101,10 +102,12 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
         });
         return;
       }
-      final currentIndex =
-          candidates.indexWhere((i) => i.id == _shownIncidentId);
-      final nextIndex =
-          currentIndex == -1 ? 0 : (currentIndex + 1) % candidates.length;
+      final currentIndex = candidates.indexWhere(
+        (i) => i.id == _shownIncidentId,
+      );
+      final nextIndex = currentIndex == -1
+          ? 0
+          : (currentIndex + 1) % candidates.length;
       setState(() {
         _shownIncidentId = candidates[nextIndex].id;
         _rotationTimer = null;
@@ -120,8 +123,9 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
     final session = ref.watch(monitorSessionControllerProvider);
     if (session is! MonitorPaired) {
       return switch (session) {
-        MonitorUnpaired(revoked: final revoked) =>
-          MonitorPairingScreen(revokedHint: revoked),
+        MonitorUnpaired(revoked: final revoked) => MonitorPairingScreen(
+          revokedHint: revoked,
+        ),
         _ => const _MonitorConnectingScreen(),
       };
     }
@@ -208,20 +212,37 @@ class _ActivationOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Concept §3.1: this is the one surface of the whole app that is
+    // deliberately rendered *before* the theme is relevant -- pure black,
+    // not the `surface` token -- since it must work even if no
+    // Font/Theme has loaded yet.
     return Scaffold(
       backgroundColor: Colors.black,
       body: InkWell(
         key: const Key('monitor-activation-overlay'),
         onTap: onTap,
         child: const Center(
-          child: Text(
-            'Zum Aktivieren tippen',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.local_fire_department, size: 96, color: Colors.white),
+              SizedBox(height: 32),
+              Text(
+                'Zum Aktivieren tippen',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Aktiviert Vollbild und Ton für Alarmdurchsagen.',
+                style: TextStyle(color: Colors.white70, fontSize: 28),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
@@ -233,19 +254,39 @@ class _ActivationOverlay extends StatelessWidget {
 /// ([MonitorUnknown]), or on a network error while a stored token is kept
 /// for retry ([MonitorOffline]) -- neither has enough data for the standby
 /// screen (no confirmed monitor name) nor should fall back to pairing
-/// (a stored session might still be valid).
+/// (a stored session might still be valid). Concept §4: both states show
+/// the exact same text -- a unified status is deliberately preferred over
+/// distinguishing "connecting" from "lost connection" here, since an
+/// unattended device needs no different reaction to either.
 class _MonitorConnectingScreen extends StatelessWidget {
   const _MonitorConnectingScreen();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.black,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final monitorStyles = theme.extension<BftagMonitorTextStyles>()!;
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: Center(
-        child: Text(
-          'Verbinde …',
-          key: Key('monitor-connecting'),
-          style: TextStyle(color: Colors.white70, fontSize: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.local_fire_department,
+              size: 96,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Verbinde …',
+              key: const Key('monitor-connecting'),
+              style: monitorStyles.headline.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
