@@ -72,6 +72,16 @@ Technik: Gong bzw. Alarmton bei `alarm.triggered` (der Browser verlangt einmal �
 tippen“), Screen Wake Lock, rotes Banner bei Verbindungsverlust, Rotation bei mehreren laufenden
 Einsätzen.
 
+Bei einem **live** `alarm.triggered` (nicht bei einem per Snapshot bereits laufenden Einsatz)
+zeigt der Monitor für 20 s einen Alarmzustand (Redesign `docs/design/screens/monitor-alarm.md`):
+Vollbild in `BftagAlarmColors.alarm`, Badge mit Alarmstufe („ERSTALARM“ / „N. NACHALARMIERUNG“,
+pulsierendes Icon, deaktiviert bei reduzierter Bewegung), Stichwort, Adresse, Meldebild, Uhrzeit
+und Laufzeit, sowie genau die mit diesem Alarm alarmierten Fahrzeuge (`Alarm.vehicleIds`, nicht
+alle Fahrzeuge des Einsatzes) mit Quittierungsfortschritt. Währenddessen pausiert die
+Einsatz-Rotation vollständig; ein erneuter `alarm.triggered` für denselben Einsatz startet die
+20 s neu, ein `incident.closed` während der Phase beendet sie sofort. Danach (oder ohne weiteren
+Live-Alarm) folgt die ruhige Einsatzansicht.
+
 ## Mobile-App (`apps/mobile`)
 
 Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nach Berechtigung.

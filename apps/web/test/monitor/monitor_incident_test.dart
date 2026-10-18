@@ -426,11 +426,24 @@ void main() {
           alarm: _alarmJson(),
         ),
       );
+      // Not `pumpAndSettle`: the Alarmzustand's badge icon pulses via an
+      // intentionally infinite AnimationController
+      // (monitor_alarm_screen.dart), which would make pumpAndSettle hang.
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('monitor-alarm-badge')), findsOneWidget);
+      expect(env.alarmSound.playCalls, 1);
+
+      // The loud Alarmzustand runs for 20 s (concept
+      // `docs/design/screens/monitor-alarm.md` §5) before the monitor
+      // automatically falls back to the calm Einsatzansicht.
+      await tester.pump(const Duration(seconds: 20));
       await tester.pumpAndSettle();
 
       expect(find.text('EINSATZ 7'), findsOneWidget);
       expect(find.byKey(const Key('monitor-clock-time')), findsNothing);
-      expect(env.alarmSound.playCalls, 1);
+      expect(find.byKey(const Key('monitor-alarm-badge')), findsNothing);
 
       // A second, unrelated alarm.triggered must not re-ring beyond once
       // per live event.
@@ -446,9 +459,13 @@ void main() {
           alarm: _alarmJson(id: 'a2', incidentId: 'i2'),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
 
       expect(env.alarmSound.playCalls, 2);
+
+      await tester.pump(const Duration(seconds: 20));
+      await tester.pumpAndSettle();
     },
   );
 

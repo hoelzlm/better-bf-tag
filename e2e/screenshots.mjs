@@ -270,10 +270,15 @@ async function webShots() {
 async function monitorShots(seeded) {
   await setViewport(1920, 1080);
 
-  // Kopplung: frischer Browser-Kontext (kein localStorage).
+  // Aktivierung: frischer Browser-Kontext (kein localStorage), vor dem
+  // Tap auf "aktivieren".
   await evalJs('localStorage.clear()');
   await nav(`${BASE}/monitor`);
   await waitForSemantics();
+  await settle();
+  await shot(MONITOR_DIR, 'aktivierung', 1920, 1080);
+
+  // Kopplung.
   await clickByText('aktivieren');
   await waitForSemantics();
   await settle();
@@ -298,11 +303,12 @@ async function monitorShots(seeded) {
   await settle(1200);
   await shot(MONITOR_DIR, 'standby-durchsage', 1920, 1080);
 
-  // Einsatzansicht mit Karte + Alarmzustand: ein frischer Live-Alarm nach
+  // Alarmzustand + Einsatzansicht mit Karte: ein frischer Live-Alarm nach
   // dem Pairing (per API), damit der Monitor den Übergang Standby ->
-  // Einsatzansicht tatsächlich live durchläuft (ein nur per Snapshot
-  // bereits laufender Einsatz löst laut Produktionslogik keinen
-  // Alarm-Übergang aus -- nur ein live `alarm.triggered`-Event tut das).
+  // Alarmzustand (20 s) -> Einsatzansicht tatsächlich live durchläuft (ein
+  // nur per Snapshot bereits laufender Einsatz löst laut Produktionslogik
+  // keinen Alarm-Übergang aus -- nur ein live `alarm.triggered`-Event tut
+  // das).
   const liveIncident = (await must('POST', `/bf-days/${seeded.day.id}/incidents`, {
     token: seeded.prepTok,
     body: { keyword: 'B2 Kellerbrand', address: 'Hauptstraße 1', report: 'Rauch aus dem Keller.', latitude: 48.138, longitude: 11.576 },
@@ -310,8 +316,25 @@ async function monitorShots(seeded) {
   await must('POST', `/incidents/${liveIncident.id}/alarms`, { token: seeded.dispTok, body: { vehicle_ids: [seeded.dlk.id] } }, 201);
   await settle(1500);
   await shot(MONITOR_DIR, 'alarm', 1920, 1080);
-  await settle(1000);
+  // Den Rest der 20-s-Alarmzustand-Phase abwarten (insgesamt >= 21 s seit
+  // Alarmauslösung), bevor die Einsatzansicht aufgenommen wird.
+  await settle(20000);
   await shot(MONITOR_DIR, 'einsatzansicht', 1920, 1080);
+
+  // Einsatz-Fallback: ein alarmierter Einsatz ohne Standort (kein
+  // latitude/longitude) -- den vorherigen Einsatz vorher schließen, damit
+  // die Rotation nicht dazwischenfunkt.
+  await must('POST', `/incidents/${liveIncident.id}/close`, { token: seeded.dispTok }, 200);
+  const fallbackIncident = (await must('POST', `/bf-days/${seeded.day.id}/incidents`, {
+    token: seeded.prepTok,
+    body: { keyword: 'B1 Kleinbrand ohne Standort', address: 'Seitenweg 3', report: 'Kein GPS verfügbar.' },
+  }, 201)).json;
+  await must('POST', `/incidents/${fallbackIncident.id}/alarms`, { token: seeded.dispTok, body: { vehicle_ids: [seeded.hlf.id] } }, 201);
+  await settle(1500);
+  // Auch hier die Alarmzustand-Phase abwarten, bevor die
+  // Einsatzansicht (Fallback ohne Karte) aufgenommen wird.
+  await settle(20000);
+  await shot(MONITOR_DIR, 'einsatz-fallback', 1920, 1080);
 }
 
 async function main() {
