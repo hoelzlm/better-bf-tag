@@ -8,6 +8,7 @@ import '../monitor/alarm_sound.dart';
 import '../monitor/announcement_banner.dart';
 import '../monitor/monitor_platform.dart';
 import '../monitor/monitor_session.dart';
+import 'monitor_alarm_screen.dart';
 import 'monitor_incident_screen.dart';
 import 'monitor_pairing_screen.dart';
 import 'monitor_standby_screen.dart';
@@ -15,6 +16,11 @@ import 'monitor_standby_screen.dart';
 /// How long the Einsatzansicht stays on one Einsatz before rotating to the
 /// next (ADR 0017, "Anzeige"), when several Einsätze have an Alarmierung.
 const _incidentRotationInterval = Duration(seconds: 15);
+
+/// How long the loud, full-surface Alarmzustand (`monitor-alarm.md`) is
+/// shown after a live `alarm.triggered`, before automatically falling
+/// back to the calmer `MonitorIncidentScreen` (concept §5 "Anzeigedauer").
+const _alarmFlashDuration = Duration(seconds: 20);
 
 /// Entry point for `/monitor` (ADR 0012, "Monitor im Browser"): shows the
 /// full-screen activation overlay on every start, then the pairing,
@@ -37,6 +43,12 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
   Announcement? _bannerAnnouncement;
   Timer? _bannerTimer;
 
+  /// The triggering `Alarm` of the currently running loud Alarmzustand
+  /// phase (concept §5 "Lebenszyklus"), or `null` outside of it. Only a
+  /// live `alarm.triggered` ever sets this -- never a snapshot alarm.
+  Alarm? _activeAlarm;
+  Timer? _alarmTimer;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +63,7 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
     WidgetsBinding.instance.removeObserver(this);
     _rotationTimer?.cancel();
     _bannerTimer?.cancel();
+    _alarmTimer?.cancel();
     super.dispose();
   }
 
@@ -131,18 +144,43 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
     }
 
     // Every live `alarm.triggered` (never snapshot content, ADR 0017)
-    // plays the gong and jumps the Einsatzansicht to that Einsatz.
+    // plays the gong, jumps to that Einsatz, and starts (or restarts,
+    // concept §4 "Zwei/mehrere alarm.triggered ... hintereinander") the
+    // loud 20-s Alarmzustand phase -- pausing the Einsatzansicht rotation
+    // entirely while it runs (concept §4/§5, AC9/AC12).
     ref.listen(liveAlarmTriggeredProvider, (previous, next) {
       final alarm = next.valueOrNull;
       if (alarm == null) return;
       unawaited(ref.read(alarmSoundProvider).play());
-      setState(() => _shownIncidentId = alarm.incidentId);
+      _rotationTimer?.cancel();
+      _rotationTimer = null;
+      _alarmTimer?.cancel();
+      _alarmTimer = Timer(_alarmFlashDuration, () {
+        if (!mounted) return;
+        setState(() => _activeAlarm = null);
+      });
+      setState(() {
+        _shownIncidentId = alarm.incidentId;
+        _activeAlarm = alarm;
+      });
     });
 
     final incidents =
         ref.watch(incidentsProvider).valueOrNull ?? const <Incident>[];
     final alarms = ref.watch(alarmsProvider).valueOrNull ?? const <Alarm>[];
     final candidates = _incidentsWithAlarms(incidents, alarms);
+
+    // AC11: the Einsatz currently shown in the loud Alarmzustand was
+    // closed while the 20-s timer was still running -- cancel it
+    // immediately instead of waiting it out (concept §4 "Der Einsatz
+    // wird geschlossen").
+    final activeAlarm = _activeAlarm;
+    if (activeAlarm != null &&
+        !candidates.any((i) => i.id == activeAlarm.incidentId)) {
+      _alarmTimer?.cancel();
+      _alarmTimer = null;
+      _activeAlarm = null;
+    }
 
     // A live `announcement.created` (never snapshot content, ADR 0024)
     // starts/replaces the standby banner timer -- but only while the
@@ -178,6 +216,9 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
       _shownIncidentId = null;
       _rotationTimer?.cancel();
       _rotationTimer = null;
+      _alarmTimer?.cancel();
+      _alarmTimer = null;
+      _activeAlarm = null;
       return MonitorStandbyScreen(liveBanner: _bannerAnnouncement);
     }
 
@@ -192,6 +233,14 @@ class _MonitorScreenState extends ConsumerState<MonitorScreen>
     final stillValid = candidates.any((i) => i.id == _shownIncidentId);
     if (!stillValid) {
       _shownIncidentId = candidates.first.id;
+    }
+
+    // AC1/AC12: while the loud Alarmzustand is active, show it exclusively
+    // for this Einsatz, and the 15-s rotation stays paused.
+    if (_activeAlarm != null) {
+      _rotationTimer?.cancel();
+      _rotationTimer = null;
+      return MonitorAlarmScreen(alarm: _activeAlarm!);
     }
 
     if (candidates.length < 2) {
