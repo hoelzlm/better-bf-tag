@@ -80,6 +80,67 @@ class _FakeTestAlarmRepository implements TestAlarmRepository {
   }
 }
 
+/// [TestAlarmRepository] fake whose `trigger` only resolves once
+/// [complete] is called, so tests can observe the `_busy == true` frame
+/// deterministically (a plain `async => value` fake resolves within the
+/// same microtask flush as a single `tester.pump()`, making the busy
+/// state unobservable).
+class _SlowTestAlarmRepository implements TestAlarmRepository {
+  final List<int> calls = [];
+  Completer<TestAlarmOutcome>? _pending;
+
+  void complete(TestAlarmOutcome outcome) {
+    _pending?.complete(outcome);
+  }
+
+  @override
+  Future<TestAlarmOutcome> trigger({int delaySeconds = 0}) {
+    calls.add(delaySeconds);
+    final completer = Completer<TestAlarmOutcome>();
+    _pending = completer;
+    return completer.future;
+  }
+}
+
+/// [DeviceSettings] fake whose status futures only resolve once
+/// [completeAll] is called, so tests can observe the Onboarding's
+/// `_loaded == false` loading frame deterministically (the same race as
+/// [_SlowTestAlarmRepository] above).
+class _SlowDeviceSettings implements DeviceSettings {
+  final _notifications = Completer<bool>();
+  final _dnd = Completer<bool>();
+  final _battery = Completer<bool>();
+  final _manufacturer = Completer<String>();
+
+  void completeAll() {
+    _notifications.complete(false);
+    _dnd.complete(false);
+    _battery.complete(false);
+    _manufacturer.complete('unknown');
+  }
+
+  @override
+  Future<bool> notificationsEnabled() => _notifications.future;
+
+  @override
+  Future<bool> bypassesDnd() => _dnd.future;
+
+  @override
+  Future<bool> batteryOptimizationIgnored() => _battery.future;
+
+  @override
+  Future<String> manufacturer() => _manufacturer.future;
+
+  @override
+  Future<void> openNotificationSettings() async {}
+
+  @override
+  Future<void> openDndSettings() async {}
+
+  @override
+  Future<void> requestIgnoreBatteryOptimization() async {}
+}
+
 /// Fake [PushService] with a controllable [onTestAlarmReceived] stream and
 /// an [init] call counter.
 class _FakePushService implements PushService {
@@ -155,8 +216,8 @@ class _FakePairedSessionController extends PairedSessionController {
 List<Override> _overrides({
   required PairedSessionState session,
   required InMemoryOnboardingStore onboardingStore,
-  required _FakeDeviceSettings deviceSettings,
-  required _FakeTestAlarmRepository testAlarmRepository,
+  required DeviceSettings deviceSettings,
+  required TestAlarmRepository testAlarmRepository,
   required _FakePushService pushService,
   required bool isIos,
   _FakeAlarmSound? alarmSound,
@@ -185,8 +246,8 @@ Future<ProviderContainer> _pump(
   WidgetTester tester, {
   required PairedSessionState session,
   required InMemoryOnboardingStore onboardingStore,
-  required _FakeDeviceSettings deviceSettings,
-  required _FakeTestAlarmRepository testAlarmRepository,
+  required DeviceSettings deviceSettings,
+  required TestAlarmRepository testAlarmRepository,
   required _FakePushService pushService,
   bool isIos = false,
 }) async {
@@ -351,7 +412,7 @@ void main() {
               find.byKey(const Key('onboarding-status-notifications')),
             )
             .data,
-        '✗',
+        'Noch nicht eingerichtet',
       );
 
       deviceSettings.notifications = true;
@@ -367,7 +428,196 @@ void main() {
               find.byKey(const Key('onboarding-status-notifications')),
             )
             .data,
-        '✓',
+        'Eingerichtet',
+      );
+    },
+  );
+
+  testWidgets(
+    'AC1: Android shows 5 steps, iOS shows 5 steps (battery xor mute)',
+    (tester) async {
+      final androidContainer = await _pump(
+        tester,
+        session: _paired,
+        onboardingStore: InMemoryOnboardingStore(completed: false),
+        deviceSettings: _FakeDeviceSettings(),
+        testAlarmRepository: _FakeTestAlarmRepository(),
+        pushService: _FakePushService(),
+        isIos: false,
+      );
+      expect(find.text('Schritt 1 von 5'), findsOneWidget);
+      androidContainer.dispose();
+
+      final iosContainer = await _pump(
+        tester,
+        session: _paired,
+        onboardingStore: InMemoryOnboardingStore(completed: false),
+        deviceSettings: _FakeDeviceSettings(),
+        testAlarmRepository: _FakeTestAlarmRepository(),
+        pushService: _FakePushService(),
+        isIos: true,
+      );
+      expect(find.text('Schritt 1 von 5'), findsOneWidget);
+      iosContainer.dispose();
+    },
+  );
+
+  testWidgets(
+    'AC2: only a spinner is shown while statuses are loading, no step '
+    'progress visible',
+    (tester) async {
+      final deviceSettings = _SlowDeviceSettings();
+      final container = ProviderContainer(
+        overrides: _overrides(
+          session: _paired,
+          onboardingStore: InMemoryOnboardingStore(completed: false),
+          deviceSettings: deviceSettings,
+          testAlarmRepository: _FakeTestAlarmRepository(),
+          pushService: _FakePushService(),
+          isIos: false,
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const BftagMobileApp(),
+        ),
+      );
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.textContaining('Schritt'), findsNothing);
+
+      deviceSettings.completeAll();
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.textContaining('Schritt'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'AC3: status chip uses errorContainer when not ok, primaryContainer '
+    'when ok, never the alarm color',
+    (tester) async {
+      final deviceSettings = _FakeDeviceSettings()..notifications = false;
+      await _pump(
+        tester,
+        session: _paired,
+        onboardingStore: InMemoryOnboardingStore(completed: false),
+        deviceSettings: deviceSettings,
+        testAlarmRepository: _FakeTestAlarmRepository(),
+        pushService: _FakePushService(),
+      );
+
+      final theme = Theme.of(
+        tester.element(find.byKey(const Key('onboarding-status-notifications'))),
+      );
+      final notOkContainer = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byKey(const Key('onboarding-status-notifications')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final notOkDecoration = notOkContainer.decoration as BoxDecoration;
+      expect(notOkDecoration.color, theme.colorScheme.errorContainer);
+      expect(notOkDecoration.color, isNot(theme.colorScheme.primaryContainer));
+      final alarmColors = theme.extension<BftagAlarmColors>();
+      expect(notOkDecoration.color, isNot(alarmColors?.alarm));
+      expect(notOkDecoration.color, isNot(alarmColors?.alarmContainer));
+
+      deviceSettings.notifications = true;
+      final observer = tester.state<State<OnboardingScreen>>(
+        find.byType(OnboardingScreen),
+      ) as WidgetsBindingObserver;
+      observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      final okContainer = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byKey(const Key('onboarding-status-notifications')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final okDecoration = okContainer.decoration as BoxDecoration;
+      expect(okDecoration.color, theme.colorScheme.primaryContainer);
+      expect(okDecoration.color, isNot(theme.colorScheme.errorContainer));
+    },
+  );
+
+  testWidgets(
+    'AC9: status chip and hint box text contrast reaches WCAG AA '
+    '(>= 4.5:1) in light and dark theme',
+    (tester) async {
+      double contrastRatio(Color a, Color b) {
+        final l1 = a.computeLuminance() + 0.05;
+        final l2 = b.computeLuminance() + 0.05;
+        return l1 > l2 ? l1 / l2 : l2 / l1;
+      }
+
+      for (final theme in [bftagLightTheme(), bftagDarkTheme()]) {
+        final colorScheme = theme.colorScheme;
+        // Status chip: not-ok (errorContainer/onErrorContainer) and ok
+        // (primaryContainer/onPrimaryContainer).
+        expect(
+          contrastRatio(
+            colorScheme.onErrorContainer,
+            colorScheme.errorContainer,
+          ),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(
+          contrastRatio(
+            colorScheme.onPrimaryContainer,
+            colorScheme.primaryContainer,
+          ),
+          greaterThanOrEqualTo(4.5),
+        );
+        // Hersteller-Hinweis-Box: onSurface on surfaceContainerHigh.
+        expect(
+          contrastRatio(
+            colorScheme.onSurface,
+            colorScheme.surfaceContainerHigh,
+          ),
+          greaterThanOrEqualTo(4.5),
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'AC4: "Einstellungen öffnen" for notifications appears only after '
+    '"Erlauben" has been pressed once',
+    (tester) async {
+      await _pump(
+        tester,
+        session: _paired,
+        onboardingStore: InMemoryOnboardingStore(completed: false),
+        deviceSettings: _FakeDeviceSettings(),
+        testAlarmRepository: _FakeTestAlarmRepository(),
+        pushService: _FakePushService(),
+      );
+
+      expect(
+        find.byKey(const Key('onboarding-action-notifications-settings')),
+        findsNothing,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('onboarding-action-notifications-allow')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('onboarding-action-notifications-settings')),
+        findsOneWidget,
       );
     },
   );
@@ -381,6 +631,57 @@ void main() {
     await tester.tap(find.byKey(const Key('onboarding-next')));
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'AC6: both Testalarm buttons are disabled while a request is in flight',
+    (tester) async {
+      final testAlarmRepository = _SlowTestAlarmRepository();
+      await _pump(
+        tester,
+        session: _paired,
+        onboardingStore: InMemoryOnboardingStore(completed: false),
+        deviceSettings: _FakeDeviceSettings(),
+        testAlarmRepository: testAlarmRepository,
+        pushService: _FakePushService(),
+      );
+      await goToTestAlarmStep(tester, false);
+
+      await tester.tap(find.byKey(const Key('test-alarm-now')));
+      await tester.pump();
+
+      final nowButton = tester.widget<FilledButton>(
+        find.byKey(const Key('test-alarm-now')),
+      );
+      final delayedButton = tester.widget<OutlinedButton>(
+        find.byKey(const Key('test-alarm-delayed')),
+      );
+      expect(nowButton.onPressed, isNull);
+      expect(delayedButton.onPressed, isNull);
+
+      testAlarmRepository.complete(TestAlarmOutcome.delivered);
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'AC7: the lock-screen hint only appears after the delayed Testalarm, '
+    'not the immediate one',
+    (tester) async {
+      await _pump(
+        tester,
+        session: _paired,
+        onboardingStore: InMemoryOnboardingStore(completed: false),
+        deviceSettings: _FakeDeviceSettings(),
+        testAlarmRepository: _FakeTestAlarmRepository(),
+        pushService: _FakePushService(),
+      );
+      await goToTestAlarmStep(tester, false);
+
+      await tester.tap(find.byKey(const Key('test-alarm-now')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('test-alarm-lock-hint')), findsNothing);
+    },
+  );
 
   testWidgets(
     '"Testalarm jetzt" triggers delaySeconds 0 and shows the delivered text',

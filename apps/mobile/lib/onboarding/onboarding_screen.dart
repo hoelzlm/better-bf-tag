@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,7 +119,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final step = steps[stepIndex];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Einrichtung')),
+      appBar: AppBar(
+        title: const Text('Einrichtung'),
+        bottom: _loaded
+            ? _StepProgress(current: stepIndex, total: steps.length)
+            : null,
+      ),
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -183,9 +189,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           title: 'Akku-Optimierung',
           description: 'Schließe BF-Tag von der Akku-Optimierung aus, '
               'damit Alarme auch im Hintergrund ankommen.',
-          extra: Text(
-            batteryHintFor(_manufacturer),
-            key: const Key('onboarding-battery-hint'),
+          extra: _HintBox(
+            icon: Icons.info_outline,
+            background: Theme.of(context).colorScheme.surfaceContainerHigh,
+            foreground: Theme.of(context).colorScheme.onSurface,
+            child: Text(
+              batteryHintFor(_manufacturer),
+              key: const Key('onboarding-battery-hint'),
+            ),
           ),
           actions: [
             FilledButton(
@@ -267,6 +278,152 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 }
 
+/// "Schritt N von M" Fortschrittsanzeiger unter der AppBar (§3 Layout):
+/// gefüllte Segmente (`primary`) bis zum aktuellen Schritt, `outline`
+/// danach. Rein informativ, nicht antippbar (§5 Interaktionen) — kein
+/// `GestureDetector`/`onTap` hier.
+class _StepProgress extends StatelessWidget implements PreferredSizeWidget {
+  const _StepProgress({required this.current, required this.total});
+
+  final int current;
+  final int total;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(48);
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final radii = Theme.of(context).extension<BftagRadii>();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: List.generate(total, (index) {
+              final filled = index <= current;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index == total - 1 ? 0 : 4),
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: filled ? colorScheme.primary : colorScheme.outline,
+                      borderRadius: BorderRadius.circular(radii?.full ?? 999),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Schritt ${current + 1} von $total',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Status-Pille statt Mini-Unicode-Zeichen (§2 Usability-Probleme Nr. 2):
+/// `errorContainer`/`onErrorContainer` solange nicht erledigt,
+/// `primaryContainer`/`onPrimaryContainer` sobald erledigt — nie
+/// [BftagAlarmColors] (Grundprinzip 1, unerledigt ist kein Alarm).
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.statusKey, required this.ok});
+
+  final String statusKey;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final radii = Theme.of(context).extension<BftagRadii>();
+    final background =
+        ok ? colorScheme.primaryContainer : colorScheme.errorContainer;
+    final foreground =
+        ok ? colorScheme.onPrimaryContainer : colorScheme.onErrorContainer;
+    final label = ok ? 'Eingerichtet' : 'Noch nicht eingerichtet';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(radii?.full ?? 999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            ok ? Icons.check_circle : Icons.warning_amber,
+            color: foreground,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            key: Key(statusKey),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hinweis-Kasten für Hersteller-/Sperrbildschirm-Hinweise (§3/§4 Alle
+/// Zustände): eigener, abgesetzter Kasten statt Fließtext, Farbe/Icon vom
+/// Aufrufer bestimmt (Designsystem-Tokens, nie Hard-Color).
+class _HintBox extends StatelessWidget {
+  const _HintBox({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.child,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final radii = Theme.of(context).extension<BftagRadii>();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(radii?.medium ?? 12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: foreground, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DefaultTextStyle.merge(
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: foreground),
+              child: child,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatusStep extends StatelessWidget {
   const _StatusStep({
     required this.statusKey,
@@ -294,16 +451,7 @@ class _StatusStep extends StatelessWidget {
       children: [
         Text(title, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(
-              ok ? Icons.check_circle : Icons.cancel,
-              color: ok ? Colors.green : Colors.red,
-            ),
-            const SizedBox(width: 8),
-            Text(ok ? '✓' : '✗', key: Key(statusKey)),
-          ],
-        ),
+        _StatusChip(statusKey: statusKey, ok: ok),
         const SizedBox(height: 8),
         Text(description),
         if (extra != null) ...[const SizedBox(height: 8), extra!],
