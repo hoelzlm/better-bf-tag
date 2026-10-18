@@ -39,9 +39,12 @@ String _formatTime(DateTime time) {
 /// Tagesablauf screen for `/tagesablauf` (ADR 0025): the sorted
 /// Programmpunkte of the running BF-Tag from [pairedProgramItemsProvider]
 /// (no own fetch); the current item(s) (`isCurrentProgramItem`) are
-/// highlighted with a "Jetzt" chip, past items (`isPastProgramItem`) are
-/// greyed out. The highlight is driven by [programNowProvider], ticking
-/// every 30 s.
+/// highlighted with a `primaryContainer` card + "Jetzt" chip, past items
+/// (`isPastProgramItem`) are greyed out at 50% opacity. The highlight is
+/// driven by [programNowProvider], ticking every 30 s.
+///
+/// Layout/states per `docs/design/screens/app-tagesablauf.md` §3/§4
+/// (ADR 0027): theme tokens only, no hardcoded colours.
 class ProgramScreen extends ConsumerWidget {
   const ProgramScreen({super.key});
 
@@ -51,32 +54,64 @@ class ProgramScreen extends ConsumerWidget {
         ref.watch(pairedProgramItemsProvider).valueOrNull ??
         const <ProgramItem>[];
     final now = ref.watch(programNowProvider).valueOrNull ?? DateTime.now();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final radii = theme.extension<BftagRadii>()!;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tagesablauf')),
       body: items.isEmpty
-          ? const Center(child: Text('Kein Tagesablauf vorhanden.'))
-          : ListView.builder(
+          ? const BftagStateView.empty(
+              icon: Icons.event_note_outlined,
+              title: 'Kein Tagesablauf vorhanden.',
+            )
+          : ListView.separated(
               key: const Key('program-list'),
               itemCount: items.length,
+              separatorBuilder: (context, index) =>
+                  Divider(height: 1, color: colorScheme.outline),
               itemBuilder: (context, index) {
                 final item = items[index];
                 final isCurrent = isCurrentProgramItem(item, now);
                 final isPast = !isCurrent && isPastProgramItem(item, now);
 
                 final tile = ListTile(
-                  leading: Icon(_iconForType(item.type)),
-                  title: Text(item.title),
+                  minVerticalPadding: 12,
+                  leading: Icon(
+                    _iconForType(item.type),
+                    color: isCurrent ? colorScheme.onPrimaryContainer : null,
+                  ),
+                  title: Text(
+                    item.title,
+                    style: isCurrent
+                        ? TextStyle(color: colorScheme.onPrimaryContainer)
+                        : null,
+                  ),
                   subtitle: Text(
                     '${_formatTime(item.startsAt)}–${_formatTime(item.endsAt)} · ${item.type.label}',
+                    style: isCurrent
+                        ? TextStyle(color: colorScheme.onPrimaryContainer)
+                        : null,
                   ),
-                  trailing: isCurrent ? const Chip(label: Text('Jetzt')) : null,
+                  trailing: isCurrent
+                      ? Chip(
+                          label: Text(
+                            'Jetzt',
+                            style: TextStyle(color: colorScheme.onPrimary),
+                          ),
+                          backgroundColor: colorScheme.primary,
+                          side: BorderSide.none,
+                        )
+                      : null,
                 );
 
                 if (isCurrent) {
                   return Card(
                     key: Key('program-current-${item.id}'),
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: colorScheme.primaryContainer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(radii.large),
+                    ),
                     child: tile,
                   );
                 }
