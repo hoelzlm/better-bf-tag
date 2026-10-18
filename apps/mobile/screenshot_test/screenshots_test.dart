@@ -311,6 +311,53 @@ Future<String?> _flutterRootFromWhich() async {
   }
 }
 
+/// Mocks the `mobile_scanner` platform channels so the "Kopplung" screen's
+/// camera preview doesn't hit the real (absent in tests) platform
+/// implementation. Without this, `MobileScannerController.start()`/`stop()`
+/// throw `MissingPluginException`s on deferred platform-channel futures;
+/// depending on exactly how much the test pumps (e.g. the extra dark-mode
+/// capture added here), those exceptions land inside the test's own zone
+/// instead of being swallowed between tests, turning into a hard failure.
+/// Returning well-formed responses avoids the exceptions entirely instead
+/// of relying on timing.
+const _scannerMethodChannel = MethodChannel(
+  'dev.steenbakker.mobile_scanner/scanner/method',
+);
+const _scannerEventChannel = EventChannel(
+  'dev.steenbakker.mobile_scanner/scanner/event',
+);
+
+void _mockMobileScannerChannel() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(_scannerMethodChannel, (call) async {
+    switch (call.method) {
+      case 'state':
+        return 1; // MobileScannerAuthorizationState.authorized
+      case 'start':
+        return <String, Object?>{
+          'textureId': 1,
+          'numberOfCameras': 1,
+          'currentTorchState': -1,
+          'size': {'width': 100.0, 'height': 100.0},
+        };
+      default:
+        return null;
+    }
+  });
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockStreamHandler(
+        _scannerEventChannel,
+        MockStreamHandler.inline(onListen: (arguments, events) {}),
+      );
+}
+
+void _unmockMobileScannerChannel() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(_scannerMethodChannel, null);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockStreamHandler(_scannerEventChannel, null);
+}
+
 final _repaintKey = GlobalKey();
 
 Future<void> _capture(WidgetTester tester, String name, Size size) async {
@@ -358,6 +405,8 @@ const _sizes = [Size(390, 844), Size(360, 640)];
 
 void main() {
   setUpAll(_loadRealFonts);
+  setUpAll(_mockMobileScannerChannel);
+  tearDownAll(_unmockMobileScannerChannel);
 
   for (final size in _sizes) {
     testWidgets('Onboarding ($size)', (tester) async {
