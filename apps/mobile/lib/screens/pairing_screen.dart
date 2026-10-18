@@ -101,68 +101,159 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
     unawaited(_pair(code));
   }
 
+  /// Camera area: proportional (not fixed) height so it shrinks on small
+  /// screens (app-kopplung.md AC6) while the manual code entry below it
+  /// stays reachable without scrolling. A `surfaceContainer` placeholder
+  /// with a centered camera icon sits behind the scanner widget, so the
+  /// area never looks "empty" before/without a live preview.
+  Widget _buildCameraArea(BuildContext context) {
+    final theme = Theme.of(context);
+    final radii = theme.extension<BftagRadii>()!;
+    // Proportional to the *screen height* (not a fixed SizedBox), so the
+    // area shrinks on short screens (app-kopplung.md AC6) — e.g. ~132 at
+    // 600dp, ~141 at 360x640, ~186 at 390x844. Deriving the AspectRatio
+    // from the available width keeps the result exactly at
+    // `targetHeight` regardless of how wide the layout is.
+    final screenHeight = MediaQuery.of(context).size.height;
+    final targetHeight = (screenHeight * 0.22).clamp(110.0, 220.0);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final aspectRatio = constraints.maxWidth / targetHeight;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(radii.large),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(
+                  color: theme.colorScheme.surfaceContainer,
+                  child: Center(
+                    child: Icon(
+                      Icons.photo_camera_outlined,
+                      size: 40,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                ref.watch(qrScannerBuilderProvider)(_onScanned),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: colorScheme.outline)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'oder Code eingeben',
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+        Expanded(child: Divider(color: colorScheme.outline)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Gerät koppeln')),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 240,
-            child: ref.watch(qrScannerBuilderProvider)(_onScanned),
-          ),
-          Expanded(
-            child: Center(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'QR-Code scannen',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildCameraArea(context),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: _buildDivider(context),
+            ),
+            Expanded(
               child: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextField(
-                          key: const Key('pair-code'),
-                          controller: _codeController,
-                          decoration: const InputDecoration(
-                            labelText: 'Code eingeben',
-                            hintText: 'ABCD-EFGH',
-                          ),
-                          textCapitalization: TextCapitalization.characters,
-                          onSubmitted: (_) => _pair(_codeController.text),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        key: const Key('pair-code'),
+                        controller: _codeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Code eingeben',
+                          hintText: 'ABCD-EFGH',
                         ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          key: const Key('pair-submit'),
-                          onPressed: _isSubmitting
-                              ? null
-                              : () => _pair(_codeController.text),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                        textCapitalization: TextCapitalization.characters,
+                        onSubmitted: (_) => _pair(_codeController.text),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        key: const Key('pair-submit'),
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => _pair(_codeController.text),
+                        child: _isSubmitting
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              )
+                            : const Text('Koppeln'),
+                      ),
+                      if (_errorText != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Row(
+                            key: const Key('pair-error'),
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                size: 20,
+                                color: theme.colorScheme.error,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorText!,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
                                   ),
-                                )
-                              : const Text('Koppeln'),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _errorText ?? '',
-                          key: const Key('pair-error'),
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
