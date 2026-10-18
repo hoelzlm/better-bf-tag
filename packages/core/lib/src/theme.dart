@@ -314,6 +314,9 @@ ThemeData _buildTheme(_Tokens t, {required bool isMonitor}) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: t.surfaceVariant,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       indicatorColor: t.primaryContainer,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => (textTheme.labelMedium ?? const TextStyle()).copyWith(

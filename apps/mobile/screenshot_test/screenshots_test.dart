@@ -7,10 +7,13 @@
 //   flutter test screenshot_test --dart-define=SCREENSHOT_DIR=<abs path>
 //
 // Captures each required screen at 390x844 and 360x640 into
-// SCREENSHOT_DIR/app/<screen>[-<state>]-<W>x<H>.png. Loads real Roboto /
+// SCREENSHOT_DIR/app/<screen>[-dark]-<W>x<H>.png. Loads real Roboto /
 // MaterialIcons fonts first so screenshots show real glyphs, not Ahem
-// boxes. The app has no dark mode today (no ThemeMode/Brightness usage
-// in lib/, see docs/testing/README.md) so no *-dark-*.png is produced.
+// boxes. The app follows `ThemeMode.system` (ADR 0027) -- every screen
+// is additionally captured with
+// `tester.platformDispatcher.platformBrightnessTestValue =
+// Brightness.dark`, producing `<name>-dark-<W>x<H>.png` next to the
+// existing light screenshot.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -308,6 +311,53 @@ Future<String?> _flutterRootFromWhich() async {
   }
 }
 
+/// Mocks the `mobile_scanner` platform channels so the "Kopplung" screen's
+/// camera preview doesn't hit the real (absent in tests) platform
+/// implementation. Without this, `MobileScannerController.start()`/`stop()`
+/// throw `MissingPluginException`s on deferred platform-channel futures;
+/// depending on exactly how much the test pumps (e.g. the extra dark-mode
+/// capture added here), those exceptions land inside the test's own zone
+/// instead of being swallowed between tests, turning into a hard failure.
+/// Returning well-formed responses avoids the exceptions entirely instead
+/// of relying on timing.
+const _scannerMethodChannel = MethodChannel(
+  'dev.steenbakker.mobile_scanner/scanner/method',
+);
+const _scannerEventChannel = EventChannel(
+  'dev.steenbakker.mobile_scanner/scanner/event',
+);
+
+void _mockMobileScannerChannel() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(_scannerMethodChannel, (call) async {
+    switch (call.method) {
+      case 'state':
+        return 1; // MobileScannerAuthorizationState.authorized
+      case 'start':
+        return <String, Object?>{
+          'textureId': 1,
+          'numberOfCameras': 1,
+          'currentTorchState': -1,
+          'size': {'width': 100.0, 'height': 100.0},
+        };
+      default:
+        return null;
+    }
+  });
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockStreamHandler(
+        _scannerEventChannel,
+        MockStreamHandler.inline(onListen: (arguments, events) {}),
+      );
+}
+
+void _unmockMobileScannerChannel() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(_scannerMethodChannel, null);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockStreamHandler(_scannerEventChannel, null);
+}
+
 final _repaintKey = GlobalKey();
 
 Future<void> _capture(WidgetTester tester, String name, Size size) async {
@@ -355,6 +405,8 @@ const _sizes = [Size(390, 844), Size(360, 640)];
 
 void main() {
   setUpAll(_loadRealFonts);
+  setUpAll(_mockMobileScannerChannel);
+  tearDownAll(_unmockMobileScannerChannel);
 
   for (final size in _sizes) {
     testWidgets('Onboarding ($size)', (tester) async {
@@ -379,6 +431,12 @@ void main() {
       );
       expect(find.byType(OnboardingScreen), findsOneWidget);
       await _capture(tester, 'onboarding', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'onboarding-dark', size);
     });
 
     testWidgets('Kopplung ($size)', (tester) async {
@@ -397,6 +455,12 @@ void main() {
         ],
       );
       await _capture(tester, 'kopplung', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'kopplung-dark', size);
     });
 
     testWidgets('Mein Fahrzeug ($size)', (tester) async {
@@ -448,6 +512,12 @@ void main() {
       );
       expect(find.text('Mein Fahrzeug'), findsOneWidget);
       await _capture(tester, 'mein-fahrzeug', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'mein-fahrzeug-dark', size);
     });
 
     testWidgets('Einsätze ($size)', (tester) async {
@@ -492,6 +562,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/einsaetze');
       await tester.pumpAndSettle();
       await _capture(tester, 'einsaetze', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'einsaetze-dark', size);
     });
 
     testWidgets('Einsatzdetail ($size)', (tester) async {
@@ -523,6 +599,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/einsaetze/i1');
       await tester.pumpAndSettle();
       await _capture(tester, 'einsatzdetail', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'einsatzdetail-dark', size);
     });
 
     testWidgets('Alarm-Screen ($size)', (tester) async {
@@ -556,6 +638,12 @@ void main() {
       );
       expect(find.text('ALARM'), findsOneWidget);
       await _capture(tester, 'alarm-screen', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'alarm-screen-dark', size);
     });
 
     testWidgets('Tagesablauf ($size)', (tester) async {
@@ -605,6 +693,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/tagesablauf');
       await tester.pumpAndSettle();
       await _capture(tester, 'tagesablauf', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'tagesablauf-dark', size);
     });
 
     testWidgets('Durchsagen ($size)', (tester) async {
@@ -642,6 +736,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/durchsagen');
       await tester.pumpAndSettle();
       await _capture(tester, 'durchsagen', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'durchsagen-dark', size);
     });
 
     testWidgets('Einstellungen ($size)', (tester) async {
@@ -670,6 +770,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/settings');
       await tester.pumpAndSettle();
       await _capture(tester, 'einstellungen', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'einstellungen-dark', size);
     });
   }
 }
