@@ -7,10 +7,13 @@
 //   flutter test screenshot_test --dart-define=SCREENSHOT_DIR=<abs path>
 //
 // Captures each required screen at 390x844 and 360x640 into
-// SCREENSHOT_DIR/app/<screen>[-<state>]-<W>x<H>.png. Loads real Roboto /
+// SCREENSHOT_DIR/app/<screen>[-dark]-<W>x<H>.png. Loads real Roboto /
 // MaterialIcons fonts first so screenshots show real glyphs, not Ahem
-// boxes. The app has no dark mode today (no ThemeMode/Brightness usage
-// in lib/, see docs/testing/README.md) so no *-dark-*.png is produced.
+// boxes. The app follows `ThemeMode.system` (ADR 0027) -- every screen
+// is additionally captured with
+// `tester.platformDispatcher.platformBrightnessTestValue =
+// Brightness.dark`, producing `<name>-dark-<W>x<H>.png` next to the
+// existing light screenshot.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -379,6 +382,12 @@ void main() {
       );
       expect(find.byType(OnboardingScreen), findsOneWidget);
       await _capture(tester, 'onboarding', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'onboarding-dark', size);
     });
 
     testWidgets('Kopplung ($size)', (tester) async {
@@ -397,6 +406,12 @@ void main() {
         ],
       );
       await _capture(tester, 'kopplung', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'kopplung-dark', size);
     });
 
     testWidgets('Mein Fahrzeug ($size)', (tester) async {
@@ -448,6 +463,12 @@ void main() {
       );
       expect(find.text('Mein Fahrzeug'), findsOneWidget);
       await _capture(tester, 'mein-fahrzeug', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'mein-fahrzeug-dark', size);
     });
 
     testWidgets('Einsätze ($size)', (tester) async {
@@ -492,6 +513,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/einsaetze');
       await tester.pumpAndSettle();
       await _capture(tester, 'einsaetze', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'einsaetze-dark', size);
     });
 
     testWidgets('Einsatzdetail ($size)', (tester) async {
@@ -523,6 +550,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/einsaetze/i1');
       await tester.pumpAndSettle();
       await _capture(tester, 'einsatzdetail', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'einsatzdetail-dark', size);
     });
 
     testWidgets('Alarm-Screen ($size)', (tester) async {
@@ -556,6 +589,12 @@ void main() {
       );
       expect(find.text('ALARM'), findsOneWidget);
       await _capture(tester, 'alarm-screen', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'alarm-screen-dark', size);
     });
 
     testWidgets('Tagesablauf ($size)', (tester) async {
@@ -605,6 +644,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/tagesablauf');
       await tester.pumpAndSettle();
       await _capture(tester, 'tagesablauf', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'tagesablauf-dark', size);
     });
 
     testWidgets('Durchsagen ($size)', (tester) async {
@@ -642,6 +687,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/durchsagen');
       await tester.pumpAndSettle();
       await _capture(tester, 'durchsagen', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'durchsagen-dark', size);
     });
 
     testWidgets('Einstellungen ($size)', (tester) async {
@@ -670,6 +721,12 @@ void main() {
       container.read(mobileGoRouterProvider).go('/settings');
       await tester.pumpAndSettle();
       await _capture(tester, 'einstellungen', size);
+
+      tester.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await _capture(tester, 'einstellungen-dark', size);
     });
   }
 }

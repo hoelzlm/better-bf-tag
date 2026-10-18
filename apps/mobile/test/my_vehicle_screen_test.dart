@@ -89,13 +89,15 @@ Future<void> _pump(
   WidgetTester tester, {
   required List<MyCrewAssignment> assignments,
   _FakeVehicleAdminRepository? repository,
+  ThemeData? theme,
+  Size surfaceSize = const Size(800, 1400),
 }) async {
   // The screen now has a bottom NavigationBar (T07-3); grow the test
   // surface so the FMS keys stay within the visible/tappable area at
   // the default test window size.
   final originalSize = tester.view.physicalSize;
   final originalDpr = tester.view.devicePixelRatio;
-  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.physicalSize = surfaceSize;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(() {
     tester.view.physicalSize = originalSize;
@@ -110,7 +112,7 @@ Future<void> _pump(
         if (repository != null)
           vehicleAdminRepositoryProvider.overrideWithValue(repository),
       ],
-      child: const MaterialApp(home: MyVehicleScreen()),
+      child: MaterialApp(theme: theme ?? bftagLightTheme(), home: const MyVehicleScreen()),
     ),
   );
   await tester.pump();
@@ -156,7 +158,10 @@ void main() {
       );
 
       expect(find.text('Florian 1'), findsOneWidget);
-      expect(find.text('Deine Funktion: GF'), findsOneWidget);
+      expect(
+        find.text('Funktion: GF · Status: 2 – Einsatzbereit auf Wache'),
+        findsOneWidget,
+      );
       expect(find.text('GF Max M.'), findsOneWidget);
       expect(find.text('MA Erika M.'), findsOneWidget);
 
@@ -245,4 +250,148 @@ void main() {
     expect(find.text('Florian 2'), findsOneWidget);
     expect(find.text('Florian 1'), findsNothing);
   });
+
+  testWidgets('settings IconButton has an "Einstellungen" tooltip',
+      (tester) async {
+    await _pump(tester, assignments: const []);
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('settings')),
+        matching: find.byTooltip('Einstellungen'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'empty state shows a 48dp local_shipping_outlined icon and the '
+    'unchanged text',
+    (tester) async {
+      await _pump(tester, assignments: const []);
+
+      expect(
+        find.text('Du bist aktuell keinem Fahrzeug zugeteilt.'),
+        findsOneWidget,
+      );
+      final icon = tester.widget<Icon>(
+        find.byIcon(Icons.local_shipping_outlined),
+      );
+      expect(icon.icon, Icons.local_shipping_outlined);
+      expect(icon.size, 48);
+    },
+  );
+
+  testWidgets(
+    'AC2: adjacent FMS tiles have a gap of at least 16px both axes',
+    (tester) async {
+      final vehicle = _vehicle(type: 'HLF');
+      await _pump(tester, assignments: [_assignment(vehicle: vehicle)]);
+
+      final rect1 = tester.getRect(find.byKey(const Key('fms-1')));
+      final rect2 = tester.getRect(find.byKey(const Key('fms-2')));
+      final rect3 = tester.getRect(find.byKey(const Key('fms-3')));
+
+      // fms-1/fms-2 are side by side (horizontal gap), fms-1/fms-3 are
+      // stacked (vertical gap) -- see FmsPanel's 2-column grid.
+      expect(rect2.left - rect1.right, greaterThanOrEqualTo(16));
+      expect(rect3.top - rect1.bottom, greaterThanOrEqualTo(16));
+    },
+  );
+
+  testWidgets(
+    'AC3: the active tile uses BftagStatusColors.colorFor, inactive '
+    'tiles stay neutral',
+    (tester) async {
+      final theme = bftagLightTheme();
+      final statusColors = theme.extension<BftagStatusColors>()!;
+      final vehicle = _vehicle(type: 'HLF', status: 3);
+      await _pump(
+        tester,
+        assignments: [_assignment(vehicle: vehicle)],
+        theme: theme,
+      );
+
+      final activeMaterial = tester.widget<Material>(
+        find.ancestor(
+          of: find.byKey(const Key('fms-3')),
+          matching: find.byType(Material),
+        ).first,
+      );
+      expect(activeMaterial.color, statusColors.fms3);
+
+      final inactiveMaterial = tester.widget<Material>(
+        find.ancestor(
+          of: find.byKey(const Key('fms-1')),
+          matching: find.byType(Material),
+        ).first,
+      );
+      expect(inactiveMaterial.color, theme.colorScheme.surfaceContainerHighest);
+    },
+  );
+
+  testWidgets(
+    'AC7: on 360x640 all 6 HLF tiles fit without needing to scroll the '
+    'content area',
+    (tester) async {
+      final vehicle = _vehicle(type: 'HLF');
+      await _pump(
+        tester,
+        assignments: [_assignment(vehicle: vehicle)],
+        surfaceSize: const Size(360, 640),
+      );
+      await tester.pumpAndSettle();
+
+      for (var code = 1; code <= 6; code++) {
+        final rect = tester.getRect(find.byKey(Key('fms-$code')));
+        expect(
+          rect.bottom,
+          lessThanOrEqualTo(640),
+          reason: 'fms-$code should be visible without scrolling',
+        );
+      }
+      // The nav bar stays fixed/visible alongside the content.
+      expect(find.byKey(const Key('main-nav-bar')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'AC9: every FMS colour reaches >= 4.5:1 contrast with its on-colour '
+    'in light and dark theme',
+    (tester) async {
+      double contrast(Color a, Color b) {
+        final la = a.computeLuminance();
+        final lb = b.computeLuminance();
+        final lighter = la > lb ? la : lb;
+        final darker = la > lb ? lb : la;
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
+      for (final theme in [bftagLightTheme(), bftagDarkTheme()]) {
+        final statusColors = theme.extension<BftagStatusColors>()!;
+        for (final status in FmsStatus.values) {
+          final ratio = contrast(
+            statusColors.onColorFor(status),
+            statusColors.colorFor(status),
+          );
+          expect(
+            ratio,
+            greaterThanOrEqualTo(4.5),
+            reason: 'FMS ${status.code} contrast too low ($ratio)',
+          );
+        }
+      }
+    },
+  );
+
+  testWidgets(
+    'meets Android tap target and labeled tap target guidelines',
+    (tester) async {
+      final vehicle = _vehicle(type: 'HLF');
+      await _pump(tester, assignments: [_assignment(vehicle: vehicle)]);
+
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }

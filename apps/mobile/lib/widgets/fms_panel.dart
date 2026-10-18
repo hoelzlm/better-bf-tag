@@ -2,13 +2,17 @@ import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// FMS-Bedienteil (ADR 0015): dark Funkgerät-Optik housing with one key
-/// per `offeredStatuses(vehicle.type)` (so 7/8 only show for RTW/KTW).
-/// Tapping a key shows a pending spinner on it and calls
-/// [VehicleAdminRepository.setStatus]; no optimistic update -- the
-/// highlighted key only changes via the realtime `vehicle.status_changed`
-/// event reflected in [vehicle]. Errors show a [SnackBar] with
-/// [describeSetStatusError].
+/// FMS-Bedienteil (ADR 0015): one tile per `offeredStatuses(vehicle.type)`
+/// (so 7/8 only show for RTW/KTW). Tapping a tile shows a pending spinner
+/// on it and calls [VehicleAdminRepository.setStatus]; no optimistic
+/// update -- the highlighted tile only changes via the realtime
+/// `vehicle.status_changed` event reflected in [vehicle]. Errors show a
+/// [SnackBar] with [describeSetStatusError]. Token styling per
+/// `docs/design/screens/app-mein-fahrzeug.md` §3/§4: inactive tiles
+/// `surfaceContainer`/`onSurface`, the active tile uses the fixed FMS
+/// token colour (`BftagStatusColors`), min height 96dp, `lg` (16px)
+/// spacing both axes, and a 1px `onSurface`-at-24%-opacity border on
+/// dark mode (Designsystem §2.4/§5.5).
 class FmsPanel extends ConsumerStatefulWidget {
   const FmsPanel({super.key, required this.vehicle});
 
@@ -39,50 +43,73 @@ class _FmsPanelState extends ConsumerState<FmsPanel> {
     }
   }
 
-  Widget _buildKey(FmsStatus status) {
+  Widget _buildTile(FmsStatus status, ThemeData theme) {
+    final statusColors = theme.extension<BftagStatusColors>()!;
     final isCurrent = status == widget.vehicle.status;
     final isPending = _pendingCode == status.code;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final background = isCurrent
+        ? statusColors.colorFor(status)
+        : theme.colorScheme.surfaceContainerHighest;
+    final foreground = isCurrent
+        ? statusColors.onColorFor(status)
+        : theme.colorScheme.onSurface;
+
     return Material(
-      color: isCurrent ? Colors.amber : const Color(0xFF2A2A2A),
-      borderRadius: BorderRadius.circular(8),
+      color: background,
+      borderRadius: BorderRadius.circular(theme.extension<BftagRadii>()!.medium),
       child: InkWell(
         key: Key('fms-${status.code}'),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(
+          theme.extension<BftagRadii>()!.medium,
+        ),
         onTap: isPending ? null : () => _tap(status.code),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 72),
-          child: Center(
-            child: isPending
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${status.code}',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        status.label,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
+        child: Container(
+          decoration: isDark
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                    theme.extension<BftagRadii>()!.medium,
                   ),
-          ),
+                  border: Border.all(
+                    color: theme.colorScheme.onSurface.withValues(
+                      alpha: 0.24,
+                    ),
+                    width: 1,
+                  ),
+                )
+              : null,
+          alignment: Alignment.center,
+          child: isPending
+              ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: foreground,
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${status.code}',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                    Text(
+                      status.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -90,22 +117,21 @@ class _FmsPanelState extends ConsumerState<FmsPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>()!;
     final statuses = offeredStatuses(widget.vehicle.type);
     return Container(
       key: const Key('fms-panel'),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111111),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: GridView.count(
-        crossAxisCount: 2,
+      child: GridView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 1.4,
-        children: [for (final status in statuses) _buildKey(status)],
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: spacing.lg,
+          crossAxisSpacing: spacing.lg,
+          mainAxisExtent: 96,
+        ),
+        children: [for (final status in statuses) _buildTile(status, theme)],
       ),
     );
   }

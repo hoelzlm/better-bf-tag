@@ -10,7 +10,8 @@ import '../widgets/main_nav_bar.dart';
 /// is currently Besatzung of (ADR 0015), with the FMS-Bedienteil to set
 /// the Fahrzeugstatus. Starts the realtime connection (so
 /// `session.revoked` is received) as a side effect of watching
-/// [pairedRealtimeClientProvider].
+/// [pairedRealtimeClientProvider]. Header hierarchy and empty state per
+/// `docs/design/screens/app-mein-fahrzeug.md` §3/§4 (ADR 0027).
 class MyVehicleScreen extends ConsumerStatefulWidget {
   const MyVehicleScreen({super.key});
 
@@ -42,13 +43,15 @@ class _MyVehicleScreenState extends ConsumerState<MyVehicleScreen> {
           IconButton(
             key: const Key('settings'),
             icon: const Icon(Icons.settings),
+            tooltip: 'Einstellungen',
             onPressed: () => context.go('/settings'),
           ),
         ],
       ),
       body: assignments.isEmpty
-          ? const Center(
-              child: Text('Du bist aktuell keinem Fahrzeug zugeteilt.'),
+          ? const BftagStateView.empty(
+              title: 'Du bist aktuell keinem Fahrzeug zugeteilt.',
+              icon: Icons.local_shipping_outlined,
             )
           : Column(
               children: [
@@ -87,24 +90,42 @@ class _VehicleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = theme.extension<BftagSpacing>()!;
     final vehicle = assignment.vehicle;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(vehicle.callSign, style: Theme.of(context).textTheme.titleLarge),
-          Text('${vehicle.shortName} – ${vehicle.type}'),
-          const SizedBox(height: 8),
-          Text('Deine Funktion: ${assignment.function}'),
+          Text(vehicle.callSign, style: theme.textTheme.headlineSmall),
           Text(
-            'Status: ${vehicle.status.code} – ${vehicle.status.label}',
+            '${vehicle.shortName} – ${vehicle.type}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing.sm),
+          Text.rich(
+            TextSpan(
+              style: theme.textTheme.bodyLarge,
+              children: [
+                TextSpan(text: 'Funktion: ${assignment.function} · '),
+                const TextSpan(
+                  text: 'Status: ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '${vehicle.status.code} – ${vehicle.status.label}',
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: spacing.lg),
           FmsPanel(vehicle: vehicle),
-          const SizedBox(height: 16),
-          Text('Besatzung', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
+          SizedBox(height: spacing.lg),
+          Text('Besatzung', style: theme.textTheme.titleMedium),
+          SizedBox(height: spacing.sm),
           for (final crewMember in assignment.crew)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
