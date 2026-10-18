@@ -12,6 +12,10 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    // "Gerät abmelden" is destructive (Grundprinzip 1, Designsystem §5.1):
+    // only the confirming dialog button gets the `alarm` style, title and
+    // body text stay neutral (§5.6).
+    final alarmTheme = Theme.of(context).extension<BftagAlarmColors>()!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -27,6 +31,10 @@ class SettingsScreen extends ConsumerWidget {
           ),
           FilledButton(
             key: const Key('logout-confirm'),
+            style: FilledButton.styleFrom(
+              backgroundColor: alarmTheme.alarm,
+              foregroundColor: alarmTheme.onAlarm,
+            ),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('Abmelden'),
           ),
@@ -43,6 +51,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final alarmTheme = Theme.of(context).extension<BftagAlarmColors>()!;
     return Scaffold(
       appBar: AppBar(title: const Text('Einstellungen')),
       body: SingleChildScrollView(
@@ -60,6 +69,10 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             FilledButton(
               key: const Key('logout-button'),
+              style: FilledButton.styleFrom(
+                backgroundColor: alarmTheme.alarm,
+                foregroundColor: alarmTheme.onAlarm,
+              ),
               onPressed: () => _confirmLogout(context, ref),
               child: const Text('Gerät abmelden'),
             ),
