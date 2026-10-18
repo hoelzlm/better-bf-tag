@@ -1,6 +1,6 @@
 # Spec: UX — UI/UX-Überarbeitung aller Oberflächen
 
-**Status:** ready-for-agent
+**Status:** done
 
 Fachbegriffe: `CONTEXT.md`. Baut auf dem fertigen Stand von MVP und v2 auf (`.scratch/mvp/`, `.scratch/v2/`).
 
