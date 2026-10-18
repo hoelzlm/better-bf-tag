@@ -23,11 +23,13 @@ void main() {
     WidgetTester tester, {
     LatLng? station,
     required UriLauncher launcher,
+    ThemeData? theme,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [uriLauncherProvider.overrideWithValue(launcher)],
         child: MaterialApp(
+          theme: theme ?? bftagLightTheme(),
           home: Scaffold(
             body: IncidentLocationCard(
               incident: incident,
@@ -94,4 +96,37 @@ void main() {
       findsOneWidget,
     );
   });
+
+  for (final entry in {
+    'light': bftagLightTheme(),
+    'dark': bftagDarkTheme(),
+  }.entries) {
+    testWidgets(
+      'meets Android tap target and labeled tap target guidelines '
+      '(${entry.key})',
+      (tester) async {
+        await pump(
+          tester,
+          theme: entry.value,
+          launcher: (uri) async => true,
+        );
+
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      },
+    );
+
+    testWidgets(
+      '"Navigation starten" reaches WCAG AA contrast (${entry.key})',
+      (tester) async {
+        await pump(
+          tester,
+          theme: entry.value,
+          launcher: (uri) async => true,
+        );
+
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      },
+    );
+  }
 }
