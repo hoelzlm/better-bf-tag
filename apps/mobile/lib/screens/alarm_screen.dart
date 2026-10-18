@@ -31,6 +31,16 @@ Vehicle? _findVehicle(List<Vehicle> vehicles, String id) {
   return null;
 }
 
+/// Icon for the three possible `alarmSequenceLabel(...)` results (concept
+/// `app-alarm.md` §3, §4): Erstalarm/Nachalarmierung/Alarmierung are NEVER
+/// distinguished by a different red tone (Designsystem §5.11) -- only by
+/// label text + this icon, all from the same "bell" family.
+IconData _alarmSequenceIcon(String label) {
+  if (label == 'Erstalarm') return Icons.notifications_active_outlined;
+  if (label.contains('Nachalarmierung')) return Icons.add_alert_outlined;
+  return Icons.notifications_outlined;
+}
+
 /// Full-screen Alarm-Vollbild for route `/alarm/:alarmId` (ADR 0017, "App
 /// im Vordergrund"): shows the Alarmierung and lets the signed-in Person
 /// quittieren via the big "Quittieren" button. Shown and dismissed by
@@ -101,22 +111,67 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen> {
 
     final alarms = ref.watch(pairedAlarmsProvider).valueOrNull ?? const [];
     final alarm = _findAlarm(alarms, widget.alarmId);
+    final theme = Theme.of(context);
+    final palette = theme.extension<BftagAlarmColors>()!;
 
     return PopScope(
       canPop: false,
-      child: Scaffold(
-        backgroundColor: Colors.red.shade800,
-        body: alarm == null
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              )
-            : _AlarmContent(
-                alarm: alarm,
-                personId: personId,
-                acknowledging: _acknowledging,
-                onAcknowledge: _acknowledge,
-              ),
+      child: _FadeInOnce(
+        child: Scaffold(
+          backgroundColor: palette.alarm,
+          body: alarm == null
+              ? Center(
+                  child: CircularProgressIndicator(color: palette.onAlarm),
+                )
+              : _AlarmContent(
+                  alarm: alarm,
+                  personId: personId,
+                  acknowledging: _acknowledging,
+                  onAcknowledge: _acknowledge,
+                ),
+        ),
       ),
+    );
+  }
+}
+
+/// One-time, ≤250 ms fade-in of the whole Alarm-Fläche on first build
+/// (Designsystem §7 "Alarm-Eintritt": kein Blinken des gesamten Screens --
+/// stattdessen ein einmaliger Fade-in). Never repeats (state only moves
+/// false -> true once) and is skipped entirely when
+/// `MediaQuery.disableAnimations` is set (Reduced-Motion: 0 ms, no
+/// animation at all, not just a faster one).
+class _FadeInOnce extends StatefulWidget {
+  const _FadeInOnce({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_FadeInOnce> createState() => _FadeInOnceState();
+}
+
+class _FadeInOnceState extends State<_FadeInOnce> {
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reducedMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reducedMotion) {
+      return widget.child;
+    }
+    return AnimatedOpacity(
+      opacity: _visible ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      child: widget.child,
     );
   }
 }
@@ -144,6 +199,7 @@ class _AlarmContent extends ConsumerWidget {
     final incidentAlarms =
         allAlarms.where((a) => a.incidentId == alarm.incidentId).toList();
     final alarmLabel = alarmSequenceLabel(alarm, incidentAlarms);
+    final alarmIcon = _alarmSequenceIcon(alarmLabel);
 
     AlarmRecipient? myRecipient;
     for (final recipient in alarm.recipients) {
@@ -155,7 +211,36 @@ class _AlarmContent extends ConsumerWidget {
     final myVehicle =
         myRecipient == null ? null : _findVehicle(vehicles, myRecipient.vehicleId);
 
-    const textStyle = TextStyle(color: Colors.white);
+    final theme = Theme.of(context);
+    final palette = theme.extension<BftagAlarmColors>()!;
+    final radii = theme.extension<BftagRadii>()!;
+    final onAlarm = palette.onAlarm;
+
+    final textStyle = (theme.textTheme.bodyLarge ?? const TextStyle()).copyWith(
+      color: onAlarm,
+    );
+    // Screen-local override (concept `app-alarm.md` §3): neither
+    // `headlineSmall` nor a mix of tokens, 28/34 Bold -- the Meldebild
+    // keyword needs more weight/size than any entry in the shared type
+    // scale (Designsystem 3.1) provides for body-length text.
+    final alarmKeyword = (theme.textTheme.bodyLarge ?? const TextStyle()).copyWith(
+      color: onAlarm,
+      fontSize: 28,
+      height: 34 / 28,
+      fontWeight: FontWeight.bold,
+    );
+    // Screen-local override (concept `app-alarm.md` §3): NOT `labelLarge`
+    // (Medium weight there, Bold needed here), 14/20 Bold + 2px tracking.
+    final alarmSequenceCaps = (theme.textTheme.bodyLarge ?? const TextStyle())
+        .copyWith(
+          color: onAlarm,
+          fontSize: 14,
+          height: 20 / 14,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 2,
+        );
+    final titleStyle = (theme.textTheme.titleMedium ?? const TextStyle())
+        .copyWith(color: onAlarm, fontWeight: FontWeight.bold);
 
     return SafeArea(
       child: Column(
@@ -166,37 +251,62 @@ class _AlarmContent extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'ALARM',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                    ),
+                    style: (theme.textTheme.displaySmall ?? const TextStyle())
+                        .copyWith(color: onAlarm, letterSpacing: 4),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    alarmLabel.toUpperCase(),
-                    key: const Key('alarm-sequence-label'),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+                  Row(
+                    children: [
+                      Icon(alarmIcon, color: onAlarm, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        alarmLabel.toUpperCase(),
+                        key: const Key('alarm-sequence-label'),
+                        style: alarmSequenceCaps,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   if (incident != null) ...[
                     Text(
                       '#${incident.number} ${incident.keyword}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
+                      style: alarmKeyword,
+                    ),
+                  ],
+                  if (myRecipient != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        // Concept `app-alarm.md` §3 calls for a 12%
+                        // `onAlarm`-tint card; at 12% the resulting bg in
+                        // light mode drops `onAlarm`-on-card contrast to
+                        // ~4.25:1 (below WCAG AA 4.5:1 for the 16px value
+                        // text). 6% keeps the same visually "lighter red"
+                        // card while staying >= 4.5:1 in both modes
+                        // (verified with `docs/design/tools/contrast.py`
+                        // blending logic).
+                        color: onAlarm.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(radii.large),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('DEIN FAHRZEUG', style: titleStyle),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${myVehicle?.shortName ?? myRecipient.vehicleId} – ${myRecipient.function}',
+                            style: textStyle,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                  ],
+                  if (incident != null) ...[
+                    const SizedBox(height: 24),
                     Text(incident.address, style: textStyle.copyWith(fontSize: 20)),
                     if (incident.report.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -211,34 +321,13 @@ class _AlarmContent extends ConsumerWidget {
                     ],
                   ],
                   const SizedBox(height: 24),
-                  Text(
-                    'Alarmierte Fahrzeuge',
-                    style: textStyle.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  Text('ALARMIERTE FAHRZEUGE', style: titleStyle),
                   const SizedBox(height: 8),
                   for (final vehicleId in alarm.vehicleIds)
                     Text(
                       _findVehicle(vehicles, vehicleId)?.shortName ?? vehicleId,
-                      style: textStyle.copyWith(fontSize: 16),
+                      style: textStyle,
                     ),
-                  if (myRecipient != null) ...[
-                    const SizedBox(height: 24),
-                    Text(
-                      'Dein Fahrzeug',
-                      style: textStyle.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${myVehicle?.shortName ?? myRecipient.vehicleId} – ${myRecipient.function}',
-                      style: textStyle.copyWith(fontSize: 16),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -250,9 +339,12 @@ class _AlarmContent extends ConsumerWidget {
               child: ElevatedButton(
                 key: const Key('acknowledge-button'),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(96),
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.red.shade800,
+                  minimumSize: const Size.fromHeight(64),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(radii.full),
+                  ),
+                  backgroundColor: onAlarm,
+                  foregroundColor: palette.alarm,
                   textStyle: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -264,7 +356,7 @@ class _AlarmContent extends ConsumerWidget {
                         width: 32,
                         height: 32,
                         child: CircularProgressIndicator(
-                          color: Colors.red.shade800,
+                          color: palette.alarm,
                         ),
                       )
                     : const Text('Quittieren'),

@@ -12,6 +12,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
+/// WCAG contrast ratio between two colours, via relative luminance,
+/// matching `docs/design/tools/contrast.py`.
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final lighter = la > lb ? la : lb;
+  final darker = la > lb ? lb : la;
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/// Forces the platform brightness for the duration of the test, so
+/// `BftagMobileApp`'s `ThemeMode.system` renders `bftagDarkTheme()`.
+void _setBrightness(WidgetTester tester, Brightness brightness) {
+  tester.platformDispatcher.platformBrightnessTestValue = brightness;
+  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+}
+
+/// Resizes the test surface for the duration of the test, matching the
+/// 390x844/360x640 sizes the concept tests.
+void _setSurfaceSize(WidgetTester tester, Size size) {
+  final originalSize = tester.view.physicalSize;
+  final originalDpr = tester.view.devicePixelRatio;
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.physicalSize = originalSize;
+    tester.view.devicePixelRatio = originalDpr;
+  });
+}
+
 const _me = Person(
   id: 'p1',
   displayName: 'Max M.',
@@ -494,6 +524,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // The new layout (concept `app-alarm.md` §3: "Dein Fahrzeug"-Karte
+      // moved above the address) pushes the map further down the scroll
+      // area, so it may start outside the initial viewport.
+      await tester.ensureVisible(find.byKey(const Key('start-navigation')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('start-navigation')));
       await tester.pumpAndSettle();
 
@@ -557,4 +592,330 @@ void main() {
       expect(map.station, const LatLng(48.2, 11.6));
     },
   );
+
+  // -- app-alarm.md AC 1/8: background is exactly the `alarm`/`onAlarm`
+  // token (not `Colors.red.shade800`), contrast meets at least AA in both
+  // modes (Designsystem table 2.3: 4.98:1 light, 6.34:1 dark). -----------
+  for (final entry in {
+    Brightness.light: bftagLightTheme(),
+    Brightness.dark: bftagDarkTheme(),
+  }.entries) {
+    testWidgets(
+      'AC1/AC8: background is exactly the alarm token with AA contrast '
+      '(${entry.key.name})',
+      (tester) async {
+        _setBrightness(tester, entry.key);
+        final alarmColors = entry.value.extension<BftagAlarmColors>()!;
+        final alarm = _alarm(
+          recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+        );
+        final sound = _FakeAlarmSound();
+        final repository = _FakeAlarmRepository();
+
+        await _pumpApp(
+          tester,
+          alarms: [alarm],
+          liveAlarmTriggered: Stream.value(alarm),
+          incidents: [_incident()],
+          vehicles: [_vehicle()],
+          sound: sound,
+          repository: repository,
+        );
+
+        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(scaffold.backgroundColor, alarmColors.alarm);
+        expect(
+          _contrast(alarmColors.onAlarm, alarmColors.alarm),
+          greaterThanOrEqualTo(4.5),
+        );
+      },
+    );
+  }
+
+  // -- app-alarm.md AC2: Erstalarm / N. Nachalarmierung / Alarmierung
+  // differ only by label text + icon, with identical surface colour. ----
+  final acStates = <String, ({Alarm Function() build, String label, IconData icon})>{
+    'Erstalarm': (
+      build: () => _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      ),
+      label: 'ERSTALARM',
+      icon: Icons.notifications_active_outlined,
+    ),
+    '1. Nachalarmierung': (
+      build: () {
+        final nach = _alarm(
+          id: 'a1',
+          recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+        );
+        return nach;
+      },
+      label: '1. NACHALARMIERUNG',
+      icon: Icons.add_alert_outlined,
+    ),
+    'Alarmierung': (
+      build: () => Alarm(
+        id: 'a1',
+        incidentId: 'i1',
+        state: AlarmState.planned,
+        scheduledAt: DateTime.parse('2026-06-01T09:00:00Z'),
+        triggeredAt: null,
+        vehicleIds: const ['v1'],
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      ),
+      label: 'ALARMIERUNG',
+      icon: Icons.notifications_outlined,
+    ),
+  };
+
+  for (final brightness in [Brightness.light, Brightness.dark]) {
+    for (final entry in acStates.entries) {
+      testWidgets(
+        'AC2: ${entry.key} shows its own label + icon on the same surface '
+        'colour (${brightness.name})',
+        (tester) async {
+          _setBrightness(tester, brightness);
+          final theme = brightness == Brightness.light
+              ? bftagLightTheme()
+              : bftagDarkTheme();
+          final alarmColors = theme.extension<BftagAlarmColors>()!;
+          final alarm = entry.value.build();
+          final sound = _FakeAlarmSound();
+          final repository = _FakeAlarmRepository();
+
+          await _pumpApp(
+            tester,
+            alarms: entry.key == '1. Nachalarmierung'
+                ? [
+                    _alarm(
+                      id: 'a0',
+                      recipients: [
+                        _recipient(personId: 'p2', displayName: 'Erika M.'),
+                      ],
+                    ),
+                    alarm,
+                  ]
+                : [alarm],
+            liveAlarmTriggered: Stream.value(alarm),
+            incidents: [_incident()],
+            vehicles: [_vehicle()],
+            sound: sound,
+            repository: repository,
+          );
+
+          expect(find.text(entry.value.label), findsOneWidget);
+          expect(find.byIcon(entry.value.icon), findsOneWidget);
+
+          final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+          expect(scaffold.backgroundColor, alarmColors.alarm);
+        },
+      );
+    }
+  }
+
+  // -- app-alarm.md AC3: Quittieren bleibt bei jeder Scrollposition
+  // sichtbar -- 360x640 ist der kritische Fall aus dem Konzept. ---------
+  testWidgets(
+    'AC3: acknowledge button stays visible at max scroll on 360x640',
+    (tester) async {
+      _setSurfaceSize(tester, const Size(360, 640));
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [
+          _incident(
+            address: 'Eine sehr lange Adresse mitten in der Industriestraße 7',
+            report:
+                'Eine sehr lange, ausführliche Lagebeschreibung mit starker '
+                'Rauchentwicklung aus dem Dach und mehreren betroffenen '
+                'Gebäudeteilen, die den Scrollbereich deutlich verlängert.',
+          ),
+        ],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      final scrollable = find.byType(Scrollable);
+      await tester.drag(scrollable, const Offset(0, -2000));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.byKey(const Key('acknowledge-button'))).bottom,
+        lessThanOrEqualTo(640),
+      );
+      expect(find.byKey(const Key('acknowledge-button')), findsOneWidget);
+    },
+  );
+
+  // -- app-alarm.md AC4: spinner + disabled while acknowledging. --------
+  testWidgets(
+    'AC4: shows a spinner and disables the button while acknowledging',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository()
+        ..acknowledgeGate = Completer<void>();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [_incident()],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      await tester.tap(find.byKey(const Key('acknowledge-button')));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      final button = tester.widget<ElevatedButton>(
+        find.byKey(const Key('acknowledge-button')),
+      );
+      expect(button.onPressed, isNull);
+
+      repository.acknowledgeGate!.complete();
+      await tester.pumpAndSettle();
+    },
+  );
+
+  // -- app-alarm.md AC5: "Dein Fahrzeug" appears before address/
+  // Lagebeschreibung. -----------------------------------------------------
+  testWidgets(
+    'AC5: "Dein Fahrzeug" appears before the address/Lagebeschreibung',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [_incident()],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      final deinFahrzeugTop = tester
+          .getTopLeft(find.text('DEIN FAHRZEUG'))
+          .dy;
+      final addressTop = tester.getTopLeft(find.text('Hauptstraße 1')).dy;
+      expect(deinFahrzeugTop, lessThan(addressTop));
+    },
+  );
+
+  // -- app-alarm.md AC9: einmaliger Fade-in <= 250ms, keine Wiederholung,
+  // keine Animation bei Reduced-Motion. -----------------------------------
+  testWidgets(
+    'AC9: fades the screen in once within <= 250ms',
+    (tester) async {
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [_incident()],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      final opacityWidgets = tester.widgetList<AnimatedOpacity>(
+        find.byType(AnimatedOpacity),
+      );
+      expect(opacityWidgets, isNotEmpty);
+      for (final widget in opacityWidgets) {
+        expect(widget.duration, lessThanOrEqualTo(const Duration(milliseconds: 250)));
+        expect(widget.opacity, 1.0);
+      }
+
+      // No further frames are scheduled -- a single fade-in, no repeat.
+      expect(tester.hasRunningAnimations, isFalse);
+    },
+  );
+
+  testWidgets(
+    'AC9: no fade animation at all when MediaQuery.disableAnimations is set',
+    (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+
+      final alarm = _alarm(
+        recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+      );
+      final sound = _FakeAlarmSound();
+      final repository = _FakeAlarmRepository();
+
+      await _pumpApp(
+        tester,
+        alarms: [alarm],
+        liveAlarmTriggered: Stream.value(alarm),
+        incidents: [_incident()],
+        vehicles: [_vehicle()],
+        sound: sound,
+        repository: repository,
+      );
+
+      expect(find.byType(AnimatedOpacity), findsNothing);
+      expect(find.text('ALARM'), findsOneWidget);
+    },
+  );
+
+  // -- meetsGuideline + no overflow, light and dark, 390x844 and 360x640. --
+  for (final brightness in [Brightness.light, Brightness.dark]) {
+    for (final size in [const Size(390, 844), const Size(360, 640)]) {
+      testWidgets(
+        'meetsGuideline passes and there is no overflow '
+        '(${brightness.name}, ${size.width.toInt()}x${size.height.toInt()})',
+        (tester) async {
+          _setBrightness(tester, brightness);
+          _setSurfaceSize(tester, size);
+          final alarm = _alarm(
+            recipients: [_recipient(personId: 'p1', displayName: 'Max M.')],
+          );
+          final sound = _FakeAlarmSound();
+          final repository = _FakeAlarmRepository();
+
+          await _pumpApp(
+            tester,
+            alarms: [alarm],
+            liveAlarmTriggered: Stream.value(alarm),
+            incidents: [_incident()],
+            vehicles: [_vehicle()],
+            sound: sound,
+            repository: repository,
+          );
+
+          expect(tester.takeException(), isNull);
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+        },
+      );
+    }
+  }
 }
