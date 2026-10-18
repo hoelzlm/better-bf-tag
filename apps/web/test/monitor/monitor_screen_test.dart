@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bftag_core/bftag_core.dart';
+import 'package:bftag_web/monitor/alarm_sound.dart';
 import 'package:bftag_web/monitor/monitor_clock.dart';
 import 'package:bftag_web/monitor/monitor_platform.dart';
 import 'package:bftag_web/monitor/monitor_session.dart';
@@ -27,6 +28,40 @@ class _FakeMonitorPlatform implements MonitorPlatform {
   Future<void> requestFullscreen() async {
     fullscreenCalls++;
   }
+}
+
+/// Records [unlock] calls instead of touching real browser audio (ADR
+/// 0017) -- used to assert the activation overlay's tap unlocks the gong
+/// exactly once (Kopplung concept §6 AC1).
+class _FakeAlarmSound implements AlarmSound {
+  int unlockCalls = 0;
+
+  @override
+  Future<void> unlock() async {
+    unlockCalls++;
+  }
+
+  @override
+  Future<void> play({bool loop = false}) async {}
+
+  @override
+  Future<void> stop() async {}
+}
+
+/// A fixed-state [MonitorSessionController] whose [restore] is a no-op,
+/// so a widget test can pin the session to [MonitorUnknown]/
+/// [MonitorOffline] without racing a real `restore()` call (Kopplung
+/// concept §6 AC3).
+class _FixedStateController extends MonitorSessionController {
+  _FixedStateController(this._initial);
+
+  final MonitorSessionState _initial;
+
+  @override
+  MonitorSessionState build() => _initial;
+
+  @override
+  Future<void> restore() async {}
 }
 
 /// A fake [WebSocketConnection] that never emits anything; sufficient for
@@ -138,16 +173,19 @@ Map<String, dynamic> _pairResponseBody({
 /// [InMemoryTokenStore], and [_FakeMonitorPlatform] for one test.
 class _Env {
   _Env({DateTime? clock})
-      : adapter = _FakeMonitorAdapter(),
-        tokenStore = InMemoryTokenStore(),
-        platform = _FakeMonitorPlatform() {
+    : adapter = _FakeMonitorAdapter(),
+      tokenStore = InMemoryTokenStore(),
+      platform = _FakeMonitorPlatform(),
+      alarmSound = _FakeAlarmSound() {
     final dio = Dio(BaseOptions(baseUrl: ''));
     dio.httpClientAdapter = adapter;
     overrides = [
       ...monitorProviderOverrides(tokenStore: tokenStore, dio: dio),
       monitorPlatformProvider.overrideWithValue(platform),
-      monitorWebSocketConnectorProvider
-          .overrideWithValue((uri) => _FakeWsConnection()),
+      monitorWebSocketConnectorProvider.overrideWithValue(
+        (uri) => _FakeWsConnection(),
+      ),
+      alarmSoundProvider.overrideWithValue(alarmSound),
       if (clock != null)
         monitorClockProvider.overrideWith((ref) => Stream.value(clock)),
     ];
@@ -156,10 +194,21 @@ class _Env {
   final _FakeMonitorAdapter adapter;
   final InMemoryTokenStore tokenStore;
   final _FakeMonitorPlatform platform;
+  final _FakeAlarmSound alarmSound;
   late final List<Override> overrides;
 }
 
+Future<void> _setMonitorViewport(WidgetTester tester) async {
+  // The pairing/activation screens target the 1920x1080 TV layout
+  // (concept `docs/design/screens/monitor-kopplung.md` §3) -- the default
+  // 800x600 test viewport is too small to fit it without scrolling.
+  tester.view.physicalSize = const Size(1920, 1080);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
 Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
+  await _setMonitorViewport(tester);
   // Mirrors production: `main.dart`'s root ProviderScope with the
   // `/monitor` route's own scoped ProviderScope nested inside (router.dart,
   // see PR #31 / commit 7764c01). A single flat scope hides "provider not
@@ -184,61 +233,122 @@ Future<void> _activate(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('shows the activation overlay and calls enableWakeLock, '
+      'requestFullscreen, and alarmSoundProvider.unlock exactly once on tap', (
+    tester,
+  ) async {
+    final env = _Env();
+    await _pumpMonitor(tester, env);
+
+    expect(find.text('Zum Aktivieren tippen'), findsOneWidget);
+    expect(env.platform.wakeLockCalls, 0);
+    expect(env.platform.fullscreenCalls, 0);
+    expect(env.alarmSound.unlockCalls, 0);
+
+    await _activate(tester);
+
+    expect(env.platform.wakeLockCalls, 1);
+    expect(env.platform.fullscreenCalls, 1);
+    expect(env.alarmSound.unlockCalls, 1);
+  });
+
+  testWidgets('before the activation tap, neither the pairing field nor the '
+      'standby clock is in the widget tree (the overlay replaces the '
+      'whole tree, it does not overlay it)', (tester) async {
+    final env = _Env();
+    await _pumpMonitor(tester, env);
+
+    expect(find.byKey(const Key('monitor-activation-overlay')), findsOneWidget);
+    expect(find.byKey(const Key('monitor-pairing-code')), findsNothing);
+    expect(find.byKey(const Key('monitor-clock-time')), findsNothing);
+
+    await _activate(tester);
+
+    expect(find.byKey(const Key('monitor-activation-overlay')), findsNothing);
+  });
+
   testWidgets(
-    'shows the activation overlay and calls enableWakeLock on tap',
+    'MonitorOffline and MonitorUnknown both render Key(monitor-connecting) '
+    'with the identical "Verbinde …" text',
     (tester) async {
-      final env = _Env();
-      await _pumpMonitor(tester, env);
+      for (final state in [
+        const MonitorUnknown(),
+        const MonitorOffline('mon1'),
+      ]) {
+        final env = _Env();
+        final container = ProviderContainer(
+          overrides: [
+            ...env.overrides,
+            monitorSessionControllerProvider.overrideWith(
+              () => _FixedStateController(state),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await _setMonitorViewport(tester);
+        await tester.pumpWidget(
+          ProviderScope(
+            child: UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp(
+                theme: bftagLightTheme(),
+                home: MonitorScreen(key: ValueKey(state.toString())),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await _activate(tester);
 
-      expect(
-        find.text('Zum Aktivieren tippen'),
-        findsOneWidget,
-      );
-      expect(env.platform.wakeLockCalls, 0);
-
-      await _activate(tester);
-
-      expect(env.platform.wakeLockCalls, 1);
-      expect(env.platform.fullscreenCalls, 1);
+        expect(
+          find.byKey(const Key('monitor-connecting')),
+          findsOneWidget,
+          reason: 'state: $state',
+        );
+        expect(
+          find.text('Verbinde …'),
+          findsOneWidget,
+          reason: 'state: $state',
+        );
+      }
     },
   );
 
-  testWidgets(
-    'unpaired -> pairing screen; entering a code pairs with the '
-    'normalized code and shows standby',
-    (tester) async {
-      final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
-      env.adapter.pairBody = _pairResponseBody(
-        accessToken: 'at1',
-        refreshToken: 'rt1',
-        monitorId: 'mon1',
-        name: 'Gerätehaus',
-      );
-      await _pumpMonitor(tester, env);
-      await _activate(tester);
+  testWidgets('unpaired -> pairing screen; entering a code pairs with the '
+      'normalized code and shows standby', (tester) async {
+    final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
+    env.adapter.pairBody = _pairResponseBody(
+      accessToken: 'at1',
+      refreshToken: 'rt1',
+      monitorId: 'mon1',
+      name: 'Gerätehaus',
+    );
+    await _pumpMonitor(tester, env);
+    await _activate(tester);
 
-      expect(find.text('Monitor koppeln'), findsOneWidget);
+    expect(find.text('Monitor koppeln'), findsOneWidget);
 
-      await tester.enterText(
-        find.byKey(const Key('monitor-pairing-code')),
-        'abcd-efgh',
-      );
-      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('monitor-pairing-code')),
+      'abcd-efgh',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+    await tester.pumpAndSettle();
 
-      expect(env.adapter.pairCalls, 1);
-      expect(find.byKey(const Key('monitor-clock-time')), findsOneWidget);
-      expect(find.text('09:41'), findsOneWidget);
+    expect(env.adapter.pairCalls, 1);
+    expect(find.byKey(const Key('monitor-clock-time')), findsOneWidget);
+    expect(find.text('09:41'), findsOneWidget);
 
-      final stored = await env.tokenStore.read();
-      expect(stored, isNotNull);
-      expect(stored!.refreshToken, 'rt1');
-      expect(stored.deviceId, 'mon1');
-    },
-  );
+    final stored = await env.tokenStore.read();
+    expect(stored, isNotNull);
+    expect(stored!.refreshToken, 'rt1');
+    expect(stored.deviceId, 'mon1');
+  });
 
-  testWidgets('invalid code shows the error text and stays on pairing',
-      (tester) async {
+  testWidgets('invalid code shows the error text and stays on pairing', (
+    tester,
+  ) async {
     final env = _Env();
     env.adapter.pairStatusCode = 401;
     await _pumpMonitor(tester, env);
@@ -248,13 +358,11 @@ void main() {
       find.byKey(const Key('monitor-pairing-code')),
       'ZZZZ-ZZZZ',
     );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Code ungültig oder abgelaufen.'),
-      findsOneWidget,
-    );
+    expect(find.text('Code ungültig oder abgelaufen.'), findsOneWidget);
     expect(find.text('Monitor koppeln'), findsOneWidget);
   });
 
@@ -297,8 +405,10 @@ void main() {
     },
   );
 
-  testWidgets('standby shows the vehicle status bar tiles from a snapshot',
-      (tester) async {
+  testWidgets('standby shows the vehicle panel rows from a snapshot '
+      '(monitor-standby.md \u00a77: vehicle-tile-<id> -> crew-vehicle-<id>)', (
+    tester,
+  ) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
     env.adapter.pairBody = _pairResponseBody(
       accessToken: 'at1',
@@ -326,10 +436,11 @@ void main() {
       find.byKey(const Key('monitor-pairing-code')),
       'ABCDEFGH',
     );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('vehicle-tile-v1')), findsOneWidget);
+    expect(find.byKey(const Key('crew-vehicle-v1')), findsOneWidget);
     expect(find.text('HLF 1'), findsOneWidget);
   });
 
@@ -364,6 +475,7 @@ void main() {
         find.byKey(const Key('monitor-pairing-code')),
         'abcd-efgh',
       );
+      await tester.pump();
       await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
       await tester.pumpAndSettle();
 
@@ -402,6 +514,7 @@ void main() {
         find.byKey(const Key('monitor-pairing-code')),
         'ABCD-EFGH',
       );
+      await tester.pump();
       await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
       await tester.pumpAndSettle();
 
@@ -420,6 +533,7 @@ void main() {
     );
     final container = ProviderContainer(overrides: env.overrides);
     addTearDown(container.dispose);
+    await _setMonitorViewport(tester);
     await tester.pumpWidget(
       ProviderScope(
         child: UncontrolledProviderScope(
@@ -437,27 +551,21 @@ void main() {
       find.byKey(const Key('monitor-pairing-code')),
       'ABCDEFGH',
     );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('monitor-clock-time')), findsOneWidget);
 
-    await container
-        .read(monitorSessionControllerProvider.notifier)
-        .onRevoked();
+    await container.read(monitorSessionControllerProvider.notifier).onRevoked();
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('monitor-revoked-hint')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('monitor-revoked-hint')), findsOneWidget);
     expect(find.text('Monitor koppeln'), findsOneWidget);
     expect(await env.tokenStore.read(), isNull);
   });
 
-  testWidgets('clock shows hour:minute, seconds, and the date', (
-    tester,
-  ) async {
+  testWidgets('clock shows hour:minute, seconds, and the date', (tester) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
     env.adapter.pairBody = _pairResponseBody(
       accessToken: 'at1',
@@ -470,6 +578,7 @@ void main() {
       find.byKey(const Key('monitor-pairing-code')),
       'ABCDEFGH',
     );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
     await tester.pumpAndSettle();
 
@@ -478,49 +587,50 @@ void main() {
     expect(find.byKey(const Key('monitor-date')), findsOneWidget);
   });
 
-  testWidgets(
-    'connection reconnecting shows the red banner; live hides it',
-    (tester) async {
-      final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
-      env.adapter.pairBody = _pairResponseBody(
-        accessToken: 'at1',
-        refreshToken: 'rt1',
-        monitorId: 'mon1',
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          child: ProviderScope(
-            overrides: [
-              ...env.overrides,
-              // Stub the vehicle list so no real RealtimeClient is built for
-              // this banner-only assertion (avoids a pending watchdog timer).
-              vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-              realtimeConnectionProvider.overrideWith(
-                (ref) => Stream.value(ConnectionStatus.reconnecting),
-              ),
-            ],
-            child: MaterialApp(
-              theme: bftagLightTheme(),
-              home: const MonitorScreen(),
+  testWidgets('connection reconnecting shows the red banner; live hides it', (
+    tester,
+  ) async {
+    final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
+    env.adapter.pairBody = _pairResponseBody(
+      accessToken: 'at1',
+      refreshToken: 'rt1',
+      monitorId: 'mon1',
+    );
+    await _setMonitorViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        child: ProviderScope(
+          overrides: [
+            ...env.overrides,
+            // Stub the vehicle list so no real RealtimeClient is built for
+            // this banner-only assertion (avoids a pending watchdog timer).
+            vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+            realtimeConnectionProvider.overrideWith(
+              (ref) => Stream.value(ConnectionStatus.reconnecting),
             ),
+          ],
+          child: MaterialApp(
+            theme: bftagLightTheme(),
+            home: const MonitorScreen(),
           ),
         ),
-      );
-      await tester.pump();
-      await _activate(tester);
-      await tester.enterText(
-        find.byKey(const Key('monitor-pairing-code')),
-        'ABCDEFGH',
-      );
-      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pump();
+    await _activate(tester);
+    await tester.enterText(
+      find.byKey(const Key('monitor-pairing-code')),
+      'ABCDEFGH',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const Key('connection-banner-reconnecting')),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.byKey(const Key('connection-banner-reconnecting')),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('live connection hides the banner', (tester) async {
     final env = _Env(clock: DateTime(2026, 10, 9, 9, 41, 7));
@@ -529,6 +639,7 @@ void main() {
       refreshToken: 'rt1',
       monitorId: 'mon1',
     );
+    await _setMonitorViewport(tester);
     await tester.pumpWidget(
       ProviderScope(
         child: ProviderScope(
@@ -552,6 +663,7 @@ void main() {
       find.byKey(const Key('monitor-pairing-code')),
       'ABCDEFGH',
     );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
     await tester.pumpAndSettle();
 
@@ -559,10 +671,7 @@ void main() {
       find.byKey(const Key('connection-banner-reconnecting')),
       findsNothing,
     );
-    expect(
-      find.byKey(const Key('connection-banner-connecting')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('connection-banner-connecting')), findsNothing);
   });
 
   testWidgets(
@@ -618,63 +727,63 @@ void main() {
     };
   }
 
-  testWidgets(
-    'crew is shown for the current shift when a BF-Tag runs',
-    (tester) async {
-      tester.view.physicalSize = const Size(1920, 1080);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      final env = _Env(clock: DateTime.utc(2026, 10, 9, 10, 0, 0));
-      env.adapter.pairBody = _pairResponseBody(
-        accessToken: 'at1',
-        refreshToken: 'rt1',
-        monitorId: 'mon1',
-      );
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': [
-          {
-            'id': 'v1',
-            'call_sign': 'Florian 1',
-            'short_name': 'HLF 1',
-            'type': 'HLF',
-            'status': 2,
-            'status_changed_at': null,
-            'sort_order': 1,
-            'active': true,
-          },
-        ],
-        'bf_day': bfDayJson(),
-        'shifts': [
-          shiftJson(
-            id: 'shift1',
-            startsAt: '2026-10-09T08:00:00Z',
-            endsAt: '2026-10-09T20:00:00Z',
-            crew: [
-              {
-                'vehicle_id': 'v1',
-                'person_id': 'p1',
-                'display_name': 'Max Mustermann',
-                'function': 'GF',
-              },
-            ],
-          ),
-        ],
-      };
-      await _pumpMonitor(tester, env);
-      await _activate(tester);
-      await tester.enterText(
-        find.byKey(const Key('monitor-pairing-code')),
-        'ABCDEFGH',
-      );
-      await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
-      await tester.pumpAndSettle();
+  testWidgets('crew is shown for the current shift when a BF-Tag runs', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final env = _Env(clock: DateTime.utc(2026, 10, 9, 10, 0, 0));
+    env.adapter.pairBody = _pairResponseBody(
+      accessToken: 'at1',
+      refreshToken: 'rt1',
+      monitorId: 'mon1',
+    );
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': [
+        {
+          'id': 'v1',
+          'call_sign': 'Florian 1',
+          'short_name': 'HLF 1',
+          'type': 'HLF',
+          'status': 2,
+          'status_changed_at': null,
+          'sort_order': 1,
+          'active': true,
+        },
+      ],
+      'bf_day': bfDayJson(),
+      'shifts': [
+        shiftJson(
+          id: 'shift1',
+          startsAt: '2026-10-09T08:00:00Z',
+          endsAt: '2026-10-09T20:00:00Z',
+          crew: [
+            {
+              'vehicle_id': 'v1',
+              'person_id': 'p1',
+              'display_name': 'Max Mustermann',
+              'function': 'GF',
+            },
+          ],
+        ),
+      ],
+    };
+    await _pumpMonitor(tester, env);
+    await _activate(tester);
+    await tester.enterText(
+      find.byKey(const Key('monitor-pairing-code')),
+      'ABCDEFGH',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('crew-panel-heading')), findsOneWidget);
-      expect(find.textContaining('Tagschicht'), findsOneWidget);
-      expect(find.textContaining('GF Max Mustermann'), findsOneWidget);
-    },
-  );
+    expect(find.byKey(const Key('crew-panel-heading')), findsOneWidget);
+    expect(find.textContaining('Tagschicht'), findsOneWidget);
+    expect(find.textContaining('GF Max Mustermann'), findsOneWidget);
+  });
 
   testWidgets(
     'crew panel switches to the night shift once the clock passes its start',
@@ -729,13 +838,11 @@ void main() {
         ProviderScope(
           child: ProviderScope(
             overrides: [
-              ...monitorProviderOverrides(
-                tokenStore: env.tokenStore,
-                dio: dio,
-              ),
+              ...monitorProviderOverrides(tokenStore: env.tokenStore, dio: dio),
               monitorPlatformProvider.overrideWithValue(env.platform),
-              monitorWebSocketConnectorProvider
-                  .overrideWithValue((uri) => _FakeWsConnection()),
+              monitorWebSocketConnectorProvider.overrideWithValue(
+                (uri) => _FakeWsConnection(),
+              ),
               monitorClockProvider.overrideWith(
                 (ref) => clockController.stream,
               ),
@@ -754,6 +861,7 @@ void main() {
         find.byKey(const Key('monitor-pairing-code')),
         'ABCDEFGH',
       );
+      await tester.pump();
       await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
       await tester.pumpAndSettle();
 
@@ -773,7 +881,10 @@ void main() {
   );
 
   testWidgets(
-    'crew panel is hidden when no BF-Tag is running',
+    'crew panel heading has no Schicht-Zusatz when no BF-Tag is running '
+    '(monitor-standby.md \u00a74: the heading itself always stays, concept '
+    'moved it into MonitorVehiclePanel -- only the Schicht suffix is '
+    'conditional)',
     (tester) async {
       tester.view.physicalSize = const Size(1920, 1080);
       tester.view.devicePixelRatio = 1.0;
@@ -784,20 +895,19 @@ void main() {
         refreshToken: 'rt1',
         monitorId: 'mon1',
       );
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-      };
+      env.adapter.snapshotBody = {'seq': 1, 'vehicles': <dynamic>[]};
       await _pumpMonitor(tester, env);
       await _activate(tester);
       await tester.enterText(
         find.byKey(const Key('monitor-pairing-code')),
         'ABCDEFGH',
       );
+      await tester.pump();
       await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('crew-panel-heading')), findsNothing);
+      expect(find.byKey(const Key('crew-panel-heading')), findsOneWidget);
+      expect(find.text('Fahrzeugstatus & Besatzung'), findsOneWidget);
     },
   );
 }

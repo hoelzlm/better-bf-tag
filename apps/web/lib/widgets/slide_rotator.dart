@@ -51,8 +51,9 @@ class _SlideRotatorState extends State<SlideRotator> {
     final currentId = (_index < oldWidget.slides.length)
         ? oldWidget.slides[_index].id
         : null;
-    final newIndex =
-        currentId == null ? -1 : widget.slides.indexWhere((s) => s.id == currentId);
+    final newIndex = currentId == null
+        ? -1
+        : widget.slides.indexWhere((s) => s.id == currentId);
     if (newIndex == -1) {
       // The current slide is gone (or there was none): restart rotation.
       _index = 0;
@@ -136,7 +137,10 @@ class _SlideView extends StatelessWidget {
               children: [
                 if (image != null) ...[
                   Expanded(
-                    child: _SlideImage(slideId: slide.id, version: image.version),
+                    child: _SlideImage(
+                      slideId: slide.id,
+                      version: image.version,
+                    ),
                   ),
                   const SizedBox(width: 24),
                 ],
@@ -151,21 +155,25 @@ class _SlideView extends StatelessWidget {
                       imageBuilder: (uri, title, alt) =>
                           const SizedBox.shrink(),
                       styleSheet: MarkdownStyleSheet(
-                        p: const TextStyle(color: Colors.white, fontSize: 24),
+                        // `monitorBody` minimum (Designsystem 3.2,
+                        // monitor-standby.md §6 AC10): >= 28 px.
+                        p: const TextStyle(color: Colors.white, fontSize: 28),
                         strong: const TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                         em: const TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 28,
                           fontStyle: FontStyle.italic,
                         ),
-                        h1: const TextStyle(color: Colors.white, fontSize: 32),
-                        h2: const TextStyle(color: Colors.white, fontSize: 28),
-                        listBullet:
-                            const TextStyle(color: Colors.white, fontSize: 24),
+                        h1: const TextStyle(color: Colors.white, fontSize: 36),
+                        h2: const TextStyle(color: Colors.white, fontSize: 32),
+                        listBullet: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                        ),
                       ),
                     ),
                   ),

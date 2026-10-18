@@ -22,6 +22,25 @@ const consoleErrors = cdpSession.consoleErrors;
 let failCount = 0;
 let stepCount = 0;
 
+// Pins the layout viewport via CDP, independent of the native browser
+// window (ADR 0012's requestFullscreen(), triggered by the monitor's
+// "Zum Aktivieren tippen" gesture, resizes the native headless-Chrome
+// window to the (tiny, display-less) default screen resolution in CI --
+// --window-size alone does not survive that. screenshots.mjs already
+// relies on this same override for its monitor shots; do the same here
+// instead of trying to scroll elements into view (futile: CanvasKit
+// paints to a single fixed-size canvas, so scrolling a flt-semantics
+// overlay node desyncs its reported rect from the actually-painted
+// pixels instead of truly bringing the button on-screen).
+async function pinViewport(width, height) {
+  await send('Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+}
+
 async function shot(name) {
   const r = await send('Page.captureScreenshot', { format: 'png' });
   const file = path.join(ARTIFACT_DIR, `${name}.png`);
@@ -88,7 +107,11 @@ async function clickByText(re) {
   const exprFor = (selector) => `(() => {
     const re = new RegExp(${JSON.stringify(re)}, 'i');
     const els = [...document.querySelectorAll(${JSON.stringify(selector)})];
-    const e = els.find(x => re.test((x.getAttribute('aria-label') || '') + ' ' + (x.innerText || '')));
+    const matches = els.filter(x => re.test((x.getAttribute('aria-label') || '') + ' ' + (x.innerText || '')));
+    // Several screens have more than one element matching the same text
+    // (e.g. incidents_screen.dart's app-bar "Einsatz anlegen" action vs.
+    // its empty-state CTA) -- prefer one that isn't disabled.
+    const e = matches.find(x => x.getAttribute('aria-disabled') !== 'true') ?? matches[0];
     if (!e) return null;
     const r = e.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return null;
@@ -210,6 +233,17 @@ async function uiCriticalPathAlarm(token, vehicle) {
 
   await nav(`${BASE}/admin/einsaetze`);
   await waitForSemantics();
+  // The AppBar's "Einsatz anlegen" button renders (disabled) before the
+  // days list finishes loading (incidents_screen.dart's _loadDays, a REST
+  // call fired from initState) -- waitForSemantics() alone is satisfied by
+  // that early render. Wait for the state-dependent filter row (only shown
+  // once `days` has loaded) so the click below lands once the button is
+  // actually enabled, instead of racing the load on a slower CI runner.
+  await waitFor(async () => {
+    await enableSemantics();
+    const t = await bodyText();
+    return /entwurf/i.test(t) ? t : undefined;
+  }, 8000, 200);
   await stepShot('crit-path-before-create');
 
   await check(await clickByText('^\\s*einsatz anlegen\\s*$'), 'crit-path: clicked Einsatz anlegen');
@@ -355,6 +389,11 @@ async function triggerUiAlarm(token) {
 async function main() {
   const port = await cdpSession.start();
   await cdpSession.connect(port);
+  // Pin the layout viewport for the whole run (see pinViewport's comment):
+  // without this, the monitor's requestFullscreen() call shrinks the
+  // native headless-Chrome window later in the run, well after
+  // --window-size has already been applied.
+  await pinViewport(1400, 900);
 
   // --- login ---------------------------------------------------------
   await nav(`${BASE}/admin/login`);

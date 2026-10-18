@@ -192,11 +192,11 @@ Map<String, dynamic> _alarmJson({String id = 'a1', String incidentId = 'i1'}) {
 
 class _Env {
   _Env()
-      : adapter = _FakeMonitorAdapter(),
-        tokenStore = InMemoryTokenStore(),
-        platform = _FakeMonitorPlatform(),
-        alarmSound = _FakeAlarmSound(),
-        connector = _FakeConnector() {
+    : adapter = _FakeMonitorAdapter(),
+      tokenStore = InMemoryTokenStore(),
+      platform = _FakeMonitorPlatform(),
+      alarmSound = _FakeAlarmSound(),
+      connector = _FakeConnector() {
     final dio = Dio(BaseOptions(baseUrl: ''));
     dio.httpClientAdapter = adapter;
     overrides = [
@@ -218,6 +218,9 @@ class _Env {
 Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
   // Mirrors production nesting (router.dart; PR #31 / commit 7764c01):
   // a root ProviderScope with the `/monitor` scope nested inside.
+  tester.view.physicalSize = const Size(1920, 1080);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       child: ProviderScope(
@@ -240,6 +243,7 @@ Future<void> _activateAndPair(WidgetTester tester, _Env env) async {
     find.byKey(const Key('monitor-pairing-code')),
     'ABCDEFGH',
   );
+  await tester.pump();
   await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
   await tester.pumpAndSettle();
 }
@@ -274,80 +278,73 @@ void main() {
     },
   );
 
-  testWidgets(
-    'the banner falls back to the Letzte-Durchsage panel after its '
-    'duration elapses',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': <dynamic>[],
-        'alarms': <dynamic>[],
-        'announcements': <dynamic>[],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('the banner falls back to the Letzte-Durchsage panel after its '
+      'duration elapses', (tester) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': <dynamic>[],
+      'alarms': <dynamic>[],
+      'announcements': <dynamic>[],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      env.connector.connections.single.emit(
-        _announcementCreatedEvent(
-          seq: 2,
-          announcement: _announcementJson(text: 'Essen ist fertig'),
-        ),
-      );
-      // The real backend would keep returning the Durchsage in any
-      // subsequent snapshot (reconnect/gap resync) for up to 20
-      // entries/until a new BF-Tag starts (ADR 0024); mirror that so a
-      // resync triggered by the long pump below doesn't wipe it from the
-      // fake backend's in-memory state.
-      env.adapter.snapshotBody = {
-        ...env.adapter.snapshotBody,
-        'announcements': [_announcementJson(text: 'Essen ist fertig')],
-      };
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('announcement-banner')), findsOneWidget);
+    env.connector.connections.single.emit(
+      _announcementCreatedEvent(
+        seq: 2,
+        announcement: _announcementJson(text: 'Essen ist fertig'),
+      ),
+    );
+    // The real backend would keep returning the Durchsage in any
+    // subsequent snapshot (reconnect/gap resync) for up to 20
+    // entries/until a new BF-Tag starts (ADR 0024); mirror that so a
+    // resync triggered by the long pump below doesn't wipe it from the
+    // fake backend's in-memory state.
+    env.adapter.snapshotBody = {
+      ...env.adapter.snapshotBody,
+      'announcements': [_announcementJson(text: 'Essen ist fertig')],
+    };
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('announcement-banner')), findsOneWidget);
 
-      await tester.pump(announcementBannerDuration + const Duration(seconds: 1));
-      await tester.pumpAndSettle();
+    await tester.pump(announcementBannerDuration + const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('announcement-banner')), findsNothing);
-      expect(
-        find.byKey(const Key('last-announcement-panel')),
-        findsOneWidget,
-      );
-      expect(find.text('Essen ist fertig'), findsOneWidget);
-    },
-  );
+    expect(find.byKey(const Key('announcement-banner')), findsNothing);
+    expect(find.byKey(const Key('last-announcement-panel')), findsOneWidget);
+    expect(find.text('Essen ist fertig'), findsOneWidget);
+  });
 
-  testWidgets(
-    'a live announcement never interrupts the Einsatzansicht',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': [_incidentJson()],
-        'alarms': [_alarmJson()],
-        'announcements': <dynamic>[],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('a live announcement never interrupts the Einsatzansicht', (
+    tester,
+  ) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': [_incidentJson()],
+      'alarms': [_alarmJson()],
+      'announcements': <dynamic>[],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      expect(find.text('EINSATZ 7'), findsOneWidget);
+    expect(find.text('EINSATZ 7'), findsOneWidget);
 
-      env.connector.connections.single.emit(
-        _announcementCreatedEvent(
-          seq: 2,
-          announcement: _announcementJson(text: 'Essen ist fertig'),
-        ),
-      );
-      await tester.pumpAndSettle();
+    env.connector.connections.single.emit(
+      _announcementCreatedEvent(
+        seq: 2,
+        announcement: _announcementJson(text: 'Essen ist fertig'),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.text('EINSATZ 7'), findsOneWidget);
-      expect(find.byKey(const Key('announcement-banner')), findsNothing);
-      expect(find.text('Essen ist fertig'), findsNothing);
-    },
-  );
+    expect(find.text('EINSATZ 7'), findsOneWidget);
+    expect(find.byKey(const Key('announcement-banner')), findsNothing);
+    expect(find.text('Essen ist fertig'), findsNothing);
+  });
 
   testWidgets(
     'a live announcement arriving during an Einsatz does not reappear '
@@ -395,36 +392,33 @@ void main() {
     },
   );
 
-  testWidgets(
-    'deleting the currently shown announcement hides the banner '
-    'immediately',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': <dynamic>[],
-        'alarms': <dynamic>[],
-        'announcements': <dynamic>[],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('deleting the currently shown announcement hides the banner '
+      'immediately', (tester) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': <dynamic>[],
+      'alarms': <dynamic>[],
+      'announcements': <dynamic>[],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      env.connector.connections.single.emit(
-        _announcementCreatedEvent(
-          seq: 2,
-          announcement: _announcementJson(id: 'ann1', text: 'Essen fertig'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('announcement-banner')), findsOneWidget);
+    env.connector.connections.single.emit(
+      _announcementCreatedEvent(
+        seq: 2,
+        announcement: _announcementJson(id: 'ann1', text: 'Essen fertig'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('announcement-banner')), findsOneWidget);
 
-      env.connector.connections.single.emit(
-        _announcementDeletedEvent(seq: 3, id: 'ann1'),
-      );
-      await tester.pumpAndSettle();
+    env.connector.connections.single.emit(
+      _announcementDeletedEvent(seq: 3, id: 'ann1'),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('announcement-banner')), findsNothing);
-    },
-  );
+    expect(find.byKey(const Key('announcement-banner')), findsNothing);
+  });
 }

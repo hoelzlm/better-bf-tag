@@ -295,6 +295,9 @@ Future<void> _pumpMonitor(WidgetTester tester, _Env env) async {
   // Mirrors production: `main.dart`'s root ProviderScope with the
   // `/monitor` route's own scoped ProviderScope nested inside (router.dart).
   // A single flat scope hides "provider not scoped" bugs.
+  tester.view.physicalSize = const Size(1920, 1080);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       child: ProviderScope(
@@ -317,6 +320,7 @@ Future<void> _activateAndPair(WidgetTester tester, _Env env) async {
     find.byKey(const Key('monitor-pairing-code')),
     'ABCDEFGH',
   );
+  await tester.pump();
   await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
   await tester.pumpAndSettle();
 }
@@ -381,7 +385,10 @@ void main() {
     expect(find.byKey(const Key('incident-recipient-p2')), findsOneWidget);
     expect(find.byKey(const Key('incident-recipient-p3')), findsOneWidget);
     expect(find.byKey(const Key('incident-vehicle-v1')), findsOneWidget);
-    expect(find.text('HLF 1'), findsOneWidget);
+    // The vehicle chip now shows both shortName and callSign (AC5); this
+    // fixture's call_sign equals shortName ('HLF 1'), so the text occurs
+    // twice -- behavior (vehicle is shown) is unchanged.
+    expect(find.text('HLF 1'), findsNWidgets(2));
 
     // Alarms arriving via the initial snapshot never ring the gong.
     expect(env.alarmSound.playCalls, 0);
@@ -419,11 +426,24 @@ void main() {
           alarm: _alarmJson(),
         ),
       );
+      // Not `pumpAndSettle`: the Alarmzustand's badge icon pulses via an
+      // intentionally infinite AnimationController
+      // (monitor_alarm_screen.dart), which would make pumpAndSettle hang.
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('monitor-alarm-badge')), findsOneWidget);
+      expect(env.alarmSound.playCalls, 1);
+
+      // The loud Alarmzustand runs for 20 s (concept
+      // `docs/design/screens/monitor-alarm.md` §5) before the monitor
+      // automatically falls back to the calm Einsatzansicht.
+      await tester.pump(const Duration(seconds: 20));
       await tester.pumpAndSettle();
 
       expect(find.text('EINSATZ 7'), findsOneWidget);
       expect(find.byKey(const Key('monitor-clock-time')), findsNothing);
-      expect(env.alarmSound.playCalls, 1);
+      expect(find.byKey(const Key('monitor-alarm-badge')), findsNothing);
 
       // A second, unrelated alarm.triggered must not re-ring beyond once
       // per live event.
@@ -439,9 +459,13 @@ void main() {
           alarm: _alarmJson(id: 'a2', incidentId: 'i2'),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
 
       expect(env.alarmSound.playCalls, 2);
+
+      await tester.pump(const Duration(seconds: 20));
+      await tester.pumpAndSettle();
     },
   );
 
@@ -528,8 +552,8 @@ void main() {
   );
 
   testWidgets(
-    'a live alarm.acknowledged event updates the recipient ack icon on '
-    'the Einsatzansicht',
+    'a live alarm.acknowledged event updates the recipient ack icon and '
+    'the ack-progress chip on the Einsatzansicht (AC4)',
     (tester) async {
       final env = _Env();
       env.adapter.snapshotBody = {
@@ -540,6 +564,7 @@ void main() {
           _alarmJson(
             recipients: [
               _recipientJson(personId: 'p1', displayName: 'Max M.'),
+              _recipientJson(personId: 'p2', displayName: 'Lea K.'),
             ],
           ),
         ],
@@ -548,6 +573,30 @@ void main() {
       await _activateAndPair(tester, env);
 
       expect(find.byKey(const Key('incident-ack-icon-p1')), findsOneWidget);
+      expect(
+        find.byKey(const Key('monitor-incident-ack-progress')),
+        findsOneWidget,
+      );
+      expect(find.text('0/2 quittiert'), findsOneWidget);
+
+      // Key('monitor-incident-alarm-label') keeps showing the
+      // Alarmierungsstufe (unverändert), rendered as a neutral chip --
+      // never the alarm/red color (concept §3 Review-Runde 1 Punkt 8).
+      expect(
+        find.byKey(const Key('monitor-incident-alarm-label')),
+        findsOneWidget,
+      );
+      expect(find.text('ERSTALARM'), findsOneWidget);
+      final alarmLabelContainer = tester.widget<Container>(
+        find.byKey(const Key('monitor-incident-alarm-label')),
+      );
+      final alarmLabelDecoration =
+          alarmLabelContainer.decoration as BoxDecoration;
+      final theme = Theme.of(
+        tester.element(find.byKey(const Key('monitor-incident-alarm-label'))),
+      );
+      final alarmColors = theme.extension<BftagAlarmColors>();
+      expect(alarmLabelDecoration.color, isNot(equals(alarmColors?.alarm)));
 
       env.connector.connections.single.emit({
         'seq': 2,
@@ -567,6 +616,7 @@ void main() {
         find.byKey(const Key('incident-ack-icon-p1')),
       );
       expect(icon.icon, Icons.check);
+      expect(find.text('1/2 quittiert'), findsOneWidget);
     },
   );
 

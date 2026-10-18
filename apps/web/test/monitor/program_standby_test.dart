@@ -159,12 +159,12 @@ Map<String, dynamic> _alarmJson({String id = 'a1', String incidentId = 'i1'}) {
 
 class _Env {
   _Env()
-      : adapter = _FakeMonitorAdapter(),
-        tokenStore = InMemoryTokenStore(),
-        platform = _FakeMonitorPlatform(),
-        alarmSound = _FakeAlarmSound(),
-        connector = _FakeConnector(),
-        clockController = StreamController<DateTime>.broadcast() {
+    : adapter = _FakeMonitorAdapter(),
+      tokenStore = InMemoryTokenStore(),
+      platform = _FakeMonitorPlatform(),
+      alarmSound = _FakeAlarmSound(),
+      connector = _FakeConnector(),
+      clockController = StreamController<DateTime>.broadcast() {
     final dio = Dio(BaseOptions(baseUrl: ''));
     dio.httpClientAdapter = adapter;
     overrides = [
@@ -213,6 +213,7 @@ Future<void> _activateAndPair(WidgetTester tester, _Env env) async {
     find.byKey(const Key('monitor-pairing-code')),
     'ABCDEFGH',
   );
+  await tester.pump();
   await tester.tap(find.byKey(const Key('monitor-pairing-submit')));
   await tester.pumpAndSettle();
   // The standby screen only subscribes to monitorClockProvider once
@@ -222,39 +223,38 @@ Future<void> _activateAndPair(WidgetTester tester, _Env env) async {
 }
 
 void main() {
-  testWidgets(
-    'shows the current and next Programmpunkt from the snapshot',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': <dynamic>[],
-        'alarms': <dynamic>[],
-        'program_items': [
-          _programItemJson(
-            id: 'p1',
-            title: 'Mittagessen',
-            startsAt: '2026-10-11T09:00:00Z',
-            endsAt: '2026-10-11T11:00:00Z',
-          ),
-          _programItemJson(
-            id: 'p2',
-            title: 'Ausbildung',
-            startsAt: '2026-10-11T12:00:00Z',
-            endsAt: '2026-10-11T13:00:00Z',
-          ),
-        ],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('shows the current and next Programmpunkt from the snapshot', (
+    tester,
+  ) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': <dynamic>[],
+      'alarms': <dynamic>[],
+      'program_items': [
+        _programItemJson(
+          id: 'p1',
+          title: 'Mittagessen',
+          startsAt: '2026-10-11T09:00:00Z',
+          endsAt: '2026-10-11T11:00:00Z',
+        ),
+        _programItemJson(
+          id: 'p2',
+          title: 'Ausbildung',
+          startsAt: '2026-10-11T12:00:00Z',
+          endsAt: '2026-10-11T13:00:00Z',
+        ),
+      ],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      expect(find.byKey(const Key('monitor-program-current')), findsOneWidget);
-      expect(find.textContaining('Mittagessen'), findsOneWidget);
-      expect(find.byKey(const Key('monitor-program-next')), findsOneWidget);
-      expect(find.textContaining('Ausbildung'), findsOneWidget);
-    },
-  );
+    expect(find.byKey(const Key('monitor-program-current')), findsOneWidget);
+    expect(find.textContaining('Mittagessen'), findsOneWidget);
+    expect(find.byKey(const Key('monitor-program-next')), findsOneWidget);
+    expect(find.textContaining('Ausbildung'), findsOneWidget);
+  });
 
   testWidgets(
     'switches which Programmpunkt is current/next purely from the clock',
@@ -337,7 +337,9 @@ void main() {
   );
 
   testWidgets(
-    'the block is absent when there are no Programmpunkte',
+    'the panel shows the empty state (icon + hint text), current/next '
+    'absent, when there are no Programmpunkte (monitor-standby.md \u00a74 '
+    '"Leer/Erststart": festes Grid, the panel itself is never hidden)',
     (tester) async {
       final env = _Env();
       env.adapter.snapshotBody = {
@@ -350,7 +352,8 @@ void main() {
       await _pumpMonitor(tester, env);
       await _activateAndPair(tester, env);
 
-      expect(find.byKey(const Key('program-standby-panel')), findsNothing);
+      expect(find.byKey(const Key('program-standby-panel')), findsOneWidget);
+      expect(find.text('Kein Tagesablauf für heute.'), findsOneWidget);
       expect(find.byKey(const Key('monitor-program-current')), findsNothing);
       expect(find.byKey(const Key('monitor-program-next')), findsNothing);
     },

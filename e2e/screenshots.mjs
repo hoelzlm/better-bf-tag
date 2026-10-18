@@ -267,13 +267,50 @@ async function webShots() {
 
 // --- 3. Monitor screenshots (1920x1080) ------------------------------------
 
+// Fails loudly if the page currently shown is the Einsatzansicht instead of
+// Standby -- guards against the screenshots.mjs ordering bug where a monitor
+// pairs while an alarmed incident from seed() is already open and correctly
+// (per docs/design/screens/monitor-alarm.md §4) jumps straight to
+// MonitorIncidentScreen, silently producing a wrong "standby" screenshot.
+async function assertStandbyScreen(name) {
+  await enableSemantics();
+  const t = await bodyText();
+  if (/EINSATZ\s*\d/.test(t)) {
+    throw new Error(
+      `screenshots: expected Standby screen for "${name}" shot but found Einsatzansicht markup ` +
+        `("EINSATZ <n>") in body text -- an alarmed incident is open when the monitor paired. ` +
+        `Body text: ${t.slice(0, 300)}`,
+    );
+  }
+  if (!t.includes('Fahrzeugstatus & Besatzung')) {
+    throw new Error(
+      `screenshots: expected Standby screen for "${name}" shot but "Fahrzeugstatus & Besatzung" ` +
+        `(MonitorVehiclePanel heading) is missing from body text. Body text: ${t.slice(0, 300)}`,
+    );
+  }
+}
+
 async function monitorShots(seeded) {
   await setViewport(1920, 1080);
 
-  // Kopplung: frischer Browser-Kontext (kein localStorage).
+  // Vor dem Pairing: den bereits in seed() alarmierten Einsatz schließen.
+  // Er wird für die webShots()-Einsätze-Übersicht (Filter "laufend") als
+  // laufender Einsatz benötigt, muss aber geschlossen sein, bevor der
+  // Monitor hier koppelt -- sonst liegt er bereits im initialen Snapshot
+  // und der Monitor springt (korrekt, siehe
+  // docs/design/screens/monitor-alarm.md §4) sofort in die Einsatzansicht
+  // statt Standby zu zeigen.
+  await must('POST', `/incidents/${seeded.runningIncident.id}/close`, { token: seeded.dispTok }, 200);
+
+  // Aktivierung: frischer Browser-Kontext (kein localStorage), vor dem
+  // Tap auf "aktivieren".
   await evalJs('localStorage.clear()');
   await nav(`${BASE}/monitor`);
   await waitForSemantics();
+  await settle();
+  await shot(MONITOR_DIR, 'aktivierung', 1920, 1080);
+
+  // Kopplung.
   await clickByText('aktivieren');
   await waitForSemantics();
   await settle();
@@ -289,20 +326,26 @@ async function monitorShots(seeded) {
   await settle(1500);
 
   // Standby: Fahrzeugstatus/Besatzung/Tagesablauf/Folie sind bereits
-  // sichtbar (Einsatz wurde erst danach ausgelöst -> hier noch Standby).
+  // sichtbar. Der in seed() alarmierte Einsatz wurde oben vor dem Pairing
+  // geschlossen, daher zeigt der initiale Snapshot keinen offenen Alarm und
+  // der Monitor bleibt im Standby (statt sofort in die Einsatzansicht zu
+  // springen).
+  await assertStandbyScreen('standby');
   await shot(MONITOR_DIR, 'standby', 1920, 1080);
 
   // Standby mit Durchsage-Banner: erneute Durchsage frisch auslösen,
   // damit das Banner sichtbar ist (bestehende sind ggf. schon abgelaufen).
   await must('POST', `/bf-days/${seeded.day.id}/announcements`, { token: seeded.dispTok, body: { text: 'Testdurchsage für den Screenshot.' } }, 201);
   await settle(1200);
+  await assertStandbyScreen('standby-durchsage');
   await shot(MONITOR_DIR, 'standby-durchsage', 1920, 1080);
 
-  // Einsatzansicht mit Karte + Alarmzustand: ein frischer Live-Alarm nach
+  // Alarmzustand + Einsatzansicht mit Karte: ein frischer Live-Alarm nach
   // dem Pairing (per API), damit der Monitor den Übergang Standby ->
-  // Einsatzansicht tatsächlich live durchläuft (ein nur per Snapshot
-  // bereits laufender Einsatz löst laut Produktionslogik keinen
-  // Alarm-Übergang aus -- nur ein live `alarm.triggered`-Event tut das).
+  // Alarmzustand (20 s) -> Einsatzansicht tatsächlich live durchläuft (ein
+  // nur per Snapshot bereits laufender Einsatz löst laut Produktionslogik
+  // keinen Alarm-Übergang aus -- nur ein live `alarm.triggered`-Event tut
+  // das).
   const liveIncident = (await must('POST', `/bf-days/${seeded.day.id}/incidents`, {
     token: seeded.prepTok,
     body: { keyword: 'B2 Kellerbrand', address: 'Hauptstraße 1', report: 'Rauch aus dem Keller.', latitude: 48.138, longitude: 11.576 },
@@ -310,8 +353,25 @@ async function monitorShots(seeded) {
   await must('POST', `/incidents/${liveIncident.id}/alarms`, { token: seeded.dispTok, body: { vehicle_ids: [seeded.dlk.id] } }, 201);
   await settle(1500);
   await shot(MONITOR_DIR, 'alarm', 1920, 1080);
-  await settle(1000);
+  // Den Rest der 20-s-Alarmzustand-Phase abwarten (insgesamt >= 21 s seit
+  // Alarmauslösung), bevor die Einsatzansicht aufgenommen wird.
+  await settle(20000);
   await shot(MONITOR_DIR, 'einsatzansicht', 1920, 1080);
+
+  // Einsatz-Fallback: ein alarmierter Einsatz ohne Standort (kein
+  // latitude/longitude) -- den vorherigen Einsatz vorher schließen, damit
+  // die Rotation nicht dazwischenfunkt.
+  await must('POST', `/incidents/${liveIncident.id}/close`, { token: seeded.dispTok }, 200);
+  const fallbackIncident = (await must('POST', `/bf-days/${seeded.day.id}/incidents`, {
+    token: seeded.prepTok,
+    body: { keyword: 'B1 Kleinbrand ohne Standort', address: 'Seitenweg 3', report: 'Kein GPS verfügbar.' },
+  }, 201)).json;
+  await must('POST', `/incidents/${fallbackIncident.id}/alarms`, { token: seeded.dispTok, body: { vehicle_ids: [seeded.hlf.id] } }, 201);
+  await settle(1500);
+  // Auch hier die Alarmzustand-Phase abwarten, bevor die
+  // Einsatzansicht (Fallback ohne Karte) aufgenommen wird.
+  await settle(20000);
+  await shot(MONITOR_DIR, 'einsatz-fallback', 1920, 1080);
 }
 
 async function main() {
