@@ -149,6 +149,30 @@ async function typeInto(index, text) {
   return true;
 }
 
+// Root cause of the CI-only "monitor left pairing screen" flake (PR #39,
+// run 39170572858): Input.insertText above fires the DOM 'input' event
+// synchronously, but Flutter's TextEditingController listener -> setState
+// -> CanvasKit repaint (which flips the submit button's aria-disabled from
+// "true" to "false" once the field is non-empty) only lands on a later
+// animation frame. clickByText() returns as soon as *any* matching
+// [role=button] box exists -- including the still-disabled button during
+// that window -- so on a fast/local machine the repaint usually wins the
+// race, but under CI's throttled CPU the click can land on a button whose
+// onPressed is still null: Flutter silently ignores it (no error, no
+// navigation), exactly matching the failure screenshot (code typed, button
+// visible, nothing happens). Waiting for aria-disabled to actually flip
+// before clicking removes the race without a blind sleep.
+async function waitForButtonEnabled(re, timeoutMs = 5000) {
+  const expr = `(() => {
+    const re = new RegExp(${JSON.stringify(re)}, 'i');
+    const btn = [...document.querySelectorAll('[role=button]')]
+      .find(x => re.test((x.getAttribute('aria-label') || '') + ' ' + (x.innerText || '')));
+    if (!btn) return undefined;
+    return btn.getAttribute('aria-disabled') !== 'true';
+  })()`;
+  return !!(await waitFor(async () => (await evalJs(expr)) ? true : undefined, timeoutMs, 150));
+}
+
 async function pressEnter() {
   for (const type of ['keyDown', 'keyUp']) {
     await send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
@@ -460,6 +484,10 @@ async function main() {
   await check([200, 201].includes(codeRes.status) && !!codeRes.json?.code, 'generated pairing code via admin API', codeRes);
 
   await check(await typeInto(0, codeRes.json.code), 'typed pairing code on monitor screen');
+  // See waitForButtonEnabled's comment: clicking before the submit button's
+  // aria-disabled flips to "false" silently no-ops the click under CI's
+  // throttled CPU.
+  await check(await waitForButtonEnabled('koppeln'), 'Koppeln button enabled after typing code');
   await check(await clickByText('koppeln'), 'clicked Koppeln button');
 
   const pairedText = await waitFor(async () => {
@@ -468,7 +496,12 @@ async function main() {
     return !t.includes('koppeln') ? t : undefined;
   }, 10000, 300);
   await stepShot('monitor-paired');
-  await check(!!pairedText && !pairedText.includes('koppeln'), 'monitor left pairing screen', pairedText?.slice(0, 300));
+  const pairingFailed = !pairedText || pairedText.includes('koppeln');
+  await check(
+    !pairingFailed,
+    'monitor left pairing screen',
+    pairingFailed ? norm(await bodyText()).slice(0, 300) : pairedText?.slice(0, 300),
+  );
 
   // --- live alarm on the monitor, triggered via the API -----------------
   await triggerUiAlarm(adminToken);

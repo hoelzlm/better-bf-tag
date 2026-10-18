@@ -120,7 +120,25 @@ Zielgeräte: Android 8+ (API 26), iOS 16+. Für alle Personen; Funktionen je nac
   Wiring fehlt noch). Alarm- und Durchsage-Pushes schließen sich gegenseitig aus:
   `PushService.onAlarmOpened` ignoriert `type: 'announcement.created'`.
 
+### Navigation & "Mein Fahrzeug" (ADR 0027, T07-3)
+
+- Die Navigationsleiste (`MainNavBar`) hat einen 1px `outline`-Trenner oben, keinen
+  Schatten/Elevation-Tint (`navigationBarTheme.elevation: 0`, `surfaceTintColor: transparent`),
+  Labels immer sichtbar und kein Badge (keine Datenquelle für ungelesen). Sie erscheint nur auf
+  den vier Top-Level-Screens (`/`, `/einsaetze`, `/durchsagen`, `/tagesablauf`), nicht auf
+  Onboarding/Pairing/Einsatzdetail/Alarm/Einstellungen.
+- `MyVehicleScreen`: Fahrzeugname `headlineSmall`, Typ-Zeile `bodyMedium`/`onSurfaceVariant`,
+  kombinierte Zeile "Funktion: … · **Status:** …" (`bodyLarge`, "Status:" fett). Der
+  Einstellungen-Button hat jetzt das Tooltip "Einstellungen". Der leere Zustand (kein
+  zugeteiltes Fahrzeug) nutzt `BftagStateView.empty` mit einem 48dp
+  `local_shipping_outlined`-Icon; der Text ist unverändert.
+- `FmsPanel`: Kacheln sind mind. 96dp hoch mit 16px Abstand (`BftagSpacing.lg`) in beide
+  Richtungen. Inaktive Kacheln: `surfaceContainerHighest`/`onSurface`; die aktive Kachel nutzt die
+  feste FMS-Token-Farbe (`BftagStatusColors`). Im Dark Mode haben alle Kacheln einen 1px
+  `onSurface`-bei-24%-Rahmen (Designsystem §2.4/§5.5).
+
 ### Tagesablauf (ADR 0025)
+
 
 - `ProgramScreen` (`/tagesablauf`, vierter Eintrag der Navigationsleiste "Ablauf") listet die
   sortierten Programmpunkte des laufenden BF-Tags aus `pairedProgramItemsProvider` -- kein eigener
