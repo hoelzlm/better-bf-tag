@@ -191,6 +191,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               'damit Alarme auch im Hintergrund ankommen.',
           extra: _HintBox(
             icon: Icons.info_outline,
+            // Architect decision: "surfaceContainer box". `_buildTheme()`
+            // (packages/core/lib/src/theme.dart) maps the design-token
+            // `surfaceContainer` to `ColorScheme.surfaceContainerHigh`
+            // (and the design-token `surfaceVariant` to
+            // `ColorScheme.surfaceContainer`, used for the lock hint in
+            // test_alarm_panel.dart) — this is the correct token, not a
+            // literal-name match against `ColorScheme.surfaceContainer`.
             background: Theme.of(context).colorScheme.surfaceContainerHigh,
             foreground: Theme.of(context).colorScheme.onSurface,
             child: Text(

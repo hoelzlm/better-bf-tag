@@ -141,6 +141,12 @@ class _TestAlarmPanelState extends ConsumerState<TestAlarmPanel> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
+                // Architect decision: "surfaceVariant box". `_buildTheme()`
+                // (packages/core/lib/src/theme.dart) maps the design-token
+                // `surfaceVariant` to `ColorScheme.surfaceContainer` (the
+                // deprecated `ColorScheme.surfaceVariant` getter is not
+                // wired to this design token and must stay unused) — this
+                // is the correct token, not a literal-name match.
                 color: colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(radii?.medium ?? 12),
               ),

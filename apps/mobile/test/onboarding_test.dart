@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bftag_core/bftag_core.dart';
 import 'package:bftag_mobile/alarm/alarm_sound.dart';
@@ -12,8 +13,32 @@ import 'package:bftag_mobile/router.dart';
 import 'package:bftag_mobile/screens/alarm_screen.dart';
 import 'package:bftag_mobile/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Loads the real Inter font (packages/core/assets/fonts, Designsystem §3 /
+/// ADR 0027) instead of the test framework's default Ahem boxes, so the
+/// 390x844/360x640 overflow check below measures the real glyph widths the
+/// app ships with rather than Ahem's deliberately-oversized test glyphs
+/// (which would report overflow that never happens on a real device). Same
+/// approach as `screenshot_test/screenshots_test.dart`; `flutter test` runs
+/// with cwd == apps/mobile, so `../..` reaches the repo root from there.
+Future<void> _loadInterFonts() async {
+  final fontsDir = Directory('../../packages/core/assets/fonts');
+  if (!fontsDir.existsSync()) {
+    // ignore: avoid_print
+    print('NOTE: $fontsDir missing, overflow check will use Ahem for Inter.');
+    return;
+  }
+  for (final file in fontsDir.listSync()) {
+    if (file is! File || !file.path.endsWith('.ttf')) continue;
+    final bytes = await file.readAsBytes();
+    final loader = FontLoader('packages/bftag_core/Inter');
+    loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+    await loader.load();
+  }
+}
 
 const _me = Person(
   id: 'p1',
@@ -274,6 +299,8 @@ Future<ProviderContainer> _pump(
 }
 
 void main() {
+  setUpAll(_loadInterFonts);
+
   testWidgets(
     'a freshly paired, not-yet-onboarded session lands on /onboarding',
     (tester) async {
@@ -588,6 +615,71 @@ void main() {
           ),
           greaterThanOrEqualTo(4.5),
         );
+      }
+    },
+  );
+
+  testWidgets(
+    'fits at 390x844 and 360x640 in light and dark theme, no overflow, '
+    'meets androidTapTargetGuideline + labeledTapTargetGuideline',
+    (tester) async {
+      final originalSize = tester.view.physicalSize;
+      final originalDpr = tester.view.devicePixelRatio;
+      addTearDown(() {
+        tester.view.physicalSize = originalSize;
+        tester.view.devicePixelRatio = originalDpr;
+        tester.platformDispatcher.clearPlatformBrightnessTestValue();
+      });
+
+      const sizes = [Size(390, 844), Size(360, 640)];
+      const brightnesses = [Brightness.light, Brightness.dark];
+
+      for (final size in sizes) {
+        for (final brightness in brightnesses) {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1.0;
+          tester.platformDispatcher.platformBrightnessTestValue = brightness;
+
+          final deviceSettings = _FakeDeviceSettings()
+            ..manufacturerValue = 'samsung';
+          final container = await _pump(
+            tester,
+            session: _paired,
+            onboardingStore: InMemoryOnboardingStore(completed: false),
+            deviceSettings: deviceSettings,
+            testAlarmRepository: _FakeTestAlarmRepository(),
+            pushService: _FakePushService(),
+            isIos: false,
+          );
+          // No RenderFlex/overflow error reported while building the
+          // notifications step at this size/theme.
+          expect(tester.takeException(), isNull);
+
+          final handle = tester.ensureSemantics();
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          handle.dispose();
+
+          // Walk to the Akku-Optimierung step (longest content: title +
+          // chip + description + manufacturer hint box + two buttons),
+          // the most likely step to overflow on the smaller surface.
+          await tester.tap(find.byKey(const Key('onboarding-next')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('onboarding-next')));
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const Key('onboarding-battery-hint')),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+
+          final batteryHandle = tester.ensureSemantics();
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          batteryHandle.dispose();
+
+          container.dispose();
+        }
       }
     },
   );
