@@ -16,6 +16,12 @@ import '../widgets/main_nav_bar.dart';
 /// changes (a realtime `incident.updated` for the running list), since
 /// that provider only tracks `running` Einsätze while this screen also
 /// shows `closed` ones and needs the full list from the server.
+///
+/// Layout/states per `docs/design/screens/app-einsaetze.md` §3/§4
+/// (ADR 0027): status chips use `primaryContainer`/`onPrimaryContainer`
+/// (`running`) and `surfaceContainer`/`onSurfaceVariant` (`closed`,
+/// i.e. the `surfaceVariant` design token -- see
+/// `packages/core/lib/src/theme.dart`), never a hardcoded red/alarm.
 class IncidentsScreen extends ConsumerStatefulWidget {
   const IncidentsScreen({super.key});
 
@@ -76,37 +82,59 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
           IconButton(
             key: const Key('settings'),
             icon: const Icon(Icons.settings),
+            tooltip: 'Einstellungen',
             onPressed: () => context.go('/settings'),
           ),
         ],
       ),
       body: RefreshIndicator(
+        color: Theme.of(context).colorScheme.primary,
         onRefresh: _load,
-        child: _buildBody(),
+        child: _buildBody(context),
       ),
       bottomNavigationBar: const MainNavBar(currentIndex: 1),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
     switch (_loadState) {
       case _LoadState.loading:
-        return const Center(child: CircularProgressIndicator());
+        return Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        );
       case _LoadState.noRunningBfDay:
-        return _scrollableMessage('Kein laufender BF-Tag.');
+        return _scrollableState(
+          icon: Icons.event_busy_outlined,
+          title: 'Kein laufender BF-Tag.',
+        );
       case _LoadState.error:
-        return _scrollableMessage('Einsätze konnten nicht geladen werden.');
+        return _scrollableState(
+          icon: Icons.warning_amber_outlined,
+          iconColor: Theme.of(context).colorScheme.error,
+          title: 'Einsätze konnten nicht geladen werden.',
+          message: 'Nach unten ziehen zum erneut Laden.',
+        );
       case _LoadState.loaded:
         if (_incidents.isEmpty) {
-          return _scrollableMessage('Noch keine Einsätze.');
+          return _scrollableState(
+            icon: Icons.campaign_outlined,
+            title: 'Noch keine Einsätze.',
+          );
         }
-        return ListView.builder(
+        return ListView.separated(
           key: const Key('incidents-list'),
           itemCount: _incidents.length,
+          separatorBuilder: (context, index) => Divider(
+            height: 1,
+            color: Theme.of(context).colorScheme.outline,
+          ),
           itemBuilder: (context, index) {
             final incident = _incidents[index];
             return ListTile(
               key: Key('incident-${incident.id}'),
+              minVerticalPadding: 12,
               title: Text('#${incident.number} ${incident.keyword}'),
               subtitle: Text(incident.address),
               trailing: _StateChip(state: incident.state),
@@ -117,16 +145,53 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     }
   }
 
-  /// Wraps [message] in a scrollable, centered container so
-  /// [RefreshIndicator] keeps working even on an otherwise empty screen.
-  Widget _scrollableMessage(String message) {
+  /// Wraps the given state in a scrollable, centered container so
+  /// [RefreshIndicator] keeps working even on an otherwise empty/error
+  /// screen (Designsystem §5.10 Leer-/Fehlerzustand).
+  Widget _scrollableState({
+    required IconData icon,
+    required String title,
+    Color? iconColor,
+    String? message,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final theme = Theme.of(context);
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(child: Text(message)),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 48,
+                      color: iconColor ?? theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    if (message != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        message,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -141,25 +206,32 @@ class _StateChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color;
+    final colorScheme = Theme.of(context).colorScheme;
+    final Color background;
+    final Color foreground;
     switch (state) {
       case IncidentState.running:
-        color = Colors.red.shade600;
+        // `primaryContainer`/`onPrimaryContainer` -- NOT `alarm`/`onAlarm`
+        // or a hardcoded red: a running Übungseinsatz is status info, not an
+        // Alarmzustand of the app (Grundprinzip 1).
+        background = colorScheme.primaryContainer;
+        foreground = colorScheme.onPrimaryContainer;
         break;
       case IncidentState.closed:
-        color = Colors.grey.shade500;
-        break;
       case IncidentState.draft:
       case IncidentState.discarded:
-        color = Colors.grey.shade300;
+        // `surfaceContainer` is the Flutter mapping of the design-token
+        // `surfaceVariant` (see packages/core/lib/src/theme.dart); the
+        // deprecated `ColorScheme.surfaceVariant` getter is not wired to
+        // this token and must stay unused.
+        background = colorScheme.surfaceContainer;
+        foreground = colorScheme.onSurfaceVariant;
         break;
     }
     return Chip(
-      label: Text(
-        state.label,
-        style: const TextStyle(color: Colors.white),
-      ),
-      backgroundColor: color,
+      label: Text(state.label, style: TextStyle(color: foreground)),
+      backgroundColor: background,
+      side: BorderSide.none,
     );
   }
 }
