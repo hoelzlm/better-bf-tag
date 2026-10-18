@@ -267,8 +267,40 @@ async function webShots() {
 
 // --- 3. Monitor screenshots (1920x1080) ------------------------------------
 
+// Fails loudly if the page currently shown is the Einsatzansicht instead of
+// Standby -- guards against the screenshots.mjs ordering bug where a monitor
+// pairs while an alarmed incident from seed() is already open and correctly
+// (per docs/design/screens/monitor-alarm.md §4) jumps straight to
+// MonitorIncidentScreen, silently producing a wrong "standby" screenshot.
+async function assertStandbyScreen(name) {
+  await enableSemantics();
+  const t = await bodyText();
+  if (/EINSATZ\s*\d/.test(t)) {
+    throw new Error(
+      `screenshots: expected Standby screen for "${name}" shot but found Einsatzansicht markup ` +
+        `("EINSATZ <n>") in body text -- an alarmed incident is open when the monitor paired. ` +
+        `Body text: ${t.slice(0, 300)}`,
+    );
+  }
+  if (!t.includes('Fahrzeugstatus & Besatzung')) {
+    throw new Error(
+      `screenshots: expected Standby screen for "${name}" shot but "Fahrzeugstatus & Besatzung" ` +
+        `(MonitorVehiclePanel heading) is missing from body text. Body text: ${t.slice(0, 300)}`,
+    );
+  }
+}
+
 async function monitorShots(seeded) {
   await setViewport(1920, 1080);
+
+  // Vor dem Pairing: den bereits in seed() alarmierten Einsatz schließen.
+  // Er wird für die webShots()-Einsätze-Übersicht (Filter "laufend") als
+  // laufender Einsatz benötigt, muss aber geschlossen sein, bevor der
+  // Monitor hier koppelt -- sonst liegt er bereits im initialen Snapshot
+  // und der Monitor springt (korrekt, siehe
+  // docs/design/screens/monitor-alarm.md §4) sofort in die Einsatzansicht
+  // statt Standby zu zeigen.
+  await must('POST', `/incidents/${seeded.runningIncident.id}/close`, { token: seeded.dispTok }, 200);
 
   // Aktivierung: frischer Browser-Kontext (kein localStorage), vor dem
   // Tap auf "aktivieren".
@@ -294,13 +326,18 @@ async function monitorShots(seeded) {
   await settle(1500);
 
   // Standby: Fahrzeugstatus/Besatzung/Tagesablauf/Folie sind bereits
-  // sichtbar (Einsatz wurde erst danach ausgelöst -> hier noch Standby).
+  // sichtbar. Der in seed() alarmierte Einsatz wurde oben vor dem Pairing
+  // geschlossen, daher zeigt der initiale Snapshot keinen offenen Alarm und
+  // der Monitor bleibt im Standby (statt sofort in die Einsatzansicht zu
+  // springen).
+  await assertStandbyScreen('standby');
   await shot(MONITOR_DIR, 'standby', 1920, 1080);
 
   // Standby mit Durchsage-Banner: erneute Durchsage frisch auslösen,
   // damit das Banner sichtbar ist (bestehende sind ggf. schon abgelaufen).
   await must('POST', `/bf-days/${seeded.day.id}/announcements`, { token: seeded.dispTok, body: { text: 'Testdurchsage für den Screenshot.' } }, 201);
   await settle(1200);
+  await assertStandbyScreen('standby-durchsage');
   await shot(MONITOR_DIR, 'standby-durchsage', 1920, 1080);
 
   // Alarmzustand + Einsatzansicht mit Karte: ein frischer Live-Alarm nach
