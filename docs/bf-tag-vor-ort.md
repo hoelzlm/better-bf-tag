@@ -10,8 +10,12 @@ Einmal-Variante für den BF-Tag am 24.10.2026. **Nicht nach `main` mergen.**
   und Monitor zeigen „N alarmiert“ und die Namen, keine Quittierung, keinen Push-Zähler.
 - **Fahrzeugzuteilung unverändert:** in *Schichten* werden Personen Fahrzeugen
   mit Funktion (GF, MA, …) zugeteilt. Alarmiert wird weiter die Besatzung.
-- **Status per Funk:** Die Besatzung meldet ihren Status per Funk, die Leitstelle setzt ihn in der
-  Lage (Status-Kachel anklicken → Status wählen).
+- **Status per Funk → Funktisch:** Die Besatzung meldet ihren Status per Funk.
+  Die Leitstelle setzt ihn auf der Lage-Seite im *Funktisch*: eine Zeile pro
+  Fahrzeug, ein Klick auf die Statustaste (1–6, RTW/KTW 1–8). Tastatur:
+  Fahrzeug anklicken, Ziffer drücken, ↑/↓ wechselt das Fahrzeug. Jede Zeile
+  zeigt den aktuellen Status mit Uhrzeit; ein Vertipper ist mit einem Klick
+  korrigiert. Die Zeiten landen in der Statushistorie (für die Berichte).
 - **Einsatzberichte:** schreiben die Betreuer nachträglich im Admin-Web.
 
 Backend, API und App sind unverändert: Ist ein Handy gekoppelt, funktioniert

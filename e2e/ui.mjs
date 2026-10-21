@@ -375,6 +375,32 @@ async function uiCriticalPathAlarm(token, vehicle) {
   );
 }
 
+// BF-Tag ohne Handys: die Leitstelle setzt den per Funk gemeldeten Status
+// mit einem Klick im Funktisch auf der Lage-Seite (kein Dialog).
+async function uiFunktisch(token, vehicle) {
+  const before = (await call('GET', '/vehicles', { token })).json?.find((v) => v.id === vehicle.id);
+  const target = before?.status === 4 ? 1 : 4;
+  await nav(`${BASE}/admin`);
+  await waitForSemantics();
+  await stepShot('funktisch');
+  const text = await bodyText();
+  await check(/Funktisch/.test(text), 'funktisch: panel visible on Lage', text.slice(0, 300));
+  await check(
+    // short_name is regex-safe (UIKP<digits>, see ensureNamedVehicle).
+    await clickByText(`${vehicle.short_name} Status ${target} `),
+    `funktisch: clicked status ${target} for ${vehicle.short_name}`,
+  );
+  const after = await waitFor(async () => {
+    const v = (await call('GET', '/vehicles', { token })).json?.find((x) => x.id === vehicle.id);
+    return v?.status === target ? v : undefined;
+  }, 5000, 200);
+  await check(!!after, `funktisch: vehicle status is ${target} after one click (no dialog)`, after);
+  const history = await call('GET', `/vehicles/${vehicle.id}/status-history`, { token });
+  const items = Array.isArray(history.json) ? history.json : (history.json?.items ?? []);
+  await check(items[0]?.status === target && items[0]?.source === 'dispatch', 'funktisch: status history records source dispatch', items[0]);
+  await stepShot('funktisch-after-click');
+}
+
 async function triggerUiAlarm(token) {
   const iso = (offsetMin) => new Date(Date.now() + offsetMin * 60000).toISOString();
 
@@ -464,6 +490,9 @@ async function main() {
 
   // --- Einsätze kritischer Pfad (concept §3.4, AC15-19) -----------------
   await uiCriticalPathAlarm(earlyToken, critPathVehicle);
+
+  // --- Funktisch (BF-Tag ohne Handys): Status per Klick auf der Lage -----
+  await uiFunktisch(earlyToken, critPathVehicle);
 
   // --- monitor pairing (fresh browser context) -------------------------
   await evalJs('localStorage.clear()');

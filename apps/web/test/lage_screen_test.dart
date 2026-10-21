@@ -30,27 +30,23 @@ GoRouter _router(SessionState session) {
       ),
       GoRoute(
         path: '/admin/einsaetze',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Einsätze-Screen')),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Einsätze-Screen'))),
       ),
       GoRoute(
         path: '/admin/monitors',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Monitore-Screen')),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Monitore-Screen'))),
       ),
       GoRoute(
         path: '/admin/slides',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Folien-Screen')),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Folien-Screen'))),
       ),
       GoRoute(
         path: '/admin/persons',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Personen-Screen')),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Personen-Screen'))),
       ),
     ],
   );
@@ -112,16 +108,18 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('anzeigen: shows the signed-in person and Berechtigung',
-      (tester) async {
+  testWidgets('anzeigen: shows the signed-in person and Berechtigung', (
+    tester,
+  ) async {
     await _pump(tester, permission: Permission.admin);
 
     expect(find.textContaining('Max Mustermann'), findsOneWidget);
     expect(find.textContaining('Administrator'), findsOneWidget);
   });
 
-  testWidgets('Navigation: nav-einsaetze goes to the Einsätze screen',
-      (tester) async {
+  testWidgets('Navigation: nav-einsaetze goes to the Einsätze screen', (
+    tester,
+  ) async {
     await _pump(tester, permission: Permission.admin);
 
     await tester.tap(find.byKey(const Key('nav-einsaetze')));
@@ -130,8 +128,9 @@ void main() {
     expect(find.text('Einsätze-Screen'), findsOneWidget);
   });
 
-  testWidgets('Navigation: nav-monitors goes to the Monitore screen',
-      (tester) async {
+  testWidgets('Navigation: nav-monitors goes to the Monitore screen', (
+    tester,
+  ) async {
     await _pump(tester, permission: Permission.admin);
 
     await tester.tap(find.byKey(const Key('nav-monitors')));
@@ -140,8 +139,9 @@ void main() {
     expect(find.text('Monitore-Screen'), findsOneWidget);
   });
 
-  testWidgets('Navigation: nav-slides goes to the Folien screen',
-      (tester) async {
+  testWidgets('Navigation: nav-slides goes to the Folien screen', (
+    tester,
+  ) async {
     await _pump(tester, permission: Permission.admin);
 
     await tester.tap(find.byKey(const Key('nav-slides')));
@@ -150,8 +150,9 @@ void main() {
     expect(find.text('Folien-Screen'), findsOneWidget);
   });
 
-  testWidgets('Navigation: nav-persons goes to the Personen screen',
-      (tester) async {
+  testWidgets('Navigation: nav-persons goes to the Personen screen', (
+    tester,
+  ) async {
     await _pump(tester, permission: Permission.admin);
 
     await tester.tap(find.byKey(const Key('nav-persons')));
@@ -160,15 +161,33 @@ void main() {
     expect(find.text('Personen-Screen'), findsOneWidget);
   });
 
-  testWidgets(
-      'Navigation: non-admin dispatch does not see admin-only nav entries',
-      (tester) async {
+  testWidgets('Leitstelle sees the Funktisch instead of the status bar', (
+    tester,
+  ) async {
     await _pump(tester, permission: Permission.dispatch);
 
-    expect(find.byKey(const Key('nav-fahrzeuge')), findsNothing);
-    expect(find.byKey(const Key('nav-persons')), findsNothing);
-    expect(find.byKey(const Key('nav-monitors')), findsNothing);
-    expect(find.byKey(const Key('nav-slides')), findsNothing);
-    expect(find.byKey(const Key('nav-einsaetze')), findsOneWidget);
+    expect(find.byKey(const Key('funktisch')), findsOneWidget);
+    expect(find.byKey(const Key('vehicle-status-bar')), findsNothing);
   });
+
+  testWidgets('without Leitstellen-Berechtigung there is no Funktisch', (
+    tester,
+  ) async {
+    await _pump(tester, permission: Permission.preparation);
+
+    expect(find.byKey(const Key('funktisch')), findsNothing);
+  });
+
+  testWidgets(
+    'Navigation: non-admin dispatch does not see admin-only nav entries',
+    (tester) async {
+      await _pump(tester, permission: Permission.dispatch);
+
+      expect(find.byKey(const Key('nav-fahrzeuge')), findsNothing);
+      expect(find.byKey(const Key('nav-persons')), findsNothing);
+      expect(find.byKey(const Key('nav-monitors')), findsNothing);
+      expect(find.byKey(const Key('nav-slides')), findsNothing);
+      expect(find.byKey(const Key('nav-einsaetze')), findsOneWidget);
+    },
+  );
 }
