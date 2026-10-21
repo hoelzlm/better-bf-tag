@@ -41,39 +41,6 @@ String? scheduledAlarmsWarningFragment(
   return parts.join(' und ');
 }
 
-IconData _ackIcon(AckState state) {
-  switch (state) {
-    case AckState.acknowledged:
-      return Icons.check_circle;
-    case AckState.pending:
-      return Icons.more_horiz;
-    case AckState.noDevice:
-      return Icons.remove_circle_outline;
-  }
-}
-
-Color _ackColor(ThemeData theme, AckState state) {
-  switch (state) {
-    case AckState.acknowledged:
-      return theme.colorScheme.primary;
-    case AckState.pending:
-      return theme.colorScheme.error;
-    case AckState.noDevice:
-      return theme.colorScheme.onSurfaceVariant;
-  }
-}
-
-String _ackLabel(AckState state) {
-  switch (state) {
-    case AckState.acknowledged:
-      return 'quittiert';
-    case AckState.pending:
-      return 'ausstehend';
-    case AckState.noDevice:
-      return 'kein Gerät';
-  }
-}
-
 /// "Laufende Einsätze" (ADR 0017/0019, Abschnitt "Anzeige"): one card per
 /// running Einsatz from [incidentsProvider], each with its Alarmierungen
 /// from [alarmsProvider] -- titled with [alarmSequenceLabel], counts and a
@@ -321,8 +288,6 @@ class _AlarmSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final summary = alarm.summary;
-    final errorColor = theme.colorScheme.error;
     final alarmColors = theme.extension<BftagAlarmColors>()!;
     final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
     return Padding(
@@ -344,15 +309,10 @@ class _AlarmSection extends StatelessWidget {
               ),
             ),
           ),
+          // BF-Tag ohne Handys: no Quittierung/Push counts, just who is alarmed.
           Text(
             key: Key('alarm-summary-${alarm.id}'),
-            '${summary.acknowledged} quittiert · ${summary.pending} ausstehend · '
-            '${summary.noDevice} kein Gerät',
-          ),
-          Text(
-            key: Key('alarm-push-summary-${alarm.id}'),
-            'Push: ${alarm.pushDelivered} zugestellt · ${alarm.pushRejected} abgelehnt',
-            style: alarm.pushRejected > 0 ? TextStyle(color: errorColor) : null,
+            '${alarm.recipients.length} alarmiert',
           ),
           const SizedBox(height: 4),
           for (final recipient in alarm.recipients)
@@ -372,7 +332,6 @@ class _RecipientRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final state = recipient.ackState;
     final vehicle = vehiclesById[recipient.vehicleId];
     final vehicleLabel = vehicle?.shortName ?? recipient.vehicleId;
     return Padding(
@@ -381,16 +340,14 @@ class _RecipientRow extends StatelessWidget {
         key: Key('alarm-recipient-${recipient.personId}'),
         children: [
           Icon(
-            _ackIcon(state),
-            key: Key('ack-icon-${recipient.personId}'),
+            Icons.person,
             size: 18,
-            color: _ackColor(theme, state),
+            color: theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              '${recipient.displayName} – $vehicleLabel, ${recipient.function} '
-              '(${_ackLabel(state)})',
+              '${recipient.displayName} – $vehicleLabel, ${recipient.function}',
             ),
           ),
         ],

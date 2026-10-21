@@ -37,7 +37,9 @@ services:
     environment:
       DATABASE_URL: postgres://bftag:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss gesetzt sein}@db:5432/bftag
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss gesetzt sein (mindestens 32 Zeichen)}
-      COOKIE_SECURE: "true"
+      # Produktion (HTTPS) immer true. Nur `just event` (HTTP im lokalen WLAN) setzt false,
+      # sonst verwirft der Browser das Refresh-Cookie und jedes Neuladen meldet ab.
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"
       TRUST_PROXY: "true"
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}

@@ -178,8 +178,8 @@ void main() {
   });
 
   testWidgets(
-      'shows the three AckStates with icons, and counts with noDevice not '
-      'counted as pending', (tester) async {
+      'BF-Tag ohne Handys: lists every alarmed person with vehicle and '
+      'function and "N alarmiert", no Quittierung state', (tester) async {
     final alarm = Alarm(
       id: 'a1',
       incidentId: 'i1',
@@ -208,30 +208,16 @@ void main() {
       vehicles: [_vehicle(id: 'v1', shortName: 'HLF 1')],
     );
 
-    expect(find.text('1 quittiert · 1 ausstehend · 1 kein Gerät'),
-        findsOneWidget);
-
-    expect(
-      find.byKey(const Key('ack-icon-p1')),
-      findsOneWidget,
-      reason: 'acknowledged recipient',
-    );
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
-    expect(find.byIcon(Icons.more_horiz), findsOneWidget);
-    expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
-
-    expect(
-      find.textContaining('Max Muster – HLF 1, GF (quittiert)'),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('Erika Musterfrau – HLF 1, GF (ausstehend)'),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('Peter Probe – HLF 1, GF (kein Gerät)'),
-      findsOneWidget,
-    );
+    expect(find.text('3 alarmiert'), findsOneWidget);
+    expect(find.textContaining('quittiert'), findsNothing);
+    expect(find.textContaining('ausstehend'), findsNothing);
+    expect(find.textContaining('kein Gerät'), findsNothing);
+    expect(find.byKey(const Key('ack-icon-p1')), findsNothing);
+    expect(find.byKey(const Key('alarm-push-summary-a1')), findsNothing);
+    expect(find.textContaining('Push:'), findsNothing);
+    expect(find.text('Max Muster – HLF 1, GF'), findsOneWidget);
+    expect(find.text('Erika Musterfrau – HLF 1, GF'), findsOneWidget);
+    expect(find.text('Peter Probe – HLF 1, GF'), findsOneWidget);
   });
 
   testWidgets('shows incident number, keyword, address and elapsed time',
@@ -262,63 +248,6 @@ void main() {
     expect(find.textContaining('seit 7 min'), findsOneWidget);
   });
 
-  testWidgets(
-      'shows "Push: X zugestellt · Y abgelehnt" and updates after an '
-      'alarm.push_reported event', (tester) async {
-    final alarm = Alarm(
-      id: 'a1',
-      incidentId: 'i1',
-      state: AlarmState.triggered,
-      triggeredAt: DateTime.now().subtract(const Duration(minutes: 5)),
-      vehicleIds: const ['v1'],
-      recipients: const [],
-      pushDelivered: 3,
-      pushRejected: 1,
-    );
-    final alarmsController = StreamController<List<Alarm>>();
-    addTearDown(alarmsController.close);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          incidentsProvider
-              .overrideWith((ref) => Stream.value([_incident(id: 'i1')])),
-          alarmsProvider.overrideWith((ref) => alarmsController.stream),
-          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-          closeSuggestedIncidentIdsProvider.overrideWith(
-            (ref) => Stream.value(const <String>{}),
-          ),
-          scheduledAlarmsProvider.overrideWith(
-            (ref) => Stream.value(const <ScheduledAlarm>[]),
-          ),
-        ],
-        child: MaterialApp(
-          theme: bftagLightTheme(),
-          home: const Scaffold(body: RunningIncidentsSection()),
-        ),
-      ),
-    );
-    alarmsController.add([alarm]);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Push: 3 zugestellt · 1 abgelehnt'), findsOneWidget);
-
-    alarmsController.add([
-      Alarm(
-        id: alarm.id,
-        incidentId: alarm.incidentId,
-        state: alarm.state,
-        triggeredAt: alarm.triggeredAt,
-        vehicleIds: alarm.vehicleIds,
-        recipients: alarm.recipients,
-        pushDelivered: 5,
-        pushRejected: 2,
-      ),
-    ]);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Push: 5 zugestellt · 2 abgelehnt'), findsOneWidget);
-  });
 
   testWidgets(
       'shows "Erstalarm" and "1. Nachalarmierung" titles for two alarms',

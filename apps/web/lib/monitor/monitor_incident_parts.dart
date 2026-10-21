@@ -7,15 +7,15 @@
 import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 
-/// "X/Y quittiert" (concept §3/§6 AC4): `X` is the number of
-/// [recipients] with [AckState.acknowledged], `Y` is the total. Pure
-/// function so it can be recomputed on every rebuild without a separate
-/// data source -- both values come from [recipients].
+/// "N alarmiert": number of alarmed persons. BF-Tag ohne Handys: nobody
+/// acknowledges on a phone, so an "X/Y quittiert" count would sit at 0
+/// forever. Name and Key kept so the monitor layout stays unchanged.
 String ackProgressLabel(List<AlarmRecipient> recipients) {
-  final acknowledged = recipients
-      .where((recipient) => recipient.ackState == AckState.acknowledged)
+  final count = recipients
+      .map((recipient) => recipient.personId)
+      .toSet()
       .length;
-  return '$acknowledged/${recipients.length} quittiert';
+  return '$count alarmiert';
 }
 
 /// Quittierungs-Fortschritt chip (concept §3 Review-Runde 1 Punkt 8,
@@ -62,12 +62,12 @@ class IncidentVehicleChip extends StatelessWidget {
     final monitorStyles = theme.extension<BftagMonitorTextStyles>();
     final radii = theme.extension<BftagRadii>() ?? const BftagRadii();
     final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
-    final nameStyle =
-        (monitorStyles?.headline ?? const TextStyle(fontSize: 40))
-            .copyWith(color: theme.colorScheme.onSurface);
+    final nameStyle = (monitorStyles?.headline ?? const TextStyle(fontSize: 40))
+        .copyWith(color: theme.colorScheme.onSurface);
     final callSignStyle =
-        (monitorStyles?.label ?? const TextStyle(fontSize: 22))
-            .copyWith(color: theme.colorScheme.onSurfaceVariant);
+        (monitorStyles?.label ?? const TextStyle(fontSize: 22)).copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        );
     return Container(
       key: Key('incident-vehicle-${vehicle.id}'),
       padding: EdgeInsets.symmetric(

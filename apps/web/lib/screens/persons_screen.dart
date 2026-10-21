@@ -3,17 +3,8 @@ import 'dart:async';
 import 'package:bftag_core/bftag_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:printing/printing.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../admin/api_errors.dart';
-import '../admin/pairing_pdf.dart';
-
-String _formatDateTime(DateTime dateTime) {
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(dateTime.day)}.${two(dateTime.month)}.${dateTime.year} '
-      '${two(dateTime.hour)}:${two(dateTime.minute)}';
-}
 
 Future<bool> _confirm(
   BuildContext context, {
@@ -43,8 +34,8 @@ Future<bool> _confirm(
 }
 
 /// Personen admin screen (`/admin/persons`, Berechtigung Administrator):
-/// Personen anlegen/bearbeiten/deaktivieren, Web-Zugang, Geräteliste,
-/// Kopplungscodes (einzeln und als druckbare Liste).
+/// Personen anlegen/bearbeiten/deaktivieren, Web-Zugang. Keine Handy-Kopplung
+/// mehr (BF-Tag ohne Handys: Jugendliche werden nur Fahrzeugen zugeteilt).
 ///
 /// Loads `GET /persons` once on entry and after every mutation -- there is
 /// no realtime subscription here (same pattern as VehiclesScreen).
@@ -68,7 +59,9 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
 
   Future<void> _reload() async {
     try {
-      final persons = await ref.read(personAdminRepositoryProvider).listPersons();
+      final persons = await ref
+          .read(personAdminRepositoryProvider)
+          .listPersons();
       if (!mounted) return;
       setState(() {
         _persons = persons;
@@ -84,9 +77,8 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateDialog() async {
@@ -96,7 +88,9 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(personAdminRepositoryProvider).createPerson(
+      await ref
+          .read(personAdminRepositoryProvider)
+          .createPerson(
             displayName: result.displayName,
             personType: result.personType,
             permission: result.permission,
@@ -116,7 +110,9 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(personAdminRepositoryProvider).updatePerson(
+      await ref
+          .read(personAdminRepositoryProvider)
+          .updatePerson(
             person.id,
             displayName: result.displayName,
             personType: result.personType,
@@ -138,7 +134,7 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
       message: activate
           ? '${person.displayName} wieder aktivieren?'
           : '${person.displayName} deaktivieren? Alle Web-Sitzungen und '
-              'Geräte dieser Person werden gesperrt.',
+                'Geräte dieser Person werden gesperrt.',
     );
     if (!confirmed) return;
     try {
@@ -147,7 +143,9 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
           .updatePerson(person.id, active: activate);
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'Status konnte nicht geändert werden.'));
+      _showError(
+        describeApiError(error, 'Status konnte nicht geändert werden.'),
+      );
     }
   }
 
@@ -160,39 +158,18 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
     try {
       switch (result) {
         case _WebAccessSet(username: final username, password: final password):
-          await ref.read(personAdminRepositoryProvider).setWebAccess(
-                person.id,
-                username: username,
-                password: password,
-              );
+          await ref
+              .read(personAdminRepositoryProvider)
+              .setWebAccess(person.id, username: username, password: password);
         case _WebAccessRemove():
-          await ref.read(personAdminRepositoryProvider).removeWebAccess(person.id);
+          await ref
+              .read(personAdminRepositoryProvider)
+              .removeWebAccess(person.id);
       }
       await _reload();
     } catch (error) {
       _showError(
         describeApiError(error, 'Web-Zugang konnte nicht gespeichert werden.'),
-      );
-    }
-  }
-
-  Future<void> _openDevicesDialog(Person person) async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) => _PersonDevicesDialog(person: person),
-    );
-  }
-
-  Future<void> _printPairingCodes() async {
-    try {
-      final items =
-          await ref.read(personAdminRepositoryProvider).createPairingCodes();
-      await Printing.layoutPdf(
-        onLayout: (format) => buildPairingCodesPdf(items),
-      );
-    } catch (error) {
-      _showError(
-        describeApiError(error, 'Kopplungscodes konnten nicht erzeugt werden.'),
       );
     }
   }
@@ -217,18 +194,6 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
                 onChanged: (value) => setState(() => _showInactive = value),
               ),
             ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(right: spacing.sm),
-            child: Tooltip(
-              message: 'Kopplungscodes drucken',
-              child: OutlinedButton.icon(
-                key: const Key('print-pairing-codes'),
-                onPressed: _printPairingCodes,
-                icon: const Icon(Icons.print),
-                label: const Text('Codes drucken'),
-              ),
-            ),
           ),
           Padding(
             padding: EdgeInsets.only(right: spacing.lg),
@@ -277,7 +242,6 @@ class _PersonsScreenState extends ConsumerState<PersonsScreen> {
           person: person,
           onEdit: () => _openEditDialog(person),
           onWebAccess: () => _openWebAccessDialog(person),
-          onDevices: () => _openDevicesDialog(person),
           onToggleActive: () => _toggleActive(person),
         );
       },
@@ -323,21 +287,19 @@ class _PersonChip extends StatelessWidget {
 }
 
 /// Personenzeile (design-system 5.3 Tabellenstil): Name + Chips oben,
-/// Benutzername (falls Web-Zugang) sowie Aktionen (Web-Zugang, Geräte,
+/// Benutzername (falls Web-Zugang) sowie Aktionen (Web-Zugang,
 /// Aktiv-Switch) darunter.
 class _PersonRow extends StatelessWidget {
   const _PersonRow({
     required this.person,
     required this.onEdit,
     required this.onWebAccess,
-    required this.onDevices,
     required this.onToggleActive,
   });
 
   final Person person;
   final VoidCallback onEdit;
   final VoidCallback onWebAccess;
-  final VoidCallback onDevices;
   final VoidCallback onToggleActive;
 
   @override
@@ -405,15 +367,6 @@ class _PersonRow extends StatelessWidget {
                       label: const Text('Web-Zugang'),
                     ),
                   ),
-                Tooltip(
-                  message: 'Geräte',
-                  child: TextButton.icon(
-                    key: Key('devices-${person.id}'),
-                    onPressed: onDevices,
-                    icon: const Icon(Icons.devices),
-                    label: const Text('Geräte'),
-                  ),
-                ),
                 SizedBox(width: spacing.sm),
                 Text(
                   person.active ? 'aktiv' : 'deaktiviert',
@@ -538,8 +491,7 @@ class _PersonFormDialogState extends State<_PersonFormDialog> {
                     key: Key('permission-${permission.name}'),
                     label: Text(permission.label),
                     selected: _permission == permission,
-                    onSelected: (_) =>
-                        setState(() => _permission = permission),
+                    onSelected: (_) => setState(() => _permission = permission),
                   ),
               ],
             ),
@@ -664,194 +616,6 @@ class _WebAccessDialogState extends State<_WebAccessDialog> {
           child: const Text('Speichern'),
         ),
       ],
-    );
-  }
-}
-
-class _PersonDevicesDialog extends ConsumerStatefulWidget {
-  const _PersonDevicesDialog({required this.person});
-
-  final Person person;
-
-  @override
-  ConsumerState<_PersonDevicesDialog> createState() =>
-      _PersonDevicesDialogState();
-}
-
-class _PersonDevicesDialogState extends ConsumerState<_PersonDevicesDialog> {
-  List<Device>? _devices;
-  String? _error;
-  PairingCodeItem? _pairingCode;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_reload());
-  }
-
-  Future<void> _reload() async {
-    try {
-      final devices = await _repository.listPersonDevices(widget.person.id);
-      if (!mounted) return;
-      setState(() {
-        _devices = devices;
-        _error = null;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Geräte konnten nicht geladen werden.');
-    }
-  }
-
-  PersonAdminRepository get _repository =>
-      ref.read(personAdminRepositoryProvider);
-
-  Future<void> _revoke(Device device) async {
-    final confirmed = await _confirm(
-      context,
-      title: 'Gerät sperren',
-      message: 'Dieses Gerät wird sofort abgemeldet und muss neu gekoppelt '
-          'werden.',
-      confirmLabel: 'Sperren',
-    );
-    if (!confirmed) return;
-    try {
-      await _repository.revokeDevice(device.id);
-      await _reload();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gerät konnte nicht gesperrt werden.')),
-      );
-    }
-  }
-
-  Future<void> _createPairingCode() async {
-    try {
-      final item = await _repository.createPairingCode(widget.person.id);
-      if (!mounted) return;
-      setState(() => _pairingCode = item);
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            describeApiError(
-              error,
-              'Kopplungscode konnte nicht erzeugt werden.',
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
-  Widget _buildPairingCodeContent(PairingCodeItem item) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ExcludeSemantics(
-          child: QrImageView(
-            data: item.rawCode,
-            size: 220,
-            backgroundColor: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          item.code,
-          key: const Key('pairing-code-text'),
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text('gültig bis ${_formatDateTime(item.expiresAt.toLocal())}'),
-        const SizedBox(height: 8),
-        const Text(
-          'Dieser Code wird nur einmal angezeigt.',
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDevicesContent(List<Device> devices) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (devices.isEmpty) const Text('Keine Geräte gekoppelt.'),
-        for (final device in devices)
-          ListTile(
-            key: Key('device-${device.id}'),
-            title: Text(
-              '${device.platform.label}'
-              '${device.deviceName != null ? ' – ${device.deviceName}' : ''}',
-            ),
-            subtitle: Text(
-              'App ${device.appVersion} · gekoppelt am '
-              '${_formatDateTime(device.createdAt.toLocal())} · '
-              'zuletzt gesehen '
-              '${_formatDateTime(device.lastSeenAt.toLocal())} · '
-              '${device.isRevoked ? 'gesperrt' : 'aktiv'}',
-            ),
-            trailing: device.isRevoked
-                ? null
-                : TextButton(
-                    key: Key('revoke-device-${device.id}'),
-                    onPressed: () => _revoke(device),
-                    child: const Text('Sperren'),
-                  ),
-          ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final devices = _devices;
-    final pairingCode = _pairingCode;
-    return AlertDialog(
-      title: Text(
-        pairingCode != null
-            ? 'Kopplungscode'
-            : 'Geräte von ${widget.person.displayName}',
-      ),
-      content: SizedBox(
-        width: 480,
-        child: pairingCode != null
-            ? _buildPairingCodeContent(pairingCode)
-            : devices == null
-                ? SizedBox(
-                    height: 80,
-                    child: Center(
-                      child: _error != null
-                          ? Text(_error!)
-                          : const CircularProgressIndicator(),
-                    ),
-                  )
-                : _buildDevicesContent(devices),
-      ),
-      actions: pairingCode != null
-          ? [
-              TextButton(
-                onPressed: () => setState(() => _pairingCode = null),
-                child: const Text('Zurück'),
-              ),
-            ]
-          : [
-              TextButton(
-                key: const Key('create-pairing-code'),
-                onPressed: _createPairingCode,
-                child: const Text('Kopplungscode erzeugen'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Schließen'),
-              ),
-            ],
     );
   }
 }

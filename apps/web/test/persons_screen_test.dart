@@ -24,27 +24,6 @@ Person _person({
   );
 }
 
-Device _device({
-  String id = 'd1',
-  DevicePlatform platform = DevicePlatform.android,
-  String? deviceName = 'Pixel 7',
-  String appVersion = '1.0.0',
-  DateTime? createdAt,
-  DateTime? lastSeenAt,
-  DateTime? revokedAt,
-}) {
-  final now = DateTime.utc(2026, 10, 8, 10, 0);
-  return Device(
-    id: id,
-    platform: platform,
-    deviceName: deviceName,
-    appVersion: appVersion,
-    createdAt: createdAt ?? now,
-    lastSeenAt: lastSeenAt ?? now,
-    revokedAt: revokedAt,
-  );
-}
-
 class _FakePersonAdminRepository implements PersonAdminRepository {
   _FakePersonAdminRepository({
     List<Person>? persons,
@@ -208,6 +187,17 @@ void main() {
     expect(find.textContaining('Erika Musterfrau'), findsOneWidget);
   });
 
+  testWidgets('BF-Tag ohne Handys: no pairing codes and no device management',
+      (tester) async {
+    await _pump(tester, persons: [_person(id: 'p1', displayName: 'Max')]);
+
+    expect(find.byKey(const Key('print-pairing-codes')), findsNothing);
+    expect(find.byKey(const Key('devices-p1')), findsNothing);
+    expect(find.text('Codes drucken'), findsNothing);
+    expect(find.text('Geräte'), findsNothing);
+    expect(find.byKey(const Key('create-person')), findsOneWidget);
+  });
+
   testWidgets(
     'Administrator option is hidden for Personentyp Jugendlicher',
     (tester) async {
@@ -259,33 +249,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    'revoke device calls revokeDevice only after confirm',
-    (tester) async {
-      final person = _person(id: 'p1');
-      final repository = await _pump(
-        tester,
-        persons: [person],
-        devices: {
-          'p1': [_device(id: 'd1')],
-        },
-      );
-
-      await tester.tap(find.byKey(const Key('devices-p1')));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('revoke-device-d1')));
-      await tester.pumpAndSettle();
-
-      // Confirm dialog shown, not yet called.
-      expect(repository.revokeDeviceCalls, isEmpty);
-
-      await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
-      await tester.pumpAndSettle();
-
-      expect(repository.revokeDeviceCalls, ['d1']);
-    },
-  );
 
   testWidgets(
     'editing a person calls updatePerson with the entered fields',
@@ -448,20 +411,4 @@ void main() {
     },
   );
 
-  testWidgets(
-    'pairing code dialog shows the formatted code',
-    (tester) async {
-      final person = _person(id: 'p1');
-      await _pump(tester, persons: [person], devices: {'p1': []});
-
-      await tester.tap(find.byKey(const Key('devices-p1')));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('create-pairing-code')));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('pairing-code-text')), findsOneWidget);
-      expect(find.text('ABCD-EFGH'), findsOneWidget);
-    },
-  );
 }

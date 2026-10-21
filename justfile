@@ -58,6 +58,10 @@ infra-smoke:
 e2e:
     ./e2e/run.sh
 
+# BF-Tag vor Ort: Stack auf dem Laptop, im WLAN erreichbar (scripts/event.sh: up|stop|status|logs|backup)
+event cmd="up":
+    ./scripts/event.sh {{cmd}}
+
 # Design-Review-Screenshots (Web/Monitor via e2e-Stack, App via Widget-Tests)
 # nach docs/design/screenshots/<dir>/{web,monitor,app}/ -- gleiche Dateinamen
 # in jedem <dir>, damit vorher/nachher 1:1 vergleichbar ist (docs/testing/README.md).

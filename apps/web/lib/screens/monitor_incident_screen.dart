@@ -28,17 +28,6 @@ String formatRuntime(DateTime since, DateTime now) {
   return '${_twoDigits(minutes)}:${_twoDigits(seconds)}';
 }
 
-IconData _ackIcon(AckState state) {
-  switch (state) {
-    case AckState.acknowledged:
-      return Icons.check;
-    case AckState.pending:
-      return Icons.more_horiz;
-    case AckState.noDevice:
-      return Icons.remove;
-  }
-}
-
 Incident? _findIncident(List<Incident> incidents, String id) {
   for (final incident in incidents) {
     if (incident.id == id) return incident;
@@ -119,8 +108,9 @@ class MonitorIncidentScreen extends ConsumerWidget {
     final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
 
     final headlineStyle =
-        (monitorStyles?.headline ?? const TextStyle(fontSize: 40))
-            .copyWith(color: colorScheme.onSurface);
+        (monitorStyles?.headline ?? const TextStyle(fontSize: 40)).copyWith(
+          color: colorScheme.onSurface,
+        );
     final bodyStyle = (monitorStyles?.body ?? const TextStyle(fontSize: 28))
         .copyWith(color: colorScheme.onSurfaceVariant);
 
@@ -373,7 +363,7 @@ class _ReportPanel extends StatelessWidget {
   }
 }
 
-/// Quittiert panel (concept §3): `surfaceContainer` card, the recipient
+/// Alarmiert panel (concept §3; BF-Tag ohne Handys: names only, no ack state): `surfaceContainer` card, the recipient
 /// chips wrap inside -- the live progress count lives in the header's
 /// `Key('monitor-incident-ack-progress')` chip, not duplicated here.
 class _RecipientsPanel extends StatelessWidget {
@@ -399,7 +389,7 @@ class _RecipientsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Quittiert', style: labelStyle),
+          Text('Alarmiert', style: labelStyle),
           SizedBox(height: spacing.sm),
           Expanded(
             child: SingleChildScrollView(
@@ -502,32 +492,16 @@ class _RecipientChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final monitorStyles = theme.extension<BftagMonitorTextStyles>();
-    final state = recipient.ackState;
-    final iconColor = switch (state) {
-      AckState.acknowledged => theme.colorScheme.primary,
-      AckState.pending => theme.colorScheme.onSurfaceVariant,
-      AckState.noDevice => theme.colorScheme.onSurfaceVariant.withValues(
-        alpha: 0.5,
-      ),
-    };
-    final textColor = state == AckState.noDevice
-        ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
-        : theme.colorScheme.onSurface;
     return Row(
       key: Key('incident-recipient-${recipient.personId}'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          _ackIcon(state),
-          key: Key('incident-ack-icon-${recipient.personId}'),
-          color: iconColor,
-          size: 22,
-        ),
+        Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant, size: 22),
         const SizedBox(width: 6),
         Text(
           recipient.displayName,
           style: (monitorStyles?.label ?? const TextStyle(fontSize: 22))
-              .copyWith(color: textColor),
+              .copyWith(color: theme.colorScheme.onSurface),
         ),
       ],
     );
