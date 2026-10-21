@@ -18,9 +18,14 @@ CONF_DIR="$HOME/.config/bftag-event"
 ENV_FILE="$CONF_DIR/.env"
 COMPOSE=(docker compose -p "$PROJECT" -f infra/docker-compose.yml --env-file "$ENV_FILE")
 
-# WLAN/LAN addresses only (skips Docker bridges docker0/br-*/veth*)
+# WLAN/LAN addresses only (skips Docker bridges docker0/br-*/veth*).
+# Linux: `ip`; macOS has no `ip`, so fall back to `ifconfig`.
 lan_ips() {
-  ip -4 -o addr show scope global 2>/dev/null | awk '$2 !~ /^(docker|br-|veth|virbr)/ {split($4, a, "/"); print a[1]}'
+  if command -v ip >/dev/null 2>&1; then
+    ip -4 -o addr show scope global 2>/dev/null | awk '$2 !~ /^(docker|br-|veth|virbr)/ {split($4, a, "/"); print a[1]}'
+  else
+    ifconfig 2>/dev/null | awk '/^[a-z]/ {iface=$1} $1 == "inet" && $2 != "127.0.0.1" && iface !~ /^(bridge|utun|docker|veth)/ {print $2}'
+  fi
 }
 
 show_urls() {
