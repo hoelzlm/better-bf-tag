@@ -92,13 +92,18 @@ class IncidentMap extends StatelessWidget {
               Marker(
                 key: const Key('incident-map-incident-pin'),
                 point: incident!,
-                child: const Icon(Icons.location_on, color: Colors.red),
+                width: 48,
+                height: 48,
+                alignment: Alignment.topCenter,
+                child: const _Pin(icon: Icons.location_on, color: Color(0xFFD32F2F)),
               ),
             if (station != null)
               Marker(
                 key: const Key('incident-map-station-pin'),
                 point: station!,
-                child: const Icon(Icons.home),
+                width: 40,
+                height: 40,
+                child: const _Pin(icon: Icons.home, color: Color(0xFF1A237E)),
               ),
           ],
         ),
@@ -141,7 +146,9 @@ class IncidentMap extends StatelessWidget {
       return initialZoom!;
     }
     if (station != null) {
-      return 13;
+      // Wache only (Monitor before the Einsatzort is known): neighbourhood
+      // view so the pin and the surrounding streets are readable from afar.
+      return 15;
     }
     return 6;
   }
@@ -153,5 +160,28 @@ class IncidentMap extends StatelessWidget {
       return null;
     }
     return LatLngBounds(incident, station);
+  }
+}
+
+/// Map pin with a fixed colour and a white halo, so it stays visible on the
+/// light OSM tiles regardless of the app theme (the dark Monitor theme made
+/// an uncoloured icon white and practically invisible).
+class _Pin extends StatelessWidget {
+  const _Pin({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      icon,
+      color: color,
+      size: 40,
+      shadows: const [
+        Shadow(color: Colors.white, blurRadius: 6),
+        Shadow(color: Colors.white, blurRadius: 3),
+      ],
+    );
   }
 }

@@ -749,7 +749,6 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
   late final TextEditingController _addressController;
   late final TextEditingController _reportController;
   late final TextEditingController _scriptController;
-  late final TextEditingController _locationSearchController;
 
   /// Current Einsatzort pin (ADR 0026), `null` when none is set.
   LatLng? _pin;
@@ -771,7 +770,6 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
     _addressController = TextEditingController(text: incident?.address ?? '');
     _reportController = TextEditingController(text: incident?.report ?? '');
     _scriptController = TextEditingController(text: incident?.script ?? '');
-    _locationSearchController = TextEditingController();
     _pin = incident?.location;
     _hadLocation = _pin != null;
   }
@@ -782,18 +780,13 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
     _addressController.dispose();
     _reportController.dispose();
     _scriptController.dispose();
-    _locationSearchController.dispose();
     super.dispose();
   }
 
-  /// Searches [_locationSearchController]'s text, falling back to the
-  /// Adresse field when the search field is empty (ADR 0026, Web-
-  /// Einsatzformular: "Die Adresse im Textfeld wird durch die Suche nicht
-  /// überschrieben" -- the search only reads the address, never writes it).
+  /// Searches the Adresse field (one field for text and map, BF-Tag). The
+  /// address text is never overwritten by the search.
   Future<void> _search() async {
-    final query = _locationSearchController.text.trim().isEmpty
-        ? _addressController.text.trim()
-        : _locationSearchController.text.trim();
+    final query = _addressController.text.trim();
     if (query.isEmpty) {
       setState(() => _suggestions = const []);
       return;
@@ -810,16 +803,45 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
   void _selectSuggestion(GeocodeSuggestion suggestion) {
     setState(() {
       _pin = LatLng(suggestion.latitude, suggestion.longitude);
+      _pinRemovedByUser = false;
       _suggestions = null;
     });
   }
 
+  /// Set once the user explicitly removes the pin, so saving does not
+  /// immediately geocode it back.
+  bool _pinRemovedByUser = false;
+
   void _removePin() {
-    setState(() => _pin = null);
+    setState(() {
+      _pin = null;
+      _pinRemovedByUser = true;
+    });
   }
 
-  void _submit() {
-    final pin = _pin;
+  bool _saving = false;
+
+  /// Saves the form. With an Adresse but no pin, the address is geocoded
+  /// first and the best match becomes the pin, so the Monitor shows the
+  /// Einsatzort without a separate search step. No match (or no network)
+  /// saves without coordinates, as before.
+  Future<void> _submit() async {
+    if (_saving) return;
+    var pin = _pin;
+    final address = _addressController.text.trim();
+    if (pin == null && address.isNotEmpty && !_pinRemovedByUser) {
+      setState(() => _saving = true);
+      try {
+        final results = await ref.read(geocodeRepositoryProvider).search(address);
+        if (results.isNotEmpty) {
+          pin = LatLng(results.first.latitude, results.first.longitude);
+        }
+      } catch (_) {
+        // Geocoding is best effort; saving must never fail because of it.
+      }
+      if (!mounted) return;
+      setState(() => _saving = false);
+    }
     Navigator.of(context).pop(
       _IncidentFormResult(
         keyword: _keywordController.text.trim(),
@@ -866,11 +888,36 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                 decoration: const InputDecoration(labelText: 'Stichwort'),
               ),
               SizedBox(height: spacing.md),
-              TextField(
-                key: const Key('incident-form-address'),
-                controller: _addressController,
-                readOnly: readOnly,
-                decoration: const InputDecoration(labelText: 'Adresse'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      key: const Key('incident-form-address'),
+                      controller: _addressController,
+                      readOnly: readOnly,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: readOnly ? null : (_) => _search(),
+                      decoration: const InputDecoration(
+                        labelText: 'Adresse',
+                        helperText:
+                            'Beim Speichern wird der Ort automatisch auf der Karte gesetzt.',
+                      ),
+                    ),
+                  ),
+                  if (!readOnly) ...[
+                    SizedBox(width: spacing.sm),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: OutlinedButton.icon(
+                        key: const Key('incident-form-location-search-button'),
+                        onPressed: _searching ? null : _search,
+                        icon: const Icon(Icons.search),
+                        label: const Text('Auf Karte suchen'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               SizedBox(height: spacing.md),
               TextField(
@@ -886,26 +933,6 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
               Text('Einsatzort (Karte)', style: theme.textTheme.titleMedium),
               SizedBox(height: spacing.sm),
               if (!readOnly) ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        key: const Key('incident-form-location-search'),
-                        controller: _locationSearchController,
-                        decoration: const InputDecoration(
-                          labelText: 'Adresssuche',
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: spacing.sm),
-                    FilledButton(
-                      key: const Key('incident-form-location-search-button'),
-                      onPressed: _searching ? null : _search,
-                      child: const Text('Suchen'),
-                    ),
-                  ],
-                ),
                 if (suggestions != null) ...[
                   SizedBox(height: spacing.xs),
                   if (suggestions.isEmpty)
@@ -996,7 +1023,7 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
         if (!readOnly)
           FilledButton(
             key: const Key('incident-form-submit'),
-            onPressed: _submit,
+            onPressed: _saving ? null : _submit,
             child: const Text('Speichern'),
           ),
       ],

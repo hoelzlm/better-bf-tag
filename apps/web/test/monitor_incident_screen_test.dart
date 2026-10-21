@@ -126,8 +126,8 @@ void main() {
     });
 
     testWidgets(
-      'shows the "Keine Standortdaten" placeholder instead of the map '
-      'when the Einsatz has no coordinates (AC2)',
+      'shows the "Keine Standortdaten" placeholder only when neither the '
+      'Einsatz nor the Wache has coordinates (AC2)',
       (tester) async {
         await _pump(tester, incident: _incident());
 
@@ -140,6 +140,26 @@ void main() {
         // Existing expectations unchanged.
         expect(find.text('EINSATZ 7'), findsOneWidget);
         expect(find.text('Musterstraße 1, Musterstadt'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'BF-Tag: without Einsatz coordinates the map is still there, centred '
+      'on the Wache (no placeholder)',
+      (tester) async {
+        await _pump(
+          tester,
+          incident: _incident(),
+          station: const LatLng(48.1, 11.5),
+        );
+
+        expect(find.byType(IncidentMap), findsOneWidget);
+        expect(
+          find.byKey(const Key('monitor-incident-map-placeholder')),
+          findsNothing,
+        );
+        expect(find.byKey(const Key('incident-map-station-pin')), findsOneWidget);
+        expect(find.byKey(const Key('incident-map-incident-pin')), findsNothing);
       },
     );
 

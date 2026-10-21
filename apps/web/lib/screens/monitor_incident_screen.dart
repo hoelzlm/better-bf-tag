@@ -437,12 +437,16 @@ class _MapArea extends StatelessWidget {
       child: SizedBox(
         width: double.infinity,
         height: double.infinity,
-        child: location == null
+        // BF-Tag: the map is there from the first frame. Without an
+        // Einsatzort it shows the Wache; once a pin arrives the camera
+        // re-fits (new key -> IncidentMap recomputes its camera).
+        child: location == null && station == null
             ? const _MapPlaceholder(
                 key: Key('monitor-incident-map-placeholder'),
                 text: 'Keine Standortdaten',
               )
             : IncidentMap(
+                key: ValueKey<LatLng?>(location),
                 incident: location,
                 station: station,
                 interactive: false,

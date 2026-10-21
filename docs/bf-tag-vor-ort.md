@@ -17,6 +17,11 @@ Einmal-Variante für den BF-Tag am 24.10.2026. **Nicht nach `main` mergen.**
 Backend, API und App sind unverändert: Ist ein Handy gekoppelt, funktioniert
 es weiter, wir nutzen es nur nicht.
 
+- **Einsatz anlegen:** nur noch ein Adressfeld. Beim Speichern wird die Adresse
+  automatisch auf der Karte gesetzt. Mit „Auf Karte suchen“ wählt man selbst
+  einen Treffer, per Klick in die Karte setzt man den Pin von Hand.
+- **Monitor-Karte:** ist von Anfang an da. Ohne Einsatzort zeigt sie die Wache.
+
 ## Am Laptop starten
 
 Voraussetzung: Docker, Flutter, `just`. Laptop und TV im selben WLAN.

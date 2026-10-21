@@ -1010,6 +1010,76 @@ void main() {
       expect(call.longitude, 13.4);
     });
 
+    testWidgets(
+        'BF-Tag: one address field -- saving with an Adresse but no pin '
+        'geocodes it and sends the best match as coordinates', (tester) async {
+      tester.view.physicalSize = const Size(900, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final geocodeRepository = _FakeGeocodeRepository(
+        results: const [
+          GeocodeSuggestion(
+            label: 'Musterweg 5, Musterstadt',
+            latitude: 52.5,
+            longitude: 13.4,
+          ),
+        ],
+      );
+      final incidentRepository = await _pump(
+        tester,
+        days: [_bfDay()],
+        geocodeRepository: geocodeRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('create-incident')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('incident-form-location-search')), findsNothing);
+      expect(find.text('Adresssuche'), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('incident-form-address')),
+        'Musterweg 5',
+      );
+      await tester.tap(find.byKey(const Key('incident-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(geocodeRepository.queries, ['Musterweg 5']);
+      final call = incidentRepository.createCalls.single;
+      expect(call.address, 'Musterweg 5');
+      expect(call.latitude, 52.5);
+      expect(call.longitude, 13.4);
+    });
+
+    testWidgets('saving still works when the address cannot be found',
+        (tester) async {
+      tester.view.physicalSize = const Size(900, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final incidentRepository = await _pump(
+        tester,
+        days: [_bfDay()],
+        geocodeRepository: _FakeGeocodeRepository(results: const []),
+      );
+
+      await tester.tap(find.byKey(const Key('create-incident')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('incident-form-address')),
+        'Nirgendwo',
+      );
+      await tester.tap(find.byKey(const Key('incident-form-submit')));
+      await tester.pumpAndSettle();
+
+      final call = incidentRepository.createCalls.single;
+      expect(call.latitude, isNull);
+      expect(call.longitude, isNull);
+    });
+
     testWidgets('empty search results show "Keine Vorschläge"', (tester) async {
       tester.view.physicalSize = const Size(900, 1000);
       tester.view.devicePixelRatio = 1.0;
