@@ -73,8 +73,9 @@ class Incident {
   final double? longitude;
 
   /// [latitude]/[longitude] as a [LatLng], or `null` unless both are set.
-  LatLng? get location =>
-      (latitude == null || longitude == null) ? null : LatLng(latitude!, longitude!);
+  LatLng? get location => (latitude == null || longitude == null)
+      ? null
+      : LatLng(latitude!, longitude!);
 
   /// Drehbuch: `null` when the server didn't include the `script` key at
   /// all (ADR 0016, "Ein Serialisierer, Feld fehlt statt `null`") -- i.e.
@@ -180,20 +181,20 @@ class Incident {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        bfDayId,
-        number,
-        keyword,
-        address,
-        report,
-        script,
-        state,
-        createdAt,
-        updatedAt,
-        closedAt,
-        latitude,
-        longitude,
-      );
+    id,
+    bfDayId,
+    number,
+    keyword,
+    address,
+    report,
+    script,
+    state,
+    createdAt,
+    updatedAt,
+    closedAt,
+    latitude,
+    longitude,
+  );
 
   @override
   String toString() => 'Incident(#$number $keyword, state: $state)';

@@ -103,8 +103,7 @@ class ProgramItem {
       other.endsAt == endsAt;
 
   @override
-  int get hashCode =>
-      Object.hash(id, bfDayId, title, type, startsAt, endsAt);
+  int get hashCode => Object.hash(id, bfDayId, title, type, startsAt, endsAt);
 
   @override
   String toString() => 'ProgramItem($title, type: $type)';

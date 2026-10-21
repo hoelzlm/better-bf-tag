@@ -27,7 +27,7 @@ abstract class UpdatePersonRequest implements Built<UpdatePersonRequest, UpdateP
 
   @BuiltValueField(wireName: r'permission')
   UpdatePersonRequestPermissionEnum? get permission;
-  // enum permissionEnum {  crew,  preparation,  dispatch,  admin,  };
+  // enum permissionEnum {  crew,  preparation,  dispatch,  radio,  admin,  };
 
   @BuiltValueField(wireName: r'active')
   bool? get active;
@@ -186,6 +186,8 @@ class UpdatePersonRequestPermissionEnum extends EnumClass {
   static const UpdatePersonRequestPermissionEnum preparation = _$updatePersonRequestPermissionEnum_preparation;
   @BuiltValueEnumConst(wireName: r'dispatch')
   static const UpdatePersonRequestPermissionEnum dispatch = _$updatePersonRequestPermissionEnum_dispatch;
+  @BuiltValueEnumConst(wireName: r'radio')
+  static const UpdatePersonRequestPermissionEnum radio = _$updatePersonRequestPermissionEnum_radio;
   @BuiltValueEnumConst(wireName: r'admin')
   static const UpdatePersonRequestPermissionEnum admin = _$updatePersonRequestPermissionEnum_admin;
 

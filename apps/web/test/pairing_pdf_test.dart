@@ -21,8 +21,11 @@ void main() {
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
   });
 
-  test('buildPairingCodesPdf returns non-empty bytes for an empty list', () async {
-    final bytes = await buildPairingCodesPdf(const []);
-    expect(bytes, isNotEmpty);
-  });
+  test(
+    'buildPairingCodesPdf returns non-empty bytes for an empty list',
+    () async {
+      final bytes = await buildPairingCodesPdf(const []);
+      expect(bytes, isNotEmpty);
+    },
+  );
 }

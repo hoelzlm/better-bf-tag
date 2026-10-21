@@ -174,7 +174,7 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.post(
     '/incidents/:id/alarms',
     {
-      preHandler: [requireAuth(), requirePermission('dispatch')],
+      preHandler: [requireAuth(), requirePermission('dispatch', 'radio')],
       schema: {
         operationId: 'createAlarm',
         tags: ['alarms'],
@@ -197,6 +197,17 @@ export const alarmRoutes: FastifyPluginAsyncZod = async fastify => {
         const incidentRow = await loadIncidentRow(tx, request.params.id);
         if (!incidentRow) {
           throw incidentNotFound();
+        }
+        // Funktisch (`radio`): nur Nachalarmierung eines laufenden Einsatzes,
+        // sofort. Entwürfe existieren für diese Berechtigung nicht (404 wie
+        // bei der Mannschaft), Planen bleibt der Leitstelle vorbehalten.
+        if (request.auth?.kind === 'person' && request.auth.permission === 'radio') {
+          if (incidentRow.state !== 'running') {
+            throw incidentNotFound();
+          }
+          if (planning) {
+            throw new ApiError(403, 'forbidden', 'Keine Berechtigung.');
+          }
         }
 
         // Idempotency (ADR 0017): a repeat with the same client-generated

@@ -50,11 +50,7 @@ sealed class RealtimeEvent {
         );
       case 'vehicle.updated':
         final map = data as Map<String, dynamic>;
-        return VehicleUpdated(
-          seq: seq,
-          at: at,
-          vehicle: Vehicle.fromJson(map),
-        );
+        return VehicleUpdated(seq: seq, at: at, vehicle: Vehicle.fromJson(map));
       case 'slides.changed':
         final map = data as Map<String, dynamic>;
         final slidesJson = map['slides'] as List<dynamic>;
@@ -67,11 +63,7 @@ sealed class RealtimeEvent {
         );
       case 'shift.crew_changed':
         final map = data as Map<String, dynamic>;
-        return ShiftCrewChanged(
-          seq: seq,
-          at: at,
-          shift: Shift.fromJson(map),
-        );
+        return ShiftCrewChanged(seq: seq, at: at, shift: Shift.fromJson(map));
       case 'shift.deleted':
         final map = data as Map<String, dynamic>;
         return ShiftDeleted(
@@ -82,11 +74,7 @@ sealed class RealtimeEvent {
         );
       case 'bf_day.updated':
         final map = data as Map<String, dynamic>;
-        return BfDayUpdated(
-          seq: seq,
-          at: at,
-          bfDay: BfDay.fromJson(map),
-        );
+        return BfDayUpdated(seq: seq, at: at, bfDay: BfDay.fromJson(map));
       case 'incident.created':
         final map = data as Map<String, dynamic>;
         return IncidentCreated(
@@ -156,11 +144,7 @@ sealed class RealtimeEvent {
         );
       case 'incident.closed':
         final map = data as Map<String, dynamic>;
-        return IncidentClosed(
-          seq: seq,
-          at: at,
-          id: map['id'] as String,
-        );
+        return IncidentClosed(seq: seq, at: at, id: map['id'] as String);
       case 'incident.close_suggested':
         final map = data as Map<String, dynamic>;
         return IncidentCloseSuggested(
@@ -178,11 +162,7 @@ sealed class RealtimeEvent {
         );
       case 'announcement.deleted':
         final map = data as Map<String, dynamic>;
-        return AnnouncementDeleted(
-          seq: seq,
-          at: at,
-          id: map['id'] as String,
-        );
+        return AnnouncementDeleted(seq: seq, at: at, id: map['id'] as String);
       case 'program.changed':
         final map = data as Map<String, dynamic>;
         final itemsJson = map['items'] as List<dynamic>;

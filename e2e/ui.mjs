@@ -401,6 +401,50 @@ async function uiFunktisch(token, vehicle) {
   await stepShot('funktisch-after-click');
 }
 
+// Berechtigung `radio` (Funktisch): Lage mit Funktisch, unter Einsätze nur
+// laufende/abgeschlossene, kein "Einsatz anlegen", keine Verwaltung.
+async function uiRadioRole(adminToken) {
+  const tag = Date.now() % 100000;
+  const username = `funk-${tag}`;
+  const password = `funk-pw-${tag}-x`;
+  const person = await call('POST', '/persons', {
+    token: adminToken,
+    body: { display_name: `Funktisch ${tag}`, person_type: 'supervisor', permission: 'radio' },
+  });
+  await check(person.status === 201, 'radio: created person with permission radio', person);
+  const access = await call('PUT', `/persons/${person.json?.id}/web-access`, {
+    token: adminToken,
+    body: { username, password },
+  });
+  await check([200, 204].includes(access.status), 'radio: gave web access', access);
+
+  await send('Network.clearBrowserCookies');
+  await evalJs('localStorage.clear()');
+  await nav(`${BASE}/admin/login`);
+  await waitForSemantics();
+  await check(await typeInto(0, username), 'radio: typed username');
+  await check(await typeInto(1, password), 'radio: typed password');
+  await check(await clickByText('^\\s*(anmelden|login|einloggen)\\s*$'), 'radio: clicked login');
+  const path = await waitFor(async () => {
+    const p = await evalJs('location.pathname');
+    return !/login/.test(p) ? p : undefined;
+  }, 8000, 200);
+  await check(path === '/admin', 'radio: logged in, lands on Lage', path);
+  await waitForSemantics();
+  const lage = await bodyText();
+  await stepShot('radio-lage');
+  await check(/Funktisch/.test(lage), 'radio: Lage shows the Funktisch', lage.slice(0, 300));
+  await check(!/Personen|Schichten|Durchsagen/.test(lage), 'radio: no Verwaltung/Schichten/Durchsagen nav', lage.slice(0, 300));
+
+  await nav(`${BASE}/admin/einsaetze`);
+  await waitForSemantics();
+  const einsaetze = await bodyText();
+  await stepShot('radio-einsaetze');
+  await check(!/Einsatz anlegen/.test(einsaetze), 'radio: no "Einsatz anlegen" button', einsaetze.slice(0, 300));
+  await check(!/Entwurf/.test(einsaetze), 'radio: no Entwurf filter', einsaetze.slice(0, 300));
+  await check(/abgeschlossen/.test(einsaetze), 'radio: abgeschlossen filter available', einsaetze.slice(0, 300));
+}
+
 async function triggerUiAlarm(token) {
   const iso = (offsetMin) => new Date(Date.now() + offsetMin * 60000).toISOString();
 
@@ -544,6 +588,9 @@ async function main() {
   const finalText = norm(alarmText ?? (await bodyText()));
   await check(finalText.includes('grossbrand'), 'monitor shows live alarm keyword (normalized)', finalText.slice(0, 400));
   await check(!finalText.includes(norm(SCRIPT)), 'monitor does not show the script', finalText.slice(0, 400));
+
+  // --- Berechtigung Funktisch: nur laufende/abgeschlossene Einsätze -------
+  await uiRadioRole(adminToken);
 
   await check(consoleErrors.length === 0, 'no uncaught JS exceptions', consoleErrors.join(' || '));
 

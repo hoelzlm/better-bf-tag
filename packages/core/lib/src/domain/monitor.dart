@@ -39,8 +39,9 @@ class Monitor {
       name: name ?? this.name,
       paired: paired ?? this.paired,
       pairedAt: pairedAt == _unset ? this.pairedAt : pairedAt as DateTime?,
-      lastSeenAt:
-          lastSeenAt == _unset ? this.lastSeenAt : lastSeenAt as DateTime?,
+      lastSeenAt: lastSeenAt == _unset
+          ? this.lastSeenAt
+          : lastSeenAt as DateTime?,
       revokedAt: revokedAt == _unset ? this.revokedAt : revokedAt as DateTime?,
       createdAt: createdAt,
     );

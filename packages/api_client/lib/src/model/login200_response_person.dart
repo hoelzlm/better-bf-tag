@@ -30,7 +30,7 @@ abstract class Login200ResponsePerson implements Built<Login200ResponsePerson, L
 
   @BuiltValueField(wireName: r'permission')
   Login200ResponsePersonPermissionEnum get permission;
-  // enum permissionEnum {  crew,  preparation,  dispatch,  admin,  };
+  // enum permissionEnum {  crew,  preparation,  dispatch,  radio,  admin,  };
 
   Login200ResponsePerson._();
 
@@ -178,6 +178,8 @@ class Login200ResponsePersonPermissionEnum extends EnumClass {
   static const Login200ResponsePersonPermissionEnum preparation = _$login200ResponsePersonPermissionEnum_preparation;
   @BuiltValueEnumConst(wireName: r'dispatch')
   static const Login200ResponsePersonPermissionEnum dispatch = _$login200ResponsePersonPermissionEnum_dispatch;
+  @BuiltValueEnumConst(wireName: r'radio')
+  static const Login200ResponsePersonPermissionEnum radio = _$login200ResponsePersonPermissionEnum_radio;
   @BuiltValueEnumConst(wireName: r'admin')
   static const Login200ResponsePersonPermissionEnum admin = _$login200ResponsePersonPermissionEnum_admin;
 

@@ -26,8 +26,7 @@ class LageScreen extends ConsumerWidget {
       SessionSignedIn(person: final person) => person.permission,
       _ => null,
     };
-    final canDispatch =
-        permission == Permission.dispatch || permission == Permission.admin;
+    final canDispatch = permission?.canRunIncidents ?? false;
 
     const incidents = Column(
       children: [

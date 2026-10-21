@@ -10,8 +10,8 @@ Shift? currentShift(List<Shift> shifts, DateTime now) {
   Shift? best;
 
   for (final candidate in shifts) {
-    final isActive = !candidate.startsAt.isAfter(now) &&
-        candidate.endsAt.isAfter(now);
+    final isActive =
+        !candidate.startsAt.isAfter(now) && candidate.endsAt.isAfter(now);
     if (!isActive) continue;
 
     if (best == null) {

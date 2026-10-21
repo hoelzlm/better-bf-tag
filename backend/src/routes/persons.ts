@@ -16,7 +16,7 @@ import type { Clock } from '../clock.js';
 import type { Config } from '../config.js';
 
 const personTypeSchema = z.enum(['youth', 'supervisor']);
-const permissionSchema = z.enum(['crew', 'preparation', 'dispatch', 'admin']);
+const permissionSchema = z.enum(['crew', 'preparation', 'dispatch', 'radio', 'admin']);
 
 const createPersonBodySchema = z.object({
   display_name: z.string().trim().min(1).max(60),

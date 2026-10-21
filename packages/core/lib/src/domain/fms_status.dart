@@ -23,7 +23,8 @@ enum FmsStatus {
   static FmsStatus fromCode(int code) {
     return FmsStatus.values.firstWhere(
       (status) => status.code == code,
-      orElse: () => throw ArgumentError.value(code, 'code', 'Unknown FmsStatus'),
+      orElse: () =>
+          throw ArgumentError.value(code, 'code', 'Unknown FmsStatus'),
     );
   }
 }

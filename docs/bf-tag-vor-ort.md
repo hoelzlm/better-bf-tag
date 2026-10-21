@@ -16,9 +16,16 @@ Einmal-Variante für den BF-Tag am 24.10.2026. **Nicht nach `main` mergen.**
   Fahrzeug anklicken, Ziffer drücken, ↑/↓ wechselt das Fahrzeug. Jede Zeile
   zeigt den aktuellen Status mit Uhrzeit; ein Vertipper ist mit einem Klick
   korrigiert. Die Zeiten landen in der Statushistorie (für die Berichte).
+- **Berechtigung „Funktisch“** für die Person am Funk (unter *Personen*
+  vergeben): sieht Lage mit Funktisch und unter *Einsätze* nur laufende und
+  abgeschlossene Einsätze. Kann Status setzen, sofort nachalarmieren und
+  Einsätze schließen, aber keine Einsätze anlegen/bearbeiten, keine
+  Entwürfe/Drehbücher und keine geplanten Alarmierungen sehen. Die
+  Einsatzvorbereitung (Leitstelle oder Admin) legt die Einsätze an und
+  alarmiert den Erstalarm.
 - **Einsatzberichte:** schreiben die Betreuer nachträglich im Admin-Web.
 
-Backend, API und App sind unverändert: Ist ein Handy gekoppelt, funktioniert
+Backend, API und App sind bis auf die neue Berechtigung unverändert: Ist ein Handy gekoppelt, funktioniert
 es weiter, wir nutzen es nur nicht.
 
 - **Einsatz anlegen:** nur noch ein Adressfeld. Beim Speichern wird die Adresse

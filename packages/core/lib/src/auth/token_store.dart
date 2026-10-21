@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// A persisted device session: the rotating refresh token plus the
 /// device id issued by `POST /auth/pair` (ADR 0010).
 class StoredDeviceSession {
-  const StoredDeviceSession({required this.refreshToken, required this.deviceId});
+  const StoredDeviceSession({
+    required this.refreshToken,
+    required this.deviceId,
+  });
 
   final String refreshToken;
   final String deviceId;
@@ -47,7 +50,5 @@ class InMemoryTokenStore implements TokenStore {
 /// `SecureTokenStore`, the web monitor with `LocalStorageTokenStore`, tests
 /// with [InMemoryTokenStore]).
 final tokenStoreProvider = Provider<TokenStore>((ref) {
-  throw UnimplementedError(
-    'tokenStoreProvider must be overridden by the app.',
-  );
+  throw UnimplementedError('tokenStoreProvider must be overridden by the app.');
 });

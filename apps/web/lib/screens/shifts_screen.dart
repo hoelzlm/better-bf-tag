@@ -39,10 +39,7 @@ Future<bool> _confirm(
   return result ?? false;
 }
 
-Future<DateTime?> _pickDateTime(
-  BuildContext context,
-  DateTime initial,
-) async {
+Future<DateTime?> _pickDateTime(BuildContext context, DateTime initial) async {
   final date = await showDatePicker(
     context: context,
     initialDate: initial,
@@ -168,8 +165,9 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
   Future<void> _loadDay(String dayId) async {
     try {
       final shifts = await ref.read(shiftRepositoryProvider).listShifts(dayId);
-      final participants =
-          await ref.read(bfDayAdminRepositoryProvider).listParticipants(dayId);
+      final participants = await ref
+          .read(bfDayAdminRepositoryProvider)
+          .listParticipants(dayId);
       if (!mounted) return;
       final sorted = _sortedShifts(shifts);
       final current = currentShift(sorted, DateTime.now());
@@ -221,9 +219,8 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateShiftDialog() async {
@@ -231,14 +228,14 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
     if (day == null) return;
     final result = await showDialog<_ShiftFormResult>(
       context: context,
-      builder: (context) => _ShiftFormDialog(
-        initialStart: day.startsAt,
-        initialEnd: day.endsAt,
-      ),
+      builder: (context) =>
+          _ShiftFormDialog(initialStart: day.startsAt, initialEnd: day.endsAt),
     );
     if (result == null) return;
     try {
-      await ref.read(shiftRepositoryProvider).createShift(
+      await ref
+          .read(shiftRepositoryProvider)
+          .createShift(
             day.id,
             name: result.name,
             startsAt: result.startsAt,
@@ -265,7 +262,9 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(shiftRepositoryProvider).updateShift(
+      await ref
+          .read(shiftRepositoryProvider)
+          .updateShift(
             day.id,
             shift.id,
             name: result.name,
@@ -307,16 +306,21 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
     );
   }
 
-  Future<void> _setCrew(String shiftId, List<CrewAssignmentInput> assignments) async {
+  Future<void> _setCrew(
+    String shiftId,
+    List<CrewAssignmentInput> assignments,
+  ) async {
     try {
-      final updated =
-          await ref.read(shiftRepositoryProvider).setCrew(shiftId, assignments);
+      final updated = await ref
+          .read(shiftRepositoryProvider)
+          .setCrew(shiftId, assignments);
       if (!mounted) return;
       setState(() {
         final shifts = _shifts;
         if (shifts != null) {
           _shifts = [
-            for (final s in shifts) if (s.id == updated.id) updated else s,
+            for (final s in shifts)
+              if (s.id == updated.id) updated else s,
           ];
         }
       });
@@ -411,7 +415,8 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
 
     final theme = Theme.of(context);
     final spacing = theme.extension<BftagSpacing>() ?? const BftagSpacing();
-    final vehicles = ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
+    final vehicles =
+        ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
     final days = _days;
     final day = _selectedDay;
     final shifts = _shifts;
@@ -431,149 +436,150 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
                   : CircularProgressIndicator(color: theme.colorScheme.primary),
             )
           : days.isEmpty
-              ? const BftagStateView.empty(
-                  title: 'Keine BF-Tage angelegt.',
-                  icon: Icons.event_busy_outlined,
-                )
-              : Padding(
-                  padding: EdgeInsets.all(spacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        key: const Key('bf-day-dropdown'),
-                        initialValue: _selectedDayId,
-                        decoration: const InputDecoration(labelText: 'BF-Tag'),
-                        items: [
-                          for (final d in days)
-                            DropdownMenuItem(value: d.id, child: Text(d.name)),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) _selectDay(value);
-                        },
-                      ),
-                      SizedBox(height: spacing.md),
-                      if (day != null) ...[
-                        Wrap(
-                          key: const Key('shift-tabs'),
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final s in shifts ?? const <Shift>[])
-                              ChoiceChip(
-                                key: Key('shift-tab-${s.id}'),
-                                label: Text(
-                                  s.id == current?.id
-                                      ? '${s.name} (aktuell)'
-                                      : s.name,
-                                ),
-                                selected: s.id == _selectedShiftId,
-                                onSelected: (_) => _selectShift(s.id),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            if (dayEnded)
-                              Tooltip(
-                                message: 'BF-Tag ist beendet',
-                                child: FilledButton.icon(
-                                  key: const Key('create-shift'),
-                                  onPressed: null,
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Schicht anlegen'),
-                                ),
-                              )
-                            else
-                              FilledButton.icon(
-                                key: const Key('create-shift'),
-                                onPressed: _openCreateShiftDialog,
-                                icon: const Icon(Icons.add),
-                                label: const Text('Schicht anlegen'),
-                              ),
-                            if (shift != null) ...[
-                              SizedBox(width: spacing.sm),
-                              IconButton(
-                                key: const Key('edit-shift'),
-                                onPressed: dayEnded
-                                    ? null
-                                    : () => _openEditShiftDialog(shift),
-                                icon: const Icon(Icons.edit),
-                                tooltip: dayEnded
-                                    ? 'BF-Tag ist beendet'
-                                    : 'Schicht bearbeiten',
-                              ),
-                              IconButton(
-                                key: const Key('delete-shift'),
-                                onPressed:
-                                    dayEnded ? null : () => _deleteShift(shift),
-                                icon: const Icon(Icons.delete),
-                                tooltip: dayEnded
-                                    ? 'BF-Tag ist beendet'
-                                    : 'Schicht löschen',
-                              ),
-                            ],
-                          ],
-                        ),
-                        SizedBox(height: spacing.lg),
-                        if (_shifts == null)
-                          Expanded(
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: theme.colorScheme.primary,
-                              ),
+          ? const BftagStateView.empty(
+              title: 'Keine BF-Tage angelegt.',
+              icon: Icons.event_busy_outlined,
+            )
+          : Padding(
+              padding: EdgeInsets.all(spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    key: const Key('bf-day-dropdown'),
+                    initialValue: _selectedDayId,
+                    decoration: const InputDecoration(labelText: 'BF-Tag'),
+                    items: [
+                      for (final d in days)
+                        DropdownMenuItem(value: d.id, child: Text(d.name)),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) _selectDay(value);
+                    },
+                  ),
+                  SizedBox(height: spacing.md),
+                  if (day != null) ...[
+                    Wrap(
+                      key: const Key('shift-tabs'),
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final s in shifts ?? const <Shift>[])
+                          ChoiceChip(
+                            key: Key('shift-tab-${s.id}'),
+                            label: Text(
+                              s.id == current?.id
+                                  ? '${s.name} (aktuell)'
+                                  : s.name,
                             ),
-                          )
-                        else if (shift == null)
-                          const Expanded(
-                            child: BftagStateView.empty(
-                              title: 'Keine Schicht vorhanden.',
-                              icon: Icons.event_seat_outlined,
+                            selected: s.id == _selectedShiftId,
+                            onSelected: (_) => _selectShift(s.id),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (dayEnded)
+                          Tooltip(
+                            message: 'BF-Tag ist beendet',
+                            child: FilledButton.icon(
+                              key: const Key('create-shift'),
+                              onPressed: null,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Schicht anlegen'),
                             ),
                           )
                         else
-                          Expanded(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _ParticipantsColumn(
-                                  participants: participants,
-                                  shift: shift,
-                                  vehicles: vehicles,
-                                ),
-                                SizedBox(width: spacing.lg),
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    child: Wrap(
-                                      key: const Key('vehicle-cards'),
-                                      spacing: spacing.lg,
-                                      runSpacing: spacing.lg,
-                                      children: [
-                                        for (final v in vehicles)
-                                          _VehicleCard(
-                                            vehicle: v,
-                                            crew: shift.crew
-                                                .where((c) => c.vehicleId == v.id)
-                                                .toList(),
-                                            doubleBooked: _vehiclesByPerson(shift),
-                                            vehicles: vehicles,
-                                            onDrop: (payload) =>
-                                                _onDrop(payload, v.id),
-                                            onRemove: _removeAssignment,
-                                            onChangeFunction: _changeFunction,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          FilledButton.icon(
+                            key: const Key('create-shift'),
+                            onPressed: _openCreateShiftDialog,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Schicht anlegen'),
                           ),
+                        if (shift != null) ...[
+                          SizedBox(width: spacing.sm),
+                          IconButton(
+                            key: const Key('edit-shift'),
+                            onPressed: dayEnded
+                                ? null
+                                : () => _openEditShiftDialog(shift),
+                            icon: const Icon(Icons.edit),
+                            tooltip: dayEnded
+                                ? 'BF-Tag ist beendet'
+                                : 'Schicht bearbeiten',
+                          ),
+                          IconButton(
+                            key: const Key('delete-shift'),
+                            onPressed: dayEnded
+                                ? null
+                                : () => _deleteShift(shift),
+                            icon: const Icon(Icons.delete),
+                            tooltip: dayEnded
+                                ? 'BF-Tag ist beendet'
+                                : 'Schicht löschen',
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
+                    ),
+                    SizedBox(height: spacing.lg),
+                    if (_shifts == null)
+                      Expanded(
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      )
+                    else if (shift == null)
+                      const Expanded(
+                        child: BftagStateView.empty(
+                          title: 'Keine Schicht vorhanden.',
+                          icon: Icons.event_seat_outlined,
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ParticipantsColumn(
+                              participants: participants,
+                              shift: shift,
+                              vehicles: vehicles,
+                            ),
+                            SizedBox(width: spacing.lg),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Wrap(
+                                  key: const Key('vehicle-cards'),
+                                  spacing: spacing.lg,
+                                  runSpacing: spacing.lg,
+                                  children: [
+                                    for (final v in vehicles)
+                                      _VehicleCard(
+                                        vehicle: v,
+                                        crew: shift.crew
+                                            .where((c) => c.vehicleId == v.id)
+                                            .toList(),
+                                        doubleBooked: _vehiclesByPerson(shift),
+                                        vehicles: vehicles,
+                                        onDrop: (payload) =>
+                                            _onDrop(payload, v.id),
+                                        onRemove: _removeAssignment,
+                                        onChangeFunction: _changeFunction,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }
@@ -617,8 +623,8 @@ class _ParticipantsColumn extends StatelessWidget {
         side: isDouble
             ? BorderSide(color: theme.colorScheme.error)
             : assignedVehicleIds.isEmpty
-                ? BorderSide(color: theme.colorScheme.outline)
-                : null,
+            ? BorderSide(color: theme.colorScheme.outline)
+            : null,
       );
       final content = isDouble
           ? Tooltip(
@@ -684,7 +690,7 @@ class _VehicleCard extends StatelessWidget {
   final void Function(_CrewDragPayload payload) onDrop;
   final void Function(String vehicleId, String personId) onRemove;
   final void Function(String vehicleId, String personId, String currentFunction)
-      onChangeFunction;
+  onChangeFunction;
 
   @override
   Widget build(BuildContext context) {
@@ -727,11 +733,15 @@ class _VehicleCard extends StatelessWidget {
                       padding: EdgeInsets.only(bottom: spacing.xs),
                       child: _CrewEntry(
                         assignment: a,
-                        allVehicleIds: doubleBooked[a.personId] ?? {a.vehicleId},
+                        allVehicleIds:
+                            doubleBooked[a.personId] ?? {a.vehicleId},
                         vehicles: vehicles,
                         onRemove: () => onRemove(a.vehicleId, a.personId),
-                        onChangeFunction: () =>
-                            onChangeFunction(a.vehicleId, a.personId, a.function),
+                        onChangeFunction: () => onChangeFunction(
+                          a.vehicleId,
+                          a.personId,
+                          a.function,
+                        ),
                       ),
                     ),
                 ],

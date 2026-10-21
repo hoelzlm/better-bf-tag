@@ -93,6 +93,7 @@ List<_NavEntry> _operationsEntries(Permission permission) => [
   _navLage,
   if (permission == Permission.preparation ||
       permission == Permission.dispatch ||
+      permission == Permission.radio ||
       permission == Permission.admin)
     _navEinsaetze,
   if (permission == Permission.dispatch || permission == Permission.admin)
@@ -235,10 +236,7 @@ class _Sidebar extends StatelessWidget {
                     active: _isActive(entry, location),
                   ),
                 if (admin.isNotEmpty) ...[
-                  _SectionHeading(
-                    collapsed: collapsed,
-                    label: 'Verwaltung',
-                  ),
+                  _SectionHeading(collapsed: collapsed, label: 'Verwaltung'),
                   for (final entry in admin)
                     _NavItem(
                       entry: entry,
@@ -306,17 +304,16 @@ class _SidebarHeader extends StatelessWidget {
               ),
             ),
           Tooltip(
-            message: collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen',
+            message: collapsed
+                ? 'Seitenleiste ausklappen'
+                : 'Seitenleiste einklappen',
             child: InkWell(
               onTap: onToggle,
               customBorder: const CircleBorder(),
               child: SizedBox(
                 width: 32,
                 height: 32,
-                child: Icon(
-                  collapsed ? Icons.menu : Icons.menu_open,
-                  size: 20,
-                ),
+                child: Icon(collapsed ? Icons.menu : Icons.menu_open, size: 20),
               ),
             ),
           ),
@@ -340,7 +337,12 @@ class _SectionHeading extends StatelessWidget {
       return SizedBox(height: spacing.lg);
     }
     return Padding(
-      padding: EdgeInsets.fromLTRB(spacing.lg, spacing.lg, spacing.lg, spacing.xs),
+      padding: EdgeInsets.fromLTRB(
+        spacing.lg,
+        spacing.lg,
+        spacing.lg,
+        spacing.xs,
+      ),
       child: Text(
         label,
         style: theme.textTheme.labelMedium?.copyWith(
@@ -392,12 +394,7 @@ class _NavItemState extends State<_NavItem> {
               : const BorderSide(width: 3, style: BorderStyle.none),
         ),
         boxShadow: _focused
-            ? [
-                BoxShadow(
-                  color: theme.colorScheme.primary,
-                  spreadRadius: 2,
-                ),
-              ]
+            ? [BoxShadow(color: theme.colorScheme.primary, spreadRadius: 2)]
             : null,
       ),
       padding: EdgeInsets.symmetric(
@@ -484,9 +481,7 @@ class _SidebarFooter extends StatelessWidget {
           Container(
             padding: EdgeInsets.only(bottom: spacing.sm),
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: theme.colorScheme.outline),
-              ),
+              border: Border(top: BorderSide(color: theme.colorScheme.outline)),
             ),
           ),
           if (collapsed)

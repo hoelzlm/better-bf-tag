@@ -29,8 +29,9 @@ Vehicle _vehicleFromApi(ListVehicles200ResponseInner v) {
     shortName: v.shortName,
     type: v.type,
     status: FmsStatus.fromCode(v.status),
-    statusChangedAt:
-        statusChangedAtRaw == null ? null : DateTime.parse(statusChangedAtRaw),
+    statusChangedAt: statusChangedAtRaw == null
+        ? null
+        : DateTime.parse(statusChangedAtRaw),
     sortOrder: v.sortOrder,
     active: v.active,
   );
@@ -64,8 +65,9 @@ BfDay? _bfDayFromApi(GetSnapshot200ResponseBfDay? day) {
     startsAt: DateTime.parse(day.startsAt),
     endsAt: DateTime.parse(day.endsAt),
     state: BfDayState.fromWire(day.state.name),
-    anonymizedAt:
-        anonymizedAtRaw == null ? null : DateTime.parse(anonymizedAtRaw),
+    anonymizedAt: anonymizedAtRaw == null
+        ? null
+        : DateTime.parse(anonymizedAtRaw),
   );
 }
 
@@ -116,8 +118,9 @@ AlarmRecipient _alarmRecipientFromApi(
     vehicleId: r.vehicleId,
     function: r.function_,
     hasDevice: r.hasDevice,
-    acknowledgedAt:
-        r.acknowledgedAt == null ? null : DateTime.parse(r.acknowledgedAt!),
+    acknowledgedAt: r.acknowledgedAt == null
+        ? null
+        : DateTime.parse(r.acknowledgedAt!),
   );
 }
 
@@ -146,9 +149,7 @@ ScheduledAlarm _scheduledAlarmFromApi(
   );
 }
 
-Announcement _announcementFromApi(
-  GetSnapshot200ResponseAnnouncementsInner a,
-) {
+Announcement _announcementFromApi(GetSnapshot200ResponseAnnouncementsInner a) {
   return Announcement(
     id: a.id,
     bfDayId: a.bfDayId,
@@ -159,9 +160,7 @@ Announcement _announcementFromApi(
   );
 }
 
-ProgramItem _programItemFromApi(
-  GetSnapshot200ResponseProgramItemsInner p,
-) {
+ProgramItem _programItemFromApi(GetSnapshot200ResponseProgramItemsInner p) {
   return ProgramItem(
     id: p.id,
     bfDayId: p.bfDayId,
@@ -434,9 +433,7 @@ final pairedRealtimeClientProvider = Provider<RealtimeClient?>((ref) {
       await ref.read(pairedSessionControllerProvider.notifier).refresh();
     },
     onRevoked: () {
-      unawaited(
-        ref.read(pairedSessionControllerProvider.notifier).onRevoked(),
-      );
+      unawaited(ref.read(pairedSessionControllerProvider.notifier).onRevoked());
     },
   );
   client.start();
@@ -560,8 +557,7 @@ final myCrewAssignmentsProvider = Provider<List<MyCrewAssignment>>((ref) {
   }
   final vehicles =
       ref.watch(pairedVehiclesProvider).valueOrNull ?? const <Vehicle>[];
-  final shifts =
-      ref.watch(pairedShiftsProvider).valueOrNull ?? const <Shift>[];
+  final shifts = ref.watch(pairedShiftsProvider).valueOrNull ?? const <Shift>[];
   final now = ref.watch(nowProvider);
   return myCrewAssignments(
     shifts: shifts,

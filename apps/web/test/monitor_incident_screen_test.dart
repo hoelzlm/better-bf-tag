@@ -158,8 +158,14 @@ void main() {
           find.byKey(const Key('monitor-incident-map-placeholder')),
           findsNothing,
         );
-        expect(find.byKey(const Key('incident-map-station-pin')), findsOneWidget);
-        expect(find.byKey(const Key('incident-map-incident-pin')), findsNothing);
+        expect(
+          find.byKey(const Key('incident-map-station-pin')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('incident-map-incident-pin')),
+          findsNothing,
+        );
       },
     );
 
@@ -195,7 +201,8 @@ void main() {
           expect(
             matches,
             isEmpty,
-            reason: '$path contains hard-coded color(s): '
+            reason:
+                '$path contains hard-coded color(s): '
                 '${matches.map((m) => m.group(0)).toList()}',
           );
         }

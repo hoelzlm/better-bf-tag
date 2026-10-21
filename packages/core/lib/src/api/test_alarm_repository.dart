@@ -39,7 +39,9 @@ abstract class TestAlarmRepository {
   Future<TestAlarmOutcome> trigger({int delaySeconds = 0});
 }
 
-TestAlarmOutcome _outcomeFromWire(TriggerTestAlarm200ResponseOutcomeEnum outcome) {
+TestAlarmOutcome _outcomeFromWire(
+  TriggerTestAlarm200ResponseOutcomeEnum outcome,
+) {
   switch (outcome) {
     case TriggerTestAlarm200ResponseOutcomeEnum.delivered:
       return TestAlarmOutcome.delivered;

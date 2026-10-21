@@ -18,8 +18,9 @@ AlarmRecipient _recipientFromApi(
     vehicleId: r.vehicleId,
     function: r.function_,
     hasDevice: r.hasDevice,
-    acknowledgedAt:
-        r.acknowledgedAt == null ? null : DateTime.parse(r.acknowledgedAt!),
+    acknowledgedAt: r.acknowledgedAt == null
+        ? null
+        : DateTime.parse(r.acknowledgedAt!),
   );
 }
 
@@ -39,9 +40,7 @@ Alarm _alarmFromApi(GetSnapshot200ResponseAlarmsInner a) {
   );
 }
 
-DoubleCrewed _doubleCrewedFromApi(
-  CreateAlarm200ResponseDoubleCrewedInner d,
-) {
+DoubleCrewed _doubleCrewedFromApi(CreateAlarm200ResponseDoubleCrewedInner d) {
   return DoubleCrewed(
     personId: d.personId,
     displayName: d.displayName,
@@ -157,14 +156,12 @@ class ApiAlarmRepository implements AlarmRepository {
   }) async {
     final response = await _api.createAlarm(
       id: incidentId,
-      createAlarmRequest: CreateAlarmRequest(
-        (b) {
-          if (id != null) b.id = id;
-          b.vehicleIds.addAll(vehicleIds);
-          b.scheduledAt = scheduledAt?.toUtc();
-          b.offsetMinutes = offsetMinutes;
-        },
-      ),
+      createAlarmRequest: CreateAlarmRequest((b) {
+        if (id != null) b.id = id;
+        b.vehicleIds.addAll(vehicleIds);
+        b.scheduledAt = scheduledAt?.toUtc();
+        b.offsetMinutes = offsetMinutes;
+      }),
     );
     final data = response.data;
     if (data == null) {
@@ -182,13 +179,11 @@ class ApiAlarmRepository implements AlarmRepository {
   }) async {
     final response = await _api.updateAlarm(
       id: alarmId,
-      updateAlarmRequest: UpdateAlarmRequest(
-        (b) {
-          b.scheduledAt = scheduledAt?.toUtc();
-          b.offsetMinutes = offsetMinutes;
-          if (vehicleIds != null) b.vehicleIds.addAll(vehicleIds);
-        },
-      ),
+      updateAlarmRequest: UpdateAlarmRequest((b) {
+        b.scheduledAt = scheduledAt?.toUtc();
+        b.offsetMinutes = offsetMinutes;
+        if (vehicleIds != null) b.vehicleIds.addAll(vehicleIds);
+      }),
     );
     final data = response.data;
     if (data == null) {

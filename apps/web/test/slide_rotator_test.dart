@@ -73,7 +73,9 @@ void main() {
       expect(find.text('Titel s1'), findsOneWidget);
     });
 
-    testWidgets('advances to the next slide after its duration', (tester) async {
+    testWidgets('advances to the next slide after its duration', (
+      tester,
+    ) async {
       await _pump(tester, [
         _slide(id: 's1', durationSeconds: 5),
         _slide(id: 's2', sortOrder: 2, durationSeconds: 5),
@@ -162,8 +164,9 @@ void main() {
       expect(find.text('fett'), findsOneWidget);
     });
 
-    testWidgets('shows nothing for the image while loading, then the image',
-        (tester) async {
+    testWidgets('shows nothing for the image while loading, then the image', (
+      tester,
+    ) async {
       final completer = Completer<Response<List<int>>>();
       final adapter = _CapturingAdapter(completer);
       final dio = Dio(BaseOptions(baseUrl: ''))..httpClientAdapter = adapter;
@@ -189,10 +192,73 @@ void main() {
 
       // 1x1 transparent PNG.
       const pngBytes = <int>[
-        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0,
-        1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 10, 73, 68,
-        65, 84, 120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0,
-        0, 73, 69, 78, 68, 174, 66, 96, 130,
+        137,
+        80,
+        78,
+        71,
+        13,
+        10,
+        26,
+        10,
+        0,
+        0,
+        0,
+        13,
+        73,
+        72,
+        68,
+        82,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        8,
+        6,
+        0,
+        0,
+        0,
+        31,
+        21,
+        196,
+        137,
+        0,
+        0,
+        0,
+        10,
+        73,
+        68,
+        65,
+        84,
+        120,
+        156,
+        99,
+        0,
+        1,
+        0,
+        0,
+        5,
+        0,
+        1,
+        13,
+        10,
+        45,
+        180,
+        0,
+        0,
+        0,
+        0,
+        73,
+        69,
+        78,
+        68,
+        174,
+        66,
+        96,
+        130,
       ];
       completer.complete(
         Response(

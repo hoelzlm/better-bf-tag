@@ -68,8 +68,9 @@ class AlarmRecipient {
       vehicleId: json['vehicle_id'] as String,
       function: json['function'] as String,
       hasDevice: json['has_device'] as bool,
-      acknowledgedAt:
-          acknowledgedAtRaw == null ? null : DateTime.parse(acknowledgedAtRaw),
+      acknowledgedAt: acknowledgedAtRaw == null
+          ? null
+          : DateTime.parse(acknowledgedAtRaw),
     );
   }
 
@@ -96,13 +97,13 @@ class AlarmRecipient {
 
   @override
   int get hashCode => Object.hash(
-        personId,
-        displayName,
-        vehicleId,
-        function,
-        hasDevice,
-        acknowledgedAt,
-      );
+    personId,
+    displayName,
+    vehicleId,
+    function,
+    hasDevice,
+    acknowledgedAt,
+  );
 
   @override
   String toString() => 'AlarmRecipient($displayName, $ackState)';
@@ -218,10 +219,12 @@ class Alarm {
       id: json['id'] as String,
       incidentId: json['incident_id'] as String,
       state: AlarmState.fromWire(json['state'] as String),
-      scheduledAt:
-          scheduledAtRaw == null ? null : DateTime.parse(scheduledAtRaw),
-      triggeredAt:
-          triggeredAtRaw == null ? null : DateTime.parse(triggeredAtRaw),
+      scheduledAt: scheduledAtRaw == null
+          ? null
+          : DateTime.parse(scheduledAtRaw),
+      triggeredAt: triggeredAtRaw == null
+          ? null
+          : DateTime.parse(triggeredAtRaw),
       vehicleIds: vehicleIdsJson.cast<String>().toList(),
       recipients: recipientsJson
           .map((e) => AlarmRecipient.fromJson(e as Map<String, dynamic>))
@@ -278,18 +281,18 @@ class Alarm {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        incidentId,
-        state,
-        scheduledAt,
-        triggeredAt,
-        Object.hashAll(vehicleIds),
-        Object.hashAll(recipients),
-        pushDelivered,
-        pushRejected,
-        relativeToAlarmId,
-        offsetMinutes,
-      );
+    id,
+    incidentId,
+    state,
+    scheduledAt,
+    triggeredAt,
+    Object.hashAll(vehicleIds),
+    Object.hashAll(recipients),
+    pushDelivered,
+    pushRejected,
+    relativeToAlarmId,
+    offsetMinutes,
+  );
 
   @override
   String toString() => 'Alarm($id, incident: $incidentId, state: $state)';
@@ -345,20 +348,19 @@ class DoubleCrewed {
 /// sortiert nach `triggered_at`, dann `id` -- Index 0 ist der Erstalarm,
 /// jeder weitere Index eine Nachalarmierung (siehe [alarmSequenceLabel]).
 List<Alarm> triggeredAlarmsInOrder(Iterable<Alarm> alarmsOfIncident) {
-  final triggered = alarmsOfIncident
-      .where((a) => a.state == AlarmState.triggered)
-      .toList()
-    ..sort((a, b) {
-      final at = a.triggeredAt;
-      final bt = b.triggeredAt;
-      final byTriggeredAt = switch ((at, bt)) {
-        (null, null) => 0,
-        (null, _) => -1,
-        (_, null) => 1,
-        (_, _) => at!.compareTo(bt!),
-      };
-      return byTriggeredAt != 0 ? byTriggeredAt : a.id.compareTo(b.id);
-    });
+  final triggered =
+      alarmsOfIncident.where((a) => a.state == AlarmState.triggered).toList()
+        ..sort((a, b) {
+          final at = a.triggeredAt;
+          final bt = b.triggeredAt;
+          final byTriggeredAt = switch ((at, bt)) {
+            (null, null) => 0,
+            (null, _) => -1,
+            (_, null) => 1,
+            (_, _) => at!.compareTo(bt!),
+          };
+          return byTriggeredAt != 0 ? byTriggeredAt : a.id.compareTo(b.id);
+        });
   return triggered;
 }
 

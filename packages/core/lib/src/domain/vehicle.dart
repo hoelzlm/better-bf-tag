@@ -35,8 +35,9 @@ class Vehicle {
       shortName: json['short_name'] as String,
       type: json['type'] as String,
       status: FmsStatus.fromCode(json['status'] as int),
-      statusChangedAt:
-          statusChangedAtRaw == null ? null : DateTime.parse(statusChangedAtRaw),
+      statusChangedAt: statusChangedAtRaw == null
+          ? null
+          : DateTime.parse(statusChangedAtRaw),
       sortOrder: json['sort_order'] as int,
       active: json['active'] as bool,
     );
@@ -78,15 +79,15 @@ class Vehicle {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        callSign,
-        shortName,
-        type,
-        status,
-        statusChangedAt,
-        sortOrder,
-        active,
-      );
+    id,
+    callSign,
+    shortName,
+    type,
+    status,
+    statusChangedAt,
+    sortOrder,
+    active,
+  );
 
   @override
   String toString() =>

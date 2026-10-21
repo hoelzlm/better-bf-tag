@@ -33,16 +33,22 @@ class _FakeSessionController extends SessionController {
 class _FakeAlarmRepository implements AlarmRepository {
   final List<String> triggerNowCalls = [];
   final List<String> discardCalls = [];
-  final List<({String id, DateTime? scheduledAt, int? offsetMinutes, List<String>? vehicleIds})>
-      updateCalls = [];
+  final List<
+    ({
+      String id,
+      DateTime? scheduledAt,
+      int? offsetMinutes,
+      List<String>? vehicleIds,
+    })
+  >
+  updateCalls = [];
 
   @override
   Future<TriggerAlarmResult> trigger(
     String incidentId,
     List<String> vehicleIds, {
     required String id,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> acknowledge(String alarmId) => throw UnimplementedError();
@@ -54,8 +60,7 @@ class _FakeAlarmRepository implements AlarmRepository {
     String? id,
     DateTime? scheduledAt,
     int? offsetMinutes,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Alarm> update(
@@ -176,8 +181,9 @@ Future<_FakeAlarmRepository> _pump(
 }
 
 void main() {
-  testWidgets('renders nothing when there are no planned Alarmierungen',
-      (tester) async {
+  testWidgets('renders nothing when there are no planned Alarmierungen', (
+    tester,
+  ) async {
     await _pump(tester, scheduledAlarms: const []);
     expect(find.byKey(const Key('scheduled-alarms-section')), findsNothing);
   });
@@ -219,8 +225,9 @@ void main() {
     expect(find.byKey(const Key('scheduled-alarm-a-late')), findsOneWidget);
   });
 
-  testWidgets('"Jetzt auslösen" calls triggerNow after confirmation',
-      (tester) async {
+  testWidgets('"Jetzt auslösen" calls triggerNow after confirmation', (
+    tester,
+  ) async {
     final incident = _incident();
     final scheduled = ScheduledAlarm(
       incident: incident,
@@ -304,8 +311,9 @@ void main() {
     expect(find.byKey(const Key('scheduled-alarm-discard-a1')), findsNothing);
   });
 
-  testWidgets('"Ändern" updates offset_minutes for a relative Alarmierung',
-      (tester) async {
+  testWidgets('"Ändern" updates offset_minutes for a relative Alarmierung', (
+    tester,
+  ) async {
     final incident = _incident();
     final scheduled = ScheduledAlarm(
       incident: incident,
@@ -366,9 +374,7 @@ void main() {
             scheduledAlarmsProvider.overrideWith(
               (ref) => Stream.value([scheduled]),
             ),
-            vehiclesProvider.overrideWith(
-              (ref) => Stream.value([_vehicle()]),
-            ),
+            vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
             sessionControllerProvider.overrideWith(
               () => _FakeSessionController(
                 const SessionSignedIn(_dispatchPerson, 'token'),

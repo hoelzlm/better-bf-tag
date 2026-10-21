@@ -44,6 +44,9 @@ const ListPersons200ResponseInnerPermissionEnum
 _$listPersons200ResponseInnerPermissionEnum_dispatch =
     const ListPersons200ResponseInnerPermissionEnum._('dispatch');
 const ListPersons200ResponseInnerPermissionEnum
+_$listPersons200ResponseInnerPermissionEnum_radio =
+    const ListPersons200ResponseInnerPermissionEnum._('radio');
+const ListPersons200ResponseInnerPermissionEnum
 _$listPersons200ResponseInnerPermissionEnum_admin =
     const ListPersons200ResponseInnerPermissionEnum._('admin');
 
@@ -56,6 +59,8 @@ _$listPersons200ResponseInnerPermissionEnumValueOf(String name) {
       return _$listPersons200ResponseInnerPermissionEnum_preparation;
     case 'dispatch':
       return _$listPersons200ResponseInnerPermissionEnum_dispatch;
+    case 'radio':
+      return _$listPersons200ResponseInnerPermissionEnum_radio;
     case 'admin':
       return _$listPersons200ResponseInnerPermissionEnum_admin;
     default:
@@ -70,6 +75,7 @@ _$listPersons200ResponseInnerPermissionEnumValues =
         _$listPersons200ResponseInnerPermissionEnum_crew,
         _$listPersons200ResponseInnerPermissionEnum_preparation,
         _$listPersons200ResponseInnerPermissionEnum_dispatch,
+        _$listPersons200ResponseInnerPermissionEnum_radio,
         _$listPersons200ResponseInnerPermissionEnum_admin,
       ],
     );
@@ -122,12 +128,14 @@ class _$ListPersons200ResponseInnerPermissionEnumSerializer
     'crew': 'crew',
     'preparation': 'preparation',
     'dispatch': 'dispatch',
+    'radio': 'radio',
     'admin': 'admin',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'crew': 'crew',
     'preparation': 'preparation',
     'dispatch': 'dispatch',
+    'radio': 'radio',
     'admin': 'admin',
   };
 

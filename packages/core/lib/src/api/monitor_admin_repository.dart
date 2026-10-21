@@ -17,9 +17,7 @@ Monitor _monitorFromApi(ListMonitors200ResponseInner m) {
   );
 }
 
-MonitorPairingCode _pairingCodeFromApi(
-  CreateMonitorPairingCode201Response r,
-) {
+MonitorPairingCode _pairingCodeFromApi(CreateMonitorPairingCode201Response r) {
   return MonitorPairingCode(
     monitorId: r.monitorId,
     name: r.name,
@@ -98,17 +96,13 @@ class ApiMonitorAdminRepository implements MonitorAdminRepository {
     final response = await _api.createMonitorPairingCode(id: id);
     final data = response.data;
     if (data == null) {
-      throw StateError(
-        'POST /monitors/{id}/pairing-code returned no body',
-      );
+      throw StateError('POST /monitors/{id}/pairing-code returned no body');
     }
     return _pairingCodeFromApi(data);
   }
 }
 
-final monitorAdminRepositoryProvider = Provider<MonitorAdminRepository>((
-  ref,
-) {
+final monitorAdminRepositoryProvider = Provider<MonitorAdminRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return ApiMonitorAdminRepository(apiClient.getMonitorsApi());
 });

@@ -41,9 +41,7 @@ UpdateProgramItemRequestTypeEnum _updateTypeToApi(ProgramItemType type) {
   }
 }
 
-ProgramItem _programItemFromApi(
-  GetSnapshot200ResponseProgramItemsInner p,
-) {
+ProgramItem _programItemFromApi(GetSnapshot200ResponseProgramItemsInner p) {
   return ProgramItem(
     id: p.id,
     bfDayId: p.bfDayId,
@@ -96,8 +94,8 @@ class ApiProgramItemRepository implements ProgramItemRepository {
   @override
   Future<List<ProgramItem>> list(String bfDayId) async {
     final response = await _api.listProgramItems(day: bfDayId);
-    final data = response.data ??
-        BuiltList<GetSnapshot200ResponseProgramItemsInner>();
+    final data =
+        response.data ?? BuiltList<GetSnapshot200ResponseProgramItemsInner>();
     return data.map(_programItemFromApi).toList();
   }
 
@@ -121,9 +119,7 @@ class ApiProgramItemRepository implements ProgramItemRepository {
     );
     final data = response.data;
     if (data == null) {
-      throw StateError(
-        'POST /bf-days/{day}/program-items returned no body',
-      );
+      throw StateError('POST /bf-days/{day}/program-items returned no body');
     }
     return _programItemFromApi(data);
   }
@@ -159,9 +155,7 @@ class ApiProgramItemRepository implements ProgramItemRepository {
   }
 }
 
-final programItemRepositoryProvider = Provider<ProgramItemRepository>((
-  ref,
-) {
+final programItemRepositoryProvider = Provider<ProgramItemRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return ApiProgramItemRepository(apiClient.getProgramItemsApi());
 });

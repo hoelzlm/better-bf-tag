@@ -28,10 +28,10 @@ class Participant {
 
   @override
   int get hashCode => Object.hash(
-        personId,
-        displayName,
-        personType,
-        permission,
-        fireDepartmentId,
-      );
+    personId,
+    displayName,
+    personType,
+    permission,
+    fireDepartmentId,
+  );
 }

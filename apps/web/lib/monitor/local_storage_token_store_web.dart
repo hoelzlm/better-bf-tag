@@ -20,7 +20,10 @@ class LocalStorageTokenStore implements TokenStore {
       final refreshToken = json['refresh_token'] as String?;
       final deviceId = json['monitor_id'] as String?;
       if (refreshToken == null || deviceId == null) return null;
-      return StoredDeviceSession(refreshToken: refreshToken, deviceId: deviceId);
+      return StoredDeviceSession(
+        refreshToken: refreshToken,
+        deviceId: deviceId,
+      );
     } catch (_) {
       return null;
     }

@@ -9,7 +9,7 @@ export const personJsonSchema = z.object({
   id: z.string(),
   display_name: z.string(),
   person_type: z.enum(['youth', 'supervisor']),
-  permission: z.enum(['crew', 'preparation', 'dispatch', 'admin']),
+  permission: z.enum(['crew', 'preparation', 'dispatch', 'radio', 'admin']),
   active: z.boolean(),
   has_web_access: z.boolean(),
   username: z.string().nullable(),

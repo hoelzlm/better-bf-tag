@@ -29,9 +29,7 @@ Future<Uint8List> buildPairingCodesPdf(List<PairingCodeItem> items) async {
         pw.GridView(
           crossAxisCount: 3,
           childAspectRatio: 0.75,
-          children: [
-            for (final item in items) _pairingCodeCard(item),
-          ],
+          children: [for (final item in items) _pairingCodeCard(item)],
         ),
       ],
     ),
@@ -65,10 +63,7 @@ pw.Widget _pairingCodeCard(PairingCodeItem item) {
         pw.SizedBox(height: 4),
         pw.Text(
           item.code,
-          style: pw.TextStyle(
-            font: pw.Font.courier(),
-            fontSize: 14,
-          ),
+          style: pw.TextStyle(font: pw.Font.courier(), fontSize: 14),
         ),
         pw.Text(
           'gültig bis ${_formatDateTime(item.expiresAt.toLocal())}',

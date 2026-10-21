@@ -45,6 +45,9 @@ const CreatePersonRequestPermissionEnum
 _$createPersonRequestPermissionEnum_dispatch =
     const CreatePersonRequestPermissionEnum._('dispatch');
 const CreatePersonRequestPermissionEnum
+_$createPersonRequestPermissionEnum_radio =
+    const CreatePersonRequestPermissionEnum._('radio');
+const CreatePersonRequestPermissionEnum
 _$createPersonRequestPermissionEnum_admin =
     const CreatePersonRequestPermissionEnum._('admin');
 
@@ -58,6 +61,8 @@ CreatePersonRequestPermissionEnum _$createPersonRequestPermissionEnumValueOf(
       return _$createPersonRequestPermissionEnum_preparation;
     case 'dispatch':
       return _$createPersonRequestPermissionEnum_dispatch;
+    case 'radio':
+      return _$createPersonRequestPermissionEnum_radio;
     case 'admin':
       return _$createPersonRequestPermissionEnum_admin;
     default:
@@ -72,6 +77,7 @@ _$createPersonRequestPermissionEnumValues =
         _$createPersonRequestPermissionEnum_crew,
         _$createPersonRequestPermissionEnum_preparation,
         _$createPersonRequestPermissionEnum_dispatch,
+        _$createPersonRequestPermissionEnum_radio,
         _$createPersonRequestPermissionEnum_admin,
       ],
     );
@@ -122,12 +128,14 @@ class _$CreatePersonRequestPermissionEnumSerializer
     'crew': 'crew',
     'preparation': 'preparation',
     'dispatch': 'dispatch',
+    'radio': 'radio',
     'admin': 'admin',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'crew': 'crew',
     'preparation': 'preparation',
     'dispatch': 'dispatch',
+    'radio': 'radio',
     'admin': 'admin',
   };
 

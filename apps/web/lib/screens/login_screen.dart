@@ -33,10 +33,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _errorText = null;
     });
     try {
-      await ref.read(sessionControllerProvider.notifier).login(
-            _usernameController.text,
-            _passwordController.text,
-          );
+      await ref
+          .read(sessionControllerProvider.notifier)
+          .login(_usernameController.text, _passwordController.text);
     } on LoginFailure catch (failure) {
       if (!mounted) {
         return;

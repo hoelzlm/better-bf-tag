@@ -46,10 +46,7 @@ Future<bool> _confirm(
   return result ?? false;
 }
 
-Future<DateTime?> _pickDateTime(
-  BuildContext context,
-  DateTime initial,
-) async {
+Future<DateTime?> _pickDateTime(BuildContext context, DateTime initial) async {
   final date = await showDatePicker(
     context: context,
     initialDate: initial,
@@ -110,9 +107,8 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateDialog() async {
@@ -181,7 +177,9 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
       await ref.read(bfDayAdminRepositoryProvider).start(day.id);
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'BF-Tag konnte nicht gestartet werden.'));
+      _showError(
+        describeApiError(error, 'BF-Tag konnte nicht gestartet werden.'),
+      );
     }
   }
 
@@ -197,7 +195,9 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
       await ref.read(bfDayAdminRepositoryProvider).end(day.id);
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'BF-Tag konnte nicht beendet werden.'));
+      _showError(
+        describeApiError(error, 'BF-Tag konnte nicht beendet werden.'),
+      );
     }
   }
 
@@ -231,8 +231,7 @@ class _BfDaysScreenState extends ConsumerState<BfDaysScreen> {
       _ => null,
     };
     final isAdmin = permission == Permission.admin;
-    final isDispatchOrAdmin =
-        isAdmin || permission == Permission.dispatch;
+    final isDispatchOrAdmin = isAdmin || permission == Permission.dispatch;
     final days = _days;
     final spacing = Theme.of(context).extension<BftagSpacing>()!;
     return Scaffold(
@@ -482,9 +481,7 @@ class _BfDayStateChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(radii.full),
-        border: bordered
-            ? Border.all(color: theme.colorScheme.outline)
-            : null,
+        border: bordered ? Border.all(color: theme.colorScheme.outline) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -644,8 +641,9 @@ class _ParticipantsDialogState extends ConsumerState<_ParticipantsDialog> {
   Future<void> _load() async {
     try {
       final repository = ref.read(bfDayAdminRepositoryProvider);
-      final persons =
-          await ref.read(personAdminRepositoryProvider).listPersons();
+      final persons = await ref
+          .read(personAdminRepositoryProvider)
+          .listPersons();
       final participants = await repository.listParticipants(widget.day.id);
       if (!mounted) return;
       setState(() {
@@ -865,9 +863,12 @@ class _AnonymizeDialogState extends ConsumerState<_AnonymizeDialog> {
         FilledButton(
           key: const Key('anonymize-dialog-confirm'),
           style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).extension<BftagAlarmColors>()!.alarm,
-            foregroundColor:
-                Theme.of(context).extension<BftagAlarmColors>()!.onAlarm,
+            backgroundColor: Theme.of(context)
+                .extension<BftagAlarmColors>()!
+                .alarm,
+            foregroundColor: Theme.of(context)
+                .extension<BftagAlarmColors>()!
+                .onAlarm,
           ),
           onPressed: summary == null
               ? null

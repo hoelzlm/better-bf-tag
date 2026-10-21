@@ -52,8 +52,7 @@ class _FakeIncidentRepository implements IncidentRepository {
     String? script,
     double? latitude,
     double? longitude,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Incident> discard(String id) => throw UnimplementedError();
@@ -75,8 +74,7 @@ class _FakeIncidentRepository implements IncidentRepository {
     double? latitude,
     double? longitude,
     bool clearLocation = false,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 }
 
 Incident _incident({
@@ -169,16 +167,16 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('empty state shows an icon and "Keine laufenden Einsätze"',
-      (tester) async {
+  testWidgets('empty state shows an icon and "Keine laufenden Einsätze"', (
+    tester,
+  ) async {
     await _pump(tester, incidents: const [], alarms: const []);
 
     expect(find.text('Keine laufenden Einsätze'), findsOneWidget);
     expect(find.byIcon(Icons.local_fire_department_outlined), findsOneWidget);
   });
 
-  testWidgets(
-      'BF-Tag ohne Handys: lists every alarmed person with vehicle and '
+  testWidgets('BF-Tag ohne Handys: lists every alarmed person with vehicle and '
       'function and "N alarmiert", no Quittierung state', (tester) async {
     final alarm = Alarm(
       id: 'a1',
@@ -220,8 +218,9 @@ void main() {
     expect(find.text('Peter Probe – HLF 1, GF'), findsOneWidget);
   });
 
-  testWidgets('shows incident number, keyword, address and elapsed time',
-      (tester) async {
+  testWidgets('shows incident number, keyword, address and elapsed time', (
+    tester,
+  ) async {
     final alarm = Alarm(
       id: 'a1',
       incidentId: 'i1',
@@ -248,82 +247,87 @@ void main() {
     expect(find.textContaining('seit 7 min'), findsOneWidget);
   });
 
+  testWidgets(
+    'shows "Erstalarm" and "1. Nachalarmierung" titles for two alarms',
+    (tester) async {
+      final erst = Alarm(
+        id: 'a1',
+        incidentId: 'i1',
+        state: AlarmState.triggered,
+        triggeredAt: DateTime.now().subtract(const Duration(minutes: 10)),
+        vehicleIds: const ['v1'],
+        recipients: const [],
+      );
+      final nach = Alarm(
+        id: 'a2',
+        incidentId: 'i1',
+        state: AlarmState.triggered,
+        triggeredAt: DateTime.now().subtract(const Duration(minutes: 3)),
+        vehicleIds: const ['v2'],
+        recipients: const [],
+      );
+
+      await _pump(
+        tester,
+        incidents: [_incident(id: 'i1')],
+        alarms: [erst, nach],
+      );
+
+      expect(find.text('Erstalarm'), findsOneWidget);
+      expect(find.text('1. Nachalarmierung'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'shows "Erstalarm" and "1. Nachalarmierung" titles for two alarms',
-      (tester) async {
-    final erst = Alarm(
-      id: 'a1',
-      incidentId: 'i1',
-      state: AlarmState.triggered,
-      triggeredAt: DateTime.now().subtract(const Duration(minutes: 10)),
-      vehicleIds: const ['v1'],
-      recipients: const [],
-    );
-    final nach = Alarm(
-      id: 'a2',
-      incidentId: 'i1',
-      state: AlarmState.triggered,
-      triggeredAt: DateTime.now().subtract(const Duration(minutes: 3)),
-      vehicleIds: const ['v2'],
-      recipients: const [],
-    );
+    '"Abschluss vorgeschlagen" banner appears and disappears with the '
+    'close_suggested_incident_ids set',
+    (tester) async {
+      final closeSuggestedController = StreamController<Set<String>>();
+      addTearDown(closeSuggestedController.close);
 
-    await _pump(
-      tester,
-      incidents: [_incident(id: 'i1')],
-      alarms: [erst, nach],
-    );
-
-    expect(find.text('Erstalarm'), findsOneWidget);
-    expect(find.text('1. Nachalarmierung'), findsOneWidget);
-  });
-
-  testWidgets(
-      '"Abschluss vorgeschlagen" banner appears and disappears with the '
-      'close_suggested_incident_ids set', (tester) async {
-    final closeSuggestedController = StreamController<Set<String>>();
-    addTearDown(closeSuggestedController.close);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          incidentsProvider
-              .overrideWith((ref) => Stream.value([_incident(id: 'i1')])),
-          alarmsProvider.overrideWith((ref) => Stream.value(const [])),
-          vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
-          closeSuggestedIncidentIdsProvider
-              .overrideWith((ref) => closeSuggestedController.stream),
-          scheduledAlarmsProvider.overrideWith(
-            (ref) => Stream.value(const <ScheduledAlarm>[]),
-          ),
-          sessionControllerProvider.overrideWith(
-            () => _FakeSessionController(
-              const SessionSignedIn(_dispatchPerson, 'token'),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            incidentsProvider.overrideWith(
+              (ref) => Stream.value([_incident(id: 'i1')]),
             ),
+            alarmsProvider.overrideWith((ref) => Stream.value(const [])),
+            vehiclesProvider.overrideWith((ref) => Stream.value(const [])),
+            closeSuggestedIncidentIdsProvider.overrideWith(
+              (ref) => closeSuggestedController.stream,
+            ),
+            scheduledAlarmsProvider.overrideWith(
+              (ref) => Stream.value(const <ScheduledAlarm>[]),
+            ),
+            sessionControllerProvider.overrideWith(
+              () => _FakeSessionController(
+                const SessionSignedIn(_dispatchPerson, 'token'),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            theme: bftagLightTheme(),
+            home: const Scaffold(body: RunningIncidentsSection()),
           ),
-        ],
-        child: MaterialApp(
-          theme: bftagLightTheme(),
-          home: const Scaffold(body: RunningIncidentsSection()),
         ),
-      ),
-    );
-    closeSuggestedController.add(const <String>{});
-    await tester.pumpAndSettle();
-    expect(find.text('Abschluss vorgeschlagen'), findsNothing);
+      );
+      closeSuggestedController.add(const <String>{});
+      await tester.pumpAndSettle();
+      expect(find.text('Abschluss vorgeschlagen'), findsNothing);
 
-    closeSuggestedController.add(const {'i1'});
-    await tester.pumpAndSettle();
-    expect(find.text('Abschluss vorgeschlagen'), findsOneWidget);
+      closeSuggestedController.add(const {'i1'});
+      await tester.pumpAndSettle();
+      expect(find.text('Abschluss vorgeschlagen'), findsOneWidget);
 
-    closeSuggestedController.add(const <String>{});
-    await tester.pumpAndSettle();
-    expect(find.text('Abschluss vorgeschlagen'), findsNothing);
-  });
+      closeSuggestedController.add(const <String>{});
+      await tester.pumpAndSettle();
+      expect(find.text('Abschluss vorgeschlagen'), findsNothing);
+    },
+  );
 
-  testWidgets('"Einsatz schließen" calls the repository after confirming',
-      (tester) async {
+  testWidgets('"Einsatz schließen" calls the repository after confirming', (
+    tester,
+  ) async {
     final repository = _FakeIncidentRepository();
 
     await _pump(
@@ -344,37 +348,34 @@ void main() {
     expect(repository.closeCalls, ['i1']);
   });
 
-  testWidgets(
-      'dispatch sees Nachalarmieren and Einsatz schließen buttons',
-      (tester) async {
+  testWidgets('dispatch sees Nachalarmieren and Einsatz schließen buttons', (
+    tester,
+  ) async {
     await _pump(
       tester,
       incidents: [_incident(id: 'i1')],
       alarms: const [],
       session: const SessionSignedIn(_dispatchPerson, 'token'),
     );
-    expect(
-      find.byKey(const Key('nachalarmieren-incident-i1')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('nachalarmieren-incident-i1')), findsOneWidget);
     expect(find.byKey(const Key('close-incident-i1')), findsOneWidget);
   });
 
   testWidgets(
-      'crew permission does not see Nachalarmieren/Einsatz schließen buttons',
-      (tester) async {
-    await _pump(
-      tester,
-      incidents: [_incident(id: 'i1')],
-      alarms: const [],
-      session: const SessionSignedIn(_crewPerson, 'token'),
-    );
-    expect(find.byKey(const Key('nachalarmieren-incident-i1')), findsNothing);
-    expect(find.byKey(const Key('close-incident-i1')), findsNothing);
-  });
+    'crew permission does not see Nachalarmieren/Einsatz schließen buttons',
+    (tester) async {
+      await _pump(
+        tester,
+        incidents: [_incident(id: 'i1')],
+        alarms: const [],
+        session: const SessionSignedIn(_crewPerson, 'token'),
+      );
+      expect(find.byKey(const Key('nachalarmieren-incident-i1')), findsNothing);
+      expect(find.byKey(const Key('close-incident-i1')), findsNothing);
+    },
+  );
 
-  testWidgets(
-      'Einsatz schließen warns with the count of planned and missed '
+  testWidgets('Einsatz schließen warns with the count of planned and missed '
       'Alarmierungen', (tester) async {
     final incident = _incident(id: 'i1');
     final scheduled = [

@@ -16,8 +16,9 @@ BfDay _bfDayFromApi(ListBfDays200ResponseInner d) {
     startsAt: DateTime.parse(d.startsAt),
     endsAt: DateTime.parse(d.endsAt),
     state: BfDayState.fromWire(d.state.name),
-    anonymizedAt:
-        anonymizedAtRaw == null ? null : DateTime.parse(anonymizedAtRaw),
+    anonymizedAt: anonymizedAtRaw == null
+        ? null
+        : DateTime.parse(anonymizedAtRaw),
   );
 }
 
@@ -186,8 +187,7 @@ class ApiBfDayAdminRepository implements BfDayAdminRepository {
   @override
   Future<List<Participant>> listParticipants(String day) async {
     final response = await _api.listParticipants(day: day);
-    final data =
-        response.data ?? BuiltList<ListParticipants200ResponseInner>();
+    final data = response.data ?? BuiltList<ListParticipants200ResponseInner>();
     return data.map(_participantFromApi).toList();
   }
 

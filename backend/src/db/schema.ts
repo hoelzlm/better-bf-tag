@@ -27,7 +27,13 @@ const bytea = customType<{ data: Buffer }>({
 });
 
 export const personTypeEnum = pgEnum('person_type', ['youth', 'supervisor']);
-export const permissionEnum = pgEnum('permission', ['crew', 'preparation', 'dispatch', 'admin']);
+export const permissionEnum = pgEnum('permission', [
+  'crew',
+  'preparation',
+  'dispatch',
+  'radio',
+  'admin',
+]);
 export const devicePlatformEnum = pgEnum('device_platform', ['android', 'ios']);
 export const pairingTargetTypeEnum = pgEnum('pairing_target_type', ['person', 'monitor']);
 export const vehicleStatusEventKindEnum = pgEnum('vehicle_status_event_kind', [

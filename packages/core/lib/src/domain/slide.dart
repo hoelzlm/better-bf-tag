@@ -50,15 +50,8 @@ class Slide {
       other.image == image;
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        title,
-        body,
-        durationSeconds,
-        sortOrder,
-        active,
-        image,
-      );
+  int get hashCode =>
+      Object.hash(id, title, body, durationSeconds, sortOrder, active, image);
 
   @override
   String toString() => 'Slide($title, duration: ${durationSeconds}s)';

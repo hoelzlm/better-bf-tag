@@ -109,14 +109,14 @@ class RealtimeClient {
     this.heartbeatInterval = const Duration(seconds: 25),
     Random? random,
     Duration Function(int attempt, Random random)? backoff,
-  })  : _wsEndpoint = wsEndpoint,
-        _loadSnapshotFn = loadSnapshot,
-        _accessToken = accessToken,
-        _refreshSession = refreshSession,
-        _onRevoked = onRevoked,
-        _connector = connector,
-        _random = random ?? Random(),
-        _backoff = backoff ?? defaultReconnectBackoff;
+  }) : _wsEndpoint = wsEndpoint,
+       _loadSnapshotFn = loadSnapshot,
+       _accessToken = accessToken,
+       _refreshSession = refreshSession,
+       _onRevoked = onRevoked,
+       _connector = connector,
+       _random = random ?? Random(),
+       _backoff = backoff ?? defaultReconnectBackoff;
 
   final Uri _wsEndpoint;
   final Future<Snapshot> Function() _loadSnapshotFn;
@@ -361,8 +361,10 @@ class RealtimeClient {
       case VehicleStatusChanged(:final vehicleId, :final status, :final at):
         final existing = _vehiclesById[vehicleId];
         if (existing != null) {
-          _vehiclesById[vehicleId] =
-              existing.copyWith(status: status, statusChangedAt: at);
+          _vehiclesById[vehicleId] = existing.copyWith(
+            status: status,
+            statusChangedAt: at,
+          );
         }
       case SlidesChanged(:final slides):
         _slides = List.of(slides);
@@ -385,16 +387,28 @@ class RealtimeClient {
         _scheduledAlarmsById.remove(alarm.id);
         _liveAlarmTriggeredController.add(alarm);
       case AlarmPlanned(:final incident, :final alarm):
-        _scheduledAlarmsById[alarm.id] =
-            ScheduledAlarm(incident: incident, alarm: alarm);
+        _scheduledAlarmsById[alarm.id] = ScheduledAlarm(
+          incident: incident,
+          alarm: alarm,
+        );
       case AlarmMissed(:final incident, :final alarm):
-        _scheduledAlarmsById[alarm.id] =
-            ScheduledAlarm(incident: incident, alarm: alarm);
+        _scheduledAlarmsById[alarm.id] = ScheduledAlarm(
+          incident: incident,
+          alarm: alarm,
+        );
       case AlarmDiscarded(:final alarmId):
         _scheduledAlarmsById.remove(alarmId);
-      case AlarmAcknowledged(:final alarmId, :final personId, :final acknowledgedAt):
+      case AlarmAcknowledged(
+        :final alarmId,
+        :final personId,
+        :final acknowledgedAt,
+      ):
         _applyAlarmAcknowledged(alarmId, personId, acknowledgedAt);
-      case AlarmPushReported(:final alarmId, :final pushDelivered, :final pushRejected):
+      case AlarmPushReported(
+        :final alarmId,
+        :final pushDelivered,
+        :final pushRejected,
+      ):
         _applyAlarmPushReported(alarmId, pushDelivered, pushRejected);
       case BfDayUpdated():
         // The current BF-Tag/shifts changed in a way too varied to patch
@@ -435,8 +449,7 @@ class RealtimeClient {
   /// both a transition away from `running` (closed/discarded) and an
   /// Einsatz belonging to a BF-Tag that isn't the running one.
   void _applyIncident(Incident incident) {
-    final matchesRunningDay =
-        _bfDay != null && incident.bfDayId == _bfDay!.id;
+    final matchesRunningDay = _bfDay != null && incident.bfDayId == _bfDay!.id;
     if (incident.state == IncidentState.running && matchesRunningDay) {
       _incidentsById[incident.id] = incident;
     } else {
@@ -582,7 +595,9 @@ class RealtimeClient {
         if (at == null) return -1;
         if (bt == null) return 1;
         final byScheduledAt = at.compareTo(bt);
-        return byScheduledAt != 0 ? byScheduledAt : a.alarm.id.compareTo(b.alarm.id);
+        return byScheduledAt != 0
+            ? byScheduledAt
+            : a.alarm.id.compareTo(b.alarm.id);
       });
     return scheduled;
   }

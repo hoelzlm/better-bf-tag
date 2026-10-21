@@ -95,7 +95,10 @@ class IncidentMap extends StatelessWidget {
                 width: 48,
                 height: 48,
                 alignment: Alignment.topCenter,
-                child: const _Pin(icon: Icons.location_on, color: Color(0xFFD32F2F)),
+                child: const _Pin(
+                  icon: Icons.location_on,
+                  color: Color(0xFFD32F2F),
+                ),
               ),
             if (station != null)
               Marker(

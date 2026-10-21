@@ -13,12 +13,74 @@ import 'package:flutter_test/flutter_test.dart';
 /// only checks the magic bytes, but `Image.memory` in `_SlideThumbnail`
 /// actually decodes this, so it has to be a real (tiny) PNG.
 final _pngBytes = Uint8List.fromList([
-  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-  0x08, 0x04, 0x00, 0x00, 0x00, 0xB5, 0x1C, 0x0C, 0x02, 0x00, 0x00, 0x00,
-  0x0B, 0x49, 0x44, 0x41, 0x54, 0x78, 0xDA, 0x63, 0x64, 0xF8, 0x0F, 0x00,
-  0x01, 0x05, 0x01, 0x01, 0x27, 0x18, 0xE3, 0x66, 0x00, 0x00, 0x00, 0x00,
-  0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x04,
+  0x00,
+  0x00,
+  0x00,
+  0xB5,
+  0x1C,
+  0x0C,
+  0x02,
+  0x00,
+  0x00,
+  0x00,
+  0x0B,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0xDA,
+  0x63,
+  0x64,
+  0xF8,
+  0x0F,
+  0x00,
+  0x01,
+  0x05,
+  0x01,
+  0x01,
+  0x27,
+  0x18,
+  0xE3,
+  0x66,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
 ]);
 
 Slide _slide({
@@ -194,8 +256,7 @@ class _FakeFilePicker extends FilePicker {
     bool withReadStream = false,
     bool lockParentWindow = false,
     bool readSequential = false,
-  }) async =>
-      result;
+  }) async => result;
 }
 
 /// Fake [SlideImageLoader] that never touches the network -- real thumbnail
@@ -232,8 +293,18 @@ void main() {
       await _pump(
         tester,
         slides: [
-          _slide(id: 's1', title: 'Willkommen', body: '**Hallo Welt**', durationSeconds: 12),
-          _slide(id: 's2', title: 'Sicherheit', durationSeconds: 20, active: false),
+          _slide(
+            id: 's1',
+            title: 'Willkommen',
+            body: '**Hallo Welt**',
+            durationSeconds: 12,
+          ),
+          _slide(
+            id: 's2',
+            title: 'Sicherheit',
+            durationSeconds: 20,
+            active: false,
+          ),
         ],
       );
 
@@ -250,8 +321,9 @@ void main() {
     },
   );
 
-  testWidgets('Folien AC2: "Folie anlegen" opens the create dialog',
-      (tester) async {
+  testWidgets('Folien AC2: "Folie anlegen" opens the create dialog', (
+    tester,
+  ) async {
     await _pump(tester, slides: []);
 
     await tester.tap(find.byKey(const Key('create-slide')));
@@ -276,79 +348,70 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Folien AC3: title over 200 characters shows an inline error',
-    (tester) async {
-      await _pump(tester, slides: []);
+  testWidgets('Folien AC3: title over 200 characters shows an inline error', (
+    tester,
+  ) async {
+    await _pump(tester, slides: []);
 
-      await tester.tap(find.byKey(const Key('create-slide')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-slide')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('slide-form-title')),
-        'x' * 201,
-      );
-      await tester.tap(find.byKey(const Key('slide-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('slide-form-title')),
+      'x' * 201,
+    );
+    await tester.tap(find.byKey(const Key('slide-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Titel darf höchstens 200 Zeichen haben.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.text('Titel darf höchstens 200 Zeichen haben.'),
+      findsOneWidget,
+    );
+  });
 
-  testWidgets(
-    'Folien AC3: body over 5000 characters shows an inline error',
-    (tester) async {
-      await _pump(tester, slides: []);
+  testWidgets('Folien AC3: body over 5000 characters shows an inline error', (
+    tester,
+  ) async {
+    await _pump(tester, slides: []);
 
-      await tester.tap(find.byKey(const Key('create-slide')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-slide')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('slide-form-title')),
-        'Titel',
-      );
-      await tester.enterText(
-        find.byKey(const Key('slide-form-body')),
-        'x' * 5001,
-      );
-      await tester.tap(find.byKey(const Key('slide-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('slide-form-title')), 'Titel');
+    await tester.enterText(
+      find.byKey(const Key('slide-form-body')),
+      'x' * 5001,
+    );
+    await tester.tap(find.byKey(const Key('slide-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Text darf höchstens 5000 Zeichen haben.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.text('Text darf höchstens 5000 Zeichen haben.'),
+      findsOneWidget,
+    );
+  });
 
-  testWidgets(
-    'Folien AC3: duration out of 3-300 range shows an inline error',
-    (tester) async {
-      await _pump(tester, slides: []);
+  testWidgets('Folien AC3: duration out of 3-300 range shows an inline error', (
+    tester,
+  ) async {
+    await _pump(tester, slides: []);
 
-      await tester.tap(find.byKey(const Key('create-slide')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-slide')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('slide-form-title')),
-        'Neue Folie',
-      );
-      await tester.enterText(
-        find.byKey(const Key('slide-form-duration')),
-        '1',
-      );
-      await tester.tap(find.byKey(const Key('slide-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('slide-form-title')),
+      'Neue Folie',
+    );
+    await tester.enterText(find.byKey(const Key('slide-form-duration')), '1');
+    await tester.tap(find.byKey(const Key('slide-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Anzeigedauer muss zwischen 3 und 300 Sekunden liegen.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.text('Anzeigedauer muss zwischen 3 und 300 Sekunden liegen.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'Folien AC2+AC3: valid input in the create dialog calls create()',
@@ -442,7 +505,11 @@ void main() {
     (tester) async {
       FilePicker.platform = _FakeFilePicker(
         FilePickerResult([
-          PlatformFile(name: 'logo.png', size: _pngBytes.length, bytes: _pngBytes),
+          PlatformFile(
+            name: 'logo.png',
+            size: _pngBytes.length,
+            bytes: _pngBytes,
+          ),
         ]),
       );
       addTearDown(() => FilePicker.platform = _FakeFilePicker(null));
@@ -454,7 +521,9 @@ void main() {
 
       await tester.tap(find.text('Willkommen'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('slide-form-upload-image')));
+      await tester.ensureVisible(
+        find.byKey(const Key('slide-form-upload-image')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('slide-form-upload-image')));
       await tester.pumpAndSettle();
@@ -466,96 +535,93 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Folien AC7: an oversized image shows an error without calling '
-    'uploadImage()',
-    (tester) async {
-      final bigBytes = Uint8List(6 * 1024 * 1024);
-      FilePicker.platform = _FakeFilePicker(
-        FilePickerResult([
-          PlatformFile(name: 'big.png', size: bigBytes.length, bytes: bigBytes),
-        ]),
-      );
-      addTearDown(() => FilePicker.platform = _FakeFilePicker(null));
+  testWidgets('Folien AC7: an oversized image shows an error without calling '
+      'uploadImage()', (tester) async {
+    final bigBytes = Uint8List(6 * 1024 * 1024);
+    FilePicker.platform = _FakeFilePicker(
+      FilePickerResult([
+        PlatformFile(name: 'big.png', size: bigBytes.length, bytes: bigBytes),
+      ]),
+    );
+    addTearDown(() => FilePicker.platform = _FakeFilePicker(null));
 
-      final repository = await _pump(
-        tester,
-        slides: [_slide(id: 's1', title: 'Willkommen')],
-      );
+    final repository = await _pump(
+      tester,
+      slides: [_slide(id: 's1', title: 'Willkommen')],
+    );
 
-      await tester.tap(find.text('Willkommen'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('slide-form-upload-image')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('slide-form-upload-image')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Willkommen'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('slide-form-upload-image')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('slide-form-upload-image')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Bild ist zu groß (max. 5 MB).'), findsOneWidget);
-      expect(repository.uploadImageCalls, isEmpty);
-    },
-  );
+    expect(find.text('Bild ist zu groß (max. 5 MB).'), findsOneWidget);
+    expect(repository.uploadImageCalls, isEmpty);
+  });
 
-  testWidgets(
-    'Folien AC7: a non-image file shows an error without calling '
-    'uploadImage()',
-    (tester) async {
-      final badBytes = Uint8List.fromList([1, 2, 3, 4]);
-      FilePicker.platform = _FakeFilePicker(
-        FilePickerResult([
-          PlatformFile(name: 'doc.txt', size: badBytes.length, bytes: badBytes),
-        ]),
-      );
-      addTearDown(() => FilePicker.platform = _FakeFilePicker(null));
+  testWidgets('Folien AC7: a non-image file shows an error without calling '
+      'uploadImage()', (tester) async {
+    final badBytes = Uint8List.fromList([1, 2, 3, 4]);
+    FilePicker.platform = _FakeFilePicker(
+      FilePickerResult([
+        PlatformFile(name: 'doc.txt', size: badBytes.length, bytes: badBytes),
+      ]),
+    );
+    addTearDown(() => FilePicker.platform = _FakeFilePicker(null));
 
-      final repository = await _pump(
-        tester,
-        slides: [_slide(id: 's1', title: 'Willkommen')],
-      );
+    final repository = await _pump(
+      tester,
+      slides: [_slide(id: 's1', title: 'Willkommen')],
+    );
 
-      await tester.tap(find.text('Willkommen'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('slide-form-upload-image')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('slide-form-upload-image')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Willkommen'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('slide-form-upload-image')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('slide-form-upload-image')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Nur PNG, JPEG oder WebP.'), findsOneWidget);
-      expect(repository.uploadImageCalls, isEmpty);
-    },
-  );
+    expect(find.text('Nur PNG, JPEG oder WebP.'), findsOneWidget);
+    expect(repository.uploadImageCalls, isEmpty);
+  });
 
-  testWidgets(
-    'Folien AC8: "Bild entfernen" calls deleteImage() and shows the '
-    'placeholder again',
-    (tester) async {
-      final repository = await _pump(
-        tester,
-        slides: [
-          _slide(
-            id: 's1',
-            title: 'Willkommen',
-            image: const SlideImage(
-              contentType: 'image/png',
-              sizeBytes: 1024,
-              version: 'v1',
-            ),
+  testWidgets('Folien AC8: "Bild entfernen" calls deleteImage() and shows the '
+      'placeholder again', (tester) async {
+    final repository = await _pump(
+      tester,
+      slides: [
+        _slide(
+          id: 's1',
+          title: 'Willkommen',
+          image: const SlideImage(
+            contentType: 'image/png',
+            sizeBytes: 1024,
+            version: 'v1',
           ),
-        ],
-      );
+        ),
+      ],
+    );
 
-      await tester.tap(find.text('Willkommen'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('slide-form-remove-image')), findsOneWidget);
+    await tester.tap(find.text('Willkommen'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('slide-form-remove-image')), findsOneWidget);
 
-      await tester.ensureVisible(find.byKey(const Key('slide-form-remove-image')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('slide-form-remove-image')));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('slide-form-remove-image')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('slide-form-remove-image')));
+    await tester.pumpAndSettle();
 
-      expect(repository.deleteImageCalls, ['s1']);
-      expect(find.byKey(const Key('slide-form-remove-image')), findsNothing);
-    },
-  );
+    expect(repository.deleteImageCalls, ['s1']);
+    expect(find.byKey(const Key('slide-form-remove-image')), findsNothing);
+  });
 
   testWidgets(
     'Folien AC9: delete asks for confirmation before calling delete()',
@@ -624,16 +690,13 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Folien AC12: an empty slide list shows the empty state with a '
-    'primary action',
-    (tester) async {
-      await _pump(tester, slides: []);
+  testWidgets('Folien AC12: an empty slide list shows the empty state with a '
+      'primary action', (tester) async {
+    await _pump(tester, slides: []);
 
-      expect(find.text('Noch keine Folien angelegt.'), findsOneWidget);
-      expect(find.byKey(const Key('slides-empty-create')), findsOneWidget);
-    },
-  );
+    expect(find.text('Noch keine Folien angelegt.'), findsOneWidget);
+    expect(find.byKey(const Key('slides-empty-create')), findsOneWidget);
+  });
 
   group('describeSlideImageError', () {
     test('maps image_too_large to the German message', () {
@@ -651,10 +714,7 @@ void main() {
         ),
       );
 
-      expect(
-        describeSlideImageError(error),
-        'Bild ist zu groß (max. 5 MB).',
-      );
+      expect(describeSlideImageError(error), 'Bild ist zu groß (max. 5 MB).');
     });
 
     test('maps unsupported_image_type to the German message', () {
@@ -702,8 +762,7 @@ class _ThrowingSlideAdminRepository implements SlideAdminRepository {
     String? body,
     int? durationSeconds,
     bool? active,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Slide> update(
@@ -712,8 +771,7 @@ class _ThrowingSlideAdminRepository implements SlideAdminRepository {
     String? body,
     int? durationSeconds,
     bool? active,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> delete(String id) => throw UnimplementedError();

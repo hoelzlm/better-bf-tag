@@ -170,6 +170,12 @@ void main() {
     expect(find.byKey(const Key('vehicle-status-bar')), findsNothing);
   });
 
+  testWidgets('Funktisch role sees the Funktisch', (tester) async {
+    await _pump(tester, permission: Permission.radio);
+
+    expect(find.byKey(const Key('funktisch')), findsOneWidget);
+  });
+
   testWidgets('without Leitstellen-Berechtigung there is no Funktisch', (
     tester,
   ) async {

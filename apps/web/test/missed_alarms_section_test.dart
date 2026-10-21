@@ -36,8 +36,7 @@ class _FakeAlarmRepository implements AlarmRepository {
     String incidentId,
     List<String> vehicleIds, {
     required String id,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> acknowledge(String alarmId) => throw UnimplementedError();
@@ -49,8 +48,7 @@ class _FakeAlarmRepository implements AlarmRepository {
     String? id,
     DateTime? scheduledAt,
     int? offsetMinutes,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Alarm> update(
@@ -58,8 +56,7 @@ class _FakeAlarmRepository implements AlarmRepository {
     DateTime? scheduledAt,
     int? offsetMinutes,
     List<String>? vehicleIds,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Alarm> discard(String alarmId) async {
@@ -148,14 +145,16 @@ Future<_FakeAlarmRepository> _pump(
 }
 
 void main() {
-  testWidgets('renders nothing when there are no missed Alarmierungen',
-      (tester) async {
+  testWidgets('renders nothing when there are no missed Alarmierungen', (
+    tester,
+  ) async {
     await _pump(tester, scheduledAlarms: const []);
     expect(find.byKey(const Key('missed-alarms-section')), findsNothing);
   });
 
-  testWidgets('shows a missed Alarmierung with incident, vehicles and time',
-      (tester) async {
+  testWidgets('shows a missed Alarmierung with incident, vehicles and time', (
+    tester,
+  ) async {
     final incident = _incident(number: 4);
     final missed = ScheduledAlarm(
       incident: incident,
@@ -169,19 +168,14 @@ void main() {
       ),
     );
 
-    await _pump(
-      tester,
-      scheduledAlarms: [missed],
-      vehicles: [_vehicle()],
-    );
+    await _pump(tester, scheduledAlarms: [missed], vehicles: [_vehicle()]);
 
     expect(find.byKey(const Key('missed-alarms-section')), findsOneWidget);
     expect(find.textContaining('#4 Zimmerbrand'), findsOneWidget);
     expect(find.text('HLF 1'), findsOneWidget);
   });
 
-  testWidgets('"Auslösen" calls triggerNow after confirmation',
-      (tester) async {
+  testWidgets('"Auslösen" calls triggerNow after confirmation', (tester) async {
     final incident = _incident();
     final missed = ScheduledAlarm(
       incident: incident,

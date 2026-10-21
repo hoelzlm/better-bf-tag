@@ -26,7 +26,7 @@ abstract class CreatePersonRequest implements Built<CreatePersonRequest, CreateP
 
   @BuiltValueField(wireName: r'permission')
   CreatePersonRequestPermissionEnum get permission;
-  // enum permissionEnum {  crew,  preparation,  dispatch,  admin,  };
+  // enum permissionEnum {  crew,  preparation,  dispatch,  radio,  admin,  };
 
   CreatePersonRequest._();
 
@@ -162,6 +162,8 @@ class CreatePersonRequestPermissionEnum extends EnumClass {
   static const CreatePersonRequestPermissionEnum preparation = _$createPersonRequestPermissionEnum_preparation;
   @BuiltValueEnumConst(wireName: r'dispatch')
   static const CreatePersonRequestPermissionEnum dispatch = _$createPersonRequestPermissionEnum_dispatch;
+  @BuiltValueEnumConst(wireName: r'radio')
+  static const CreatePersonRequestPermissionEnum radio = _$createPersonRequestPermissionEnum_radio;
   @BuiltValueEnumConst(wireName: r'admin')
   static const CreatePersonRequestPermissionEnum admin = _$createPersonRequestPermissionEnum_admin;
 

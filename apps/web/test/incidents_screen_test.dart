@@ -558,6 +558,44 @@ void main() {
     expect(find.byKey(const Key('alarm-incident-i1')), findsNothing);
   });
 
+  testWidgets(
+    'Funktisch: no Einsatz anlegen, no Entwurf filter, starts on laufend, '
+    'Nachalarmieren without planning, card not editable',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        incidents: {
+          'd1': [
+            _incident(id: 'i1', number: 1, state: IncidentState.running),
+            _incident(id: 'i2', number: 2, state: IncidentState.closed),
+          ],
+        },
+        permission: Permission.radio,
+      );
+
+      expect(find.byKey(const Key('create-incident')), findsNothing);
+      expect(find.text('Entwurf'), findsNothing);
+      expect(find.byKey(const Key('incident-i1')), findsOneWidget);
+      expect(find.byKey(const Key('incident-i2')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('incident-i1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
+
+      await tester.tap(find.text('Nachalarmieren'));
+      await tester.pumpAndSettle();
+      expect(find.text('Wann?'), findsNothing);
+      expect(find.byKey(const Key('alarm-mode-scheduled')), findsNothing);
+      await tester.tap(find.text('Abbrechen'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('abgeschlossen'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('incident-i2')), findsOneWidget);
+    },
+  );
+
   testWidgets('AC5: dispatch sees the Alarmieren button for a draft incident', (
     tester,
   ) async {
@@ -1011,50 +1049,56 @@ void main() {
     });
 
     testWidgets(
-        'BF-Tag: one address field -- saving with an Adresse but no pin '
-        'geocodes it and sends the best match as coordinates', (tester) async {
-      tester.view.physicalSize = const Size(900, 1000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+      'BF-Tag: one address field -- saving with an Adresse but no pin '
+      'geocodes it and sends the best match as coordinates',
+      (tester) async {
+        tester.view.physicalSize = const Size(900, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      final geocodeRepository = _FakeGeocodeRepository(
-        results: const [
-          GeocodeSuggestion(
-            label: 'Musterweg 5, Musterstadt',
-            latitude: 52.5,
-            longitude: 13.4,
-          ),
-        ],
-      );
-      final incidentRepository = await _pump(
-        tester,
-        days: [_bfDay()],
-        geocodeRepository: geocodeRepository,
-      );
+        final geocodeRepository = _FakeGeocodeRepository(
+          results: const [
+            GeocodeSuggestion(
+              label: 'Musterweg 5, Musterstadt',
+              latitude: 52.5,
+              longitude: 13.4,
+            ),
+          ],
+        );
+        final incidentRepository = await _pump(
+          tester,
+          days: [_bfDay()],
+          geocodeRepository: geocodeRepository,
+        );
 
-      await tester.tap(find.byKey(const Key('create-incident')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('create-incident')));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('incident-form-location-search')), findsNothing);
-      expect(find.text('Adresssuche'), findsNothing);
+        expect(
+          find.byKey(const Key('incident-form-location-search')),
+          findsNothing,
+        );
+        expect(find.text('Adresssuche'), findsNothing);
 
-      await tester.enterText(
-        find.byKey(const Key('incident-form-address')),
-        'Musterweg 5',
-      );
-      await tester.tap(find.byKey(const Key('incident-form-submit')));
-      await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('incident-form-address')),
+          'Musterweg 5',
+        );
+        await tester.tap(find.byKey(const Key('incident-form-submit')));
+        await tester.pumpAndSettle();
 
-      expect(geocodeRepository.queries, ['Musterweg 5']);
-      final call = incidentRepository.createCalls.single;
-      expect(call.address, 'Musterweg 5');
-      expect(call.latitude, 52.5);
-      expect(call.longitude, 13.4);
-    });
+        expect(geocodeRepository.queries, ['Musterweg 5']);
+        final call = incidentRepository.createCalls.single;
+        expect(call.address, 'Musterweg 5');
+        expect(call.latitude, 52.5);
+        expect(call.longitude, 13.4);
+      },
+    );
 
-    testWidgets('saving still works when the address cannot be found',
-        (tester) async {
+    testWidgets('saving still works when the address cannot be found', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(900, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);

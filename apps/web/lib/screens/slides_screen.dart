@@ -88,10 +88,9 @@ String? _detectImageContentType(Uint8List bytes) {
 /// presentation-only transform, not a Markdown parser; good enough for a
 /// one-line preview.
 String _plainTextPreview(String body) {
-  final line = body.split('\n').firstWhere(
-        (l) => l.trim().isNotEmpty,
-        orElse: () => '',
-      );
+  final line = body
+      .split('\n')
+      .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '');
   return line
       .replaceAll(RegExp(r'[#*_`>~]'), '')
       .replaceAllMapped(RegExp(r'\[(.*?)\]\(.*?\)'), (m) => m.group(1) ?? '')
@@ -140,9 +139,8 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateDialog() async {
@@ -152,7 +150,9 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(slideAdminRepositoryProvider).create(
+      await ref
+          .read(slideAdminRepositoryProvider)
+          .create(
             title: result.title,
             body: result.body,
             durationSeconds: result.durationSeconds,
@@ -160,7 +160,9 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
           );
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'Folie konnte nicht angelegt werden.'));
+      _showError(
+        describeApiError(error, 'Folie konnte nicht angelegt werden.'),
+      );
     }
   }
 
@@ -171,7 +173,9 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
     );
     if (result == null) return;
     try {
-      await ref.read(slideAdminRepositoryProvider).update(
+      await ref
+          .read(slideAdminRepositoryProvider)
+          .update(
             slide.id,
             title: result.title,
             body: result.body,
@@ -193,7 +197,9 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
           .update(slide.id, active: active);
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'Status konnte nicht geändert werden.'));
+      _showError(
+        describeApiError(error, 'Status konnte nicht geändert werden.'),
+      );
     }
   }
 
@@ -209,7 +215,9 @@ class _SlidesScreenState extends ConsumerState<SlidesScreen> {
       await ref.read(slideAdminRepositoryProvider).delete(slide.id);
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'Folie konnte nicht gelöscht werden.'));
+      _showError(
+        describeApiError(error, 'Folie konnte nicht gelöscht werden.'),
+      );
     }
   }
 
@@ -391,9 +399,7 @@ class _SlideRow extends StatelessWidget {
                     height: 56,
                     child: slide.image != null
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              radii.medium,
-                            ),
+                            borderRadius: BorderRadius.circular(radii.medium),
                             child: _SlideThumbnail(
                               slideId: slide.id,
                               version: slide.image!.version,
@@ -402,9 +408,7 @@ class _SlideRow extends StatelessWidget {
                         : Container(
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(
-                                radii.medium,
-                              ),
+                              borderRadius: BorderRadius.circular(radii.medium),
                             ),
                             child: Icon(
                               Icons.image_outlined,
@@ -614,8 +618,7 @@ class _SlideFormDialogState extends ConsumerState<_SlideFormDialog> {
       bodyError = 'Text darf höchstens 5000 Zeichen haben.';
     }
     if (duration == null || duration < 3 || duration > 300) {
-      durationError =
-          'Anzeigedauer muss zwischen 3 und 300 Sekunden liegen.';
+      durationError = 'Anzeigedauer muss zwischen 3 und 300 Sekunden liegen.';
     }
     setState(() {
       _titleError = titleError;
@@ -720,8 +723,7 @@ class _SlideFormDialogState extends ConsumerState<_SlideFormDialog> {
                 const Spacer(),
                 TextButton(
                   key: const Key('slide-form-preview-toggle'),
-                  onPressed: () =>
-                      setState(() => _showPreview = !_showPreview),
+                  onPressed: () => setState(() => _showPreview = !_showPreview),
                   child: Text(_showPreview ? 'Bearbeiten' : 'Vorschau'),
                 ),
               ],
@@ -786,9 +788,7 @@ class _SlideFormDialogState extends ConsumerState<_SlideFormDialog> {
                 Text(
                   _imageError!,
                   key: const Key('slide-form-image-error'),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
             ],
           ],

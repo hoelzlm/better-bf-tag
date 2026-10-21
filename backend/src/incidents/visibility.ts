@@ -16,7 +16,7 @@ export const scriptAudience = (v: Viewer): boolean =>
  * it, Monitore never either.
  */
 export const closeSuggestedAudience = (v: Viewer): boolean =>
-  v.permission === 'dispatch' || v.permission === 'admin';
+  v.permission === 'dispatch' || v.permission === 'radio' || v.permission === 'admin';
 
 /**
  * Whether the given Principal may see an Einsatz's Drehbuch (ADR 0016).

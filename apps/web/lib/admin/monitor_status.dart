@@ -26,5 +26,7 @@ MonitorDisplayStatus monitorStatusOf(Monitor monitor) {
   if (monitor.isRevoked) {
     return MonitorDisplayStatus.revoked;
   }
-  return monitor.paired ? MonitorDisplayStatus.paired : MonitorDisplayStatus.notPaired;
+  return monitor.paired
+      ? MonitorDisplayStatus.paired
+      : MonitorDisplayStatus.notPaired;
 }

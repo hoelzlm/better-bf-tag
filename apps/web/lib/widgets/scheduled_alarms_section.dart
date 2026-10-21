@@ -96,7 +96,8 @@ class _ScheduledAlarmRow extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Jetzt auslösen?',
-      message: 'Die geplante Alarmierung für Einsatz '
+      message:
+          'Die geplante Alarmierung für Einsatz '
           '#${scheduledAlarm.incident.number} wird sofort ausgelöst.',
       confirmLabel: 'Jetzt auslösen',
     );
@@ -105,9 +106,9 @@ class _ScheduledAlarmRow extends ConsumerWidget {
       await ref.read(alarmRepositoryProvider).triggerNow(alarm.id);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(describeAlarmTriggerError(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(describeAlarmTriggerError(error))));
     }
   }
 
@@ -116,7 +117,8 @@ class _ScheduledAlarmRow extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Alarmierung verwerfen?',
-      message: 'Die geplante Alarmierung für Einsatz '
+      message:
+          'Die geplante Alarmierung für Einsatz '
           '#${scheduledAlarm.incident.number} wird verworfen.',
       confirmLabel: 'Verwerfen',
     );
@@ -126,7 +128,14 @@ class _ScheduledAlarmRow extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(describeApiError(error, 'Alarmierung konnte nicht verworfen werden.'))),
+        SnackBar(
+          content: Text(
+            describeApiError(
+              error,
+              'Alarmierung konnte nicht verworfen werden.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -134,7 +143,8 @@ class _ScheduledAlarmRow extends ConsumerWidget {
   Future<void> _openChangeDialog(BuildContext context) async {
     await showDialog<bool>(
       context: context,
-      builder: (context) => ChangeScheduledAlarmDialog(alarm: scheduledAlarm.alarm),
+      builder: (context) =>
+          ChangeScheduledAlarmDialog(alarm: scheduledAlarm.alarm),
     );
   }
 
@@ -285,7 +295,9 @@ class _ChangeScheduledAlarmDialogState
       _error = null;
     });
     try {
-      await ref.read(alarmRepositoryProvider).update(
+      await ref
+          .read(alarmRepositoryProvider)
+          .update(
             widget.alarm.id,
             scheduledAt: _isRelative ? null : _scheduledAtLocal!.toUtc(),
             offsetMinutes: _isRelative ? _offsetMinutes : null,
@@ -304,7 +316,8 @@ class _ChangeScheduledAlarmDialogState
 
   @override
   Widget build(BuildContext context) {
-    final vehicles = ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
+    final vehicles =
+        ref.watch(vehiclesProvider).valueOrNull ?? const <Vehicle>[];
 
     return AlertDialog(
       title: const Text('Geplante Alarmierung ändern'),
@@ -354,8 +367,8 @@ class _ChangeScheduledAlarmDialogState
                         _scheduledDate == null
                             ? 'Datum wählen'
                             : '${_scheduledDate!.day.toString().padLeft(2, '0')}.'
-                                '${_scheduledDate!.month.toString().padLeft(2, '0')}.'
-                                '${_scheduledDate!.year}',
+                                  '${_scheduledDate!.month.toString().padLeft(2, '0')}.'
+                                  '${_scheduledDate!.year}',
                       ),
                     ),
                   ),
@@ -375,14 +388,19 @@ class _ChangeScheduledAlarmDialogState
               ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting
+              ? null
+              : () => Navigator.of(context).pop(false),
           child: const Text('Abbrechen'),
         ),
         FilledButton(

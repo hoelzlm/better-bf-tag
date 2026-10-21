@@ -28,8 +28,8 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
   _FakePersonAdminRepository({
     List<Person>? persons,
     Map<String, List<Device>>? devices,
-  })  : persons = persons ?? [],
-        devices = devices ?? {};
+  }) : persons = persons ?? [],
+       devices = devices ?? {};
 
   List<Person> persons;
   Map<String, List<Device>> devices;
@@ -94,7 +94,10 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
   @override
   Future<void> removeWebAccess(String id) async {
     final index = persons.indexWhere((p) => p.id == id);
-    final updated = persons[index].copyWith(hasWebAccess: false, username: null);
+    final updated = persons[index].copyWith(
+      hasWebAccess: false,
+      username: null,
+    );
     persons = List.of(persons)..[index] = updated;
   }
 
@@ -113,8 +116,7 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
   @override
   Future<List<PairingCodeItem>> createPairingCodes({
     List<String>? personIds,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<List<Device>> listPersonDevices(String id) async =>
@@ -163,9 +165,7 @@ Future<_FakePersonAdminRepository> _pump(
   );
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        personAdminRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [personAdminRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(theme: bftagLightTheme(), home: const PersonsScreen()),
     ),
   );
@@ -187,9 +187,13 @@ void main() {
     expect(find.textContaining('Erika Musterfrau'), findsOneWidget);
   });
 
-  testWidgets('BF-Tag ohne Handys: no pairing codes and no device management',
-      (tester) async {
-    await _pump(tester, persons: [_person(id: 'p1', displayName: 'Max')]);
+  testWidgets('BF-Tag ohne Handys: no pairing codes and no device management', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      persons: [_person(id: 'p1', displayName: 'Max')],
+    );
 
     expect(find.byKey(const Key('print-pairing-codes')), findsNothing);
     expect(find.byKey(const Key('devices-p1')), findsNothing);
@@ -198,158 +202,149 @@ void main() {
     expect(find.byKey(const Key('create-person')), findsOneWidget);
   });
 
-  testWidgets(
-    'Administrator option is hidden for Personentyp Jugendlicher',
-    (tester) async {
-      await _pump(tester, persons: []);
+  testWidgets('Administrator option is hidden for Personentyp Jugendlicher', (
+    tester,
+  ) async {
+    await _pump(tester, persons: []);
 
-      await tester.tap(find.byKey(const Key('create-person')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-person')));
+    await tester.pumpAndSettle();
 
-      // Default personType is youth: no admin chip offered.
-      expect(find.byKey(const Key('permission-admin')), findsNothing);
+    // Default personType is youth: no admin chip offered.
+    expect(find.byKey(const Key('permission-admin')), findsNothing);
 
-      await tester.tap(find.byKey(const Key('person-type-supervisor')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('person-type-supervisor')));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('permission-admin')), findsOneWidget);
+    expect(find.byKey(const Key('permission-admin')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('person-type-youth')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('person-type-youth')));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('permission-admin')), findsNothing);
-    },
-  );
+    expect(find.byKey(const Key('permission-admin')), findsNothing);
+  });
 
-  testWidgets(
-    'creating a person calls createPerson with the entered fields',
-    (tester) async {
-      final repository = await _pump(tester, persons: []);
+  testWidgets('creating a person calls createPerson with the entered fields', (
+    tester,
+  ) async {
+    final repository = await _pump(tester, persons: []);
 
-      await tester.tap(find.byKey(const Key('create-person')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-person')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('person-form-display-name')),
-        'Neue Person',
-      );
-      await tester.tap(find.byKey(const Key('person-type-supervisor')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('permission-admin')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('person-form-display-name')),
+      'Neue Person',
+    );
+    await tester.tap(find.byKey(const Key('person-type-supervisor')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('permission-admin')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('person-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('person-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(repository.createCalls, hasLength(1));
-      final call = repository.createCalls.single;
-      expect(call.$1, 'Neue Person');
-      expect(call.$2, PersonType.supervisor);
-      expect(call.$3, Permission.admin);
-    },
-  );
+    expect(repository.createCalls, hasLength(1));
+    final call = repository.createCalls.single;
+    expect(call.$1, 'Neue Person');
+    expect(call.$2, PersonType.supervisor);
+    expect(call.$3, Permission.admin);
+  });
 
+  testWidgets('editing a person calls updatePerson with the entered fields', (
+    tester,
+  ) async {
+    final person = _person(
+      id: 'p1',
+      displayName: 'Max Mustermann',
+      personType: PersonType.youth,
+      permission: Permission.crew,
+    );
+    final repository = await _pump(tester, persons: [person]);
 
-  testWidgets(
-    'editing a person calls updatePerson with the entered fields',
-    (tester) async {
-      final person = _person(
-        id: 'p1',
-        displayName: 'Max Mustermann',
-        personType: PersonType.youth,
-        permission: Permission.crew,
-      );
-      final repository = await _pump(tester, persons: [person]);
+    await tester.tap(find.byKey(const Key('person-p1')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('person-p1')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('person-form-display-name')),
+      'Max Geändert',
+    );
+    await tester.tap(find.byKey(const Key('person-form-submit')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('person-form-display-name')),
-        'Max Geändert',
-      );
-      await tester.tap(find.byKey(const Key('person-form-submit')));
-      await tester.pumpAndSettle();
+    expect(repository.persons.single.displayName, 'Max Geändert');
+    expect(find.textContaining('Max Geändert'), findsOneWidget);
+  });
 
-      expect(repository.persons.single.displayName, 'Max Geändert');
-      expect(find.textContaining('Max Geändert'), findsOneWidget);
-    },
-  );
+  testWidgets('toggling active calls updatePerson with active after confirm', (
+    tester,
+  ) async {
+    final person = _person(id: 'p1', active: true);
+    final repository = await _pump(tester, persons: [person]);
 
-  testWidgets(
-    'toggling active calls updatePerson with active after confirm',
-    (tester) async {
-      final person = _person(id: 'p1', active: true);
-      final repository = await _pump(tester, persons: [person]);
+    await tester.tap(find.byKey(const Key('active-switch-p1')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('active-switch-p1')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('confirm-dialog-confirm')));
-      await tester.pumpAndSettle();
+    expect(repository.persons.single.active, isFalse);
+  });
 
-      expect(repository.persons.single.active, isFalse);
-    },
-  );
-
-  testWidgets(
-    'load error shows the error message instead of the list',
-    (tester) async {
-      tester.view.physicalSize = const Size(1600, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            personAdminRepositoryProvider.overrideWithValue(
-              _ThrowingPersonAdminRepository(),
-            ),
-          ],
-          child:
-              MaterialApp(theme: bftagLightTheme(), home: const PersonsScreen()),
+  testWidgets('load error shows the error message instead of the list', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          personAdminRepositoryProvider.overrideWithValue(
+            _ThrowingPersonAdminRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const PersonsScreen(),
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Personen konnten nicht geladen werden.'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('persons-list')), findsNothing);
-    },
-  );
+    expect(find.text('Personen konnten nicht geladen werden.'), findsOneWidget);
+    expect(find.byKey(const Key('persons-list')), findsNothing);
+  });
 
-  testWidgets(
-    'load error shows a retry button that calls the same load path',
-    (tester) async {
-      tester.view.physicalSize = const Size(1600, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      final repository = _ThrowingPersonAdminRepository();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            personAdminRepositoryProvider.overrideWithValue(repository),
-          ],
-          child:
-              MaterialApp(theme: bftagLightTheme(), home: const PersonsScreen()),
+  testWidgets('load error shows a retry button that calls the same load path', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final repository = _ThrowingPersonAdminRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          personAdminRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const PersonsScreen(),
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.text('Erneut versuchen'), findsOneWidget);
+    expect(find.text('Erneut versuchen'), findsOneWidget);
 
-      await tester.tap(find.text('Erneut versuchen'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Erneut versuchen'));
+    await tester.pumpAndSettle();
 
-      // Still errors (fake always throws), but the retry path (same
-      // `_reload()` that initState used) was exercised without crashing.
-      expect(
-        find.text('Personen konnten nicht geladen werden.'),
-        findsOneWidget,
-      );
-    },
-  );
+    // Still errors (fake always throws), but the retry path (same
+    // `_reload()` that initState used) was exercised without crashing.
+    expect(find.text('Personen konnten nicht geladen werden.'), findsOneWidget);
+  });
 
   testWidgets(
     'empty list shows "Noch keine Personen" and a working create action',
@@ -395,20 +390,18 @@ void main() {
     },
   );
 
-  testWidgets(
-    'web-access-{id} is only shown for permission != crew',
-    (tester) async {
-      await _pump(
-        tester,
-        persons: [
-          _person(id: 'p1', permission: Permission.crew),
-          _person(id: 'p2', permission: Permission.dispatch),
-        ],
-      );
+  testWidgets('web-access-{id} is only shown for permission != crew', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      persons: [
+        _person(id: 'p1', permission: Permission.crew),
+        _person(id: 'p2', permission: Permission.dispatch),
+      ],
+    );
 
-      expect(find.byKey(const Key('web-access-p1')), findsNothing);
-      expect(find.byKey(const Key('web-access-p2')), findsOneWidget);
-    },
-  );
-
+    expect(find.byKey(const Key('web-access-p1')), findsNothing);
+    expect(find.byKey(const Key('web-access-p2')), findsOneWidget);
+  });
 }

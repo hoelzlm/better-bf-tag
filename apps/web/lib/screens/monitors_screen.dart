@@ -51,17 +51,17 @@ Future<bool> _confirm(
 /// nicht gekoppelt, dann gesperrt -- reine Darstellungsreihenfolge, keine
 /// Zeile wird entfernt.
 int _statusSortOrder(MonitorDisplayStatus status) => switch (status) {
-      MonitorDisplayStatus.paired => 0,
-      MonitorDisplayStatus.notPaired => 1,
-      MonitorDisplayStatus.revoked => 2,
-    };
+  MonitorDisplayStatus.paired => 0,
+  MonitorDisplayStatus.notPaired => 1,
+  MonitorDisplayStatus.revoked => 2,
+};
 
 List<Monitor> _sortedMonitors(List<Monitor> monitors) {
   final sorted = List<Monitor>.of(monitors);
   sorted.sort(
-    (a, b) => _statusSortOrder(
-      monitorStatusOf(a),
-    ).compareTo(_statusSortOrder(monitorStatusOf(b))),
+    (a, b) =>
+        _statusSortOrder(monitorStatusOf(a))
+            .compareTo(_statusSortOrder(monitorStatusOf(b))),
   );
   return sorted;
 }
@@ -92,8 +92,9 @@ class _MonitorsScreenState extends ConsumerState<MonitorsScreen> {
 
   Future<void> _reload() async {
     try {
-      final monitors =
-          await ref.read(monitorAdminRepositoryProvider).listMonitors();
+      final monitors = await ref
+          .read(monitorAdminRepositoryProvider)
+          .listMonitors();
       if (!mounted) return;
       setState(() {
         _monitors = monitors;
@@ -109,9 +110,8 @@ class _MonitorsScreenState extends ConsumerState<MonitorsScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateDialog() async {
@@ -121,9 +121,7 @@ class _MonitorsScreenState extends ConsumerState<MonitorsScreen> {
     );
     if (name == null) return;
     try {
-      await ref
-          .read(monitorAdminRepositoryProvider)
-          .createMonitor(name: name);
+      await ref.read(monitorAdminRepositoryProvider).createMonitor(name: name);
       await _reload();
     } catch (error) {
       _showError(
@@ -154,18 +152,19 @@ class _MonitorsScreenState extends ConsumerState<MonitorsScreen> {
     final confirmed = await _confirm(
       context,
       title: 'Monitor sperren',
-      message: 'Der Monitor zeigt danach nichts mehr an und muss neu '
+      message:
+          'Der Monitor zeigt danach nichts mehr an und muss neu '
           'gekoppelt werden.',
       confirmLabel: 'Sperren',
     );
     if (!confirmed) return;
     try {
-      await ref.read(monitorAdminRepositoryProvider).revokeMonitor(
-            monitor.id,
-          );
+      await ref.read(monitorAdminRepositoryProvider).revokeMonitor(monitor.id);
       await _reload();
     } catch (error) {
-      _showError(describeApiError(error, 'Monitor konnte nicht gesperrt werden.'));
+      _showError(
+        describeApiError(error, 'Monitor konnte nicht gesperrt werden.'),
+      );
     }
   }
 
@@ -578,7 +577,9 @@ class _MonitorPairingCodeDialog extends StatelessWidget {
                       'Dieser Code wird nur einmal angezeigt. Ein neuer '
                       'Code beendet die aktuelle Sitzung dieses Monitors, '
                       'falls er bereits gekoppelt ist.',
-                      style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                      style: TextStyle(
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
                     ),
                   ),
                 ],

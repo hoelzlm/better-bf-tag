@@ -53,6 +53,25 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
   String? _selectedDayId;
   List<Incident>? _incidents;
   IncidentState _filter = IncidentState.draft;
+
+  bool get _isRadio => switch (ref.read(sessionControllerProvider)) {
+    SessionSignedIn(person: final person) =>
+      person.permission == Permission.radio,
+    _ => false,
+  };
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Funktisch hat keinen Entwurf-Filter: Start auf "laufend".
+    final session = ref.read(sessionControllerProvider);
+    if (session is SessionSignedIn &&
+        session.person.permission == Permission.radio &&
+        _filter == IncidentState.draft) {
+      _filter = IncidentState.running;
+    }
+  }
+
   String? _loadError;
 
   /// Id of the card currently showing the brief post-create highlight
@@ -178,8 +197,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
       SessionSignedIn(person: final person) => person.permission,
       _ => null,
     };
-    final canAlarm =
-        permission == Permission.dispatch || permission == Permission.admin;
+    final canAlarm = permission?.canRunIncidents ?? false;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final anchorContext = _anchorKeyFor(incidentId).currentContext;
@@ -287,6 +305,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
       context: context,
       builder: (context) => AlarmDialog(
         incidentId: incident.id,
+        allowPlanning: !_isRadio,
         title: title,
         alreadyAlarmedVehicleIds: alreadyAlarmed,
         hasFirstAlarm: hasFirstAlarmFor(incident.id, alarms, scheduledAlarms),
@@ -371,8 +390,10 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
       SessionSignedIn(person: final person) => person.permission,
       _ => null,
     };
-    final canAlarm =
-        permission == Permission.dispatch || permission == Permission.admin;
+    final canAlarm = permission?.canRunIncidents ?? false;
+    // Funktisch: nur laufende + abgeschlossene Einsätze, nichts anlegen
+    // oder bearbeiten (Entwürfe liefert das Backend gar nicht erst).
+    final isRadio = permission == Permission.radio;
     final days = _days;
     final day = _selectedDay;
     final dayEnded = day?.state == BfDayState.ended;
@@ -404,15 +425,16 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
                 ],
               ),
             ),
-          Padding(
-            padding: EdgeInsets.only(right: spacing.lg),
-            child: FilledButton.icon(
-              key: const Key('create-incident'),
-              onPressed: (day == null || dayEnded) ? null : _openCreateDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Einsatz anlegen'),
+          if (!isRadio)
+            Padding(
+              padding: EdgeInsets.only(right: spacing.lg),
+              child: FilledButton.icon(
+                key: const Key('create-incident'),
+                onPressed: (day == null || dayEnded) ? null : _openCreateDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Einsatz anlegen'),
+              ),
             ),
-          ),
         ],
       ),
       body: days == null
@@ -436,16 +458,17 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
                 children: [
                   SegmentedButton<IncidentState>(
                     key: const Key('incident-filter'),
-                    segments: const [
-                      ButtonSegment(
-                        value: IncidentState.draft,
-                        label: Text('Entwurf'),
-                      ),
-                      ButtonSegment(
+                    segments: [
+                      if (!isRadio)
+                        const ButtonSegment(
+                          value: IncidentState.draft,
+                          label: Text('Entwurf'),
+                        ),
+                      const ButtonSegment(
                         value: IncidentState.running,
                         label: Text('laufend'),
                       ),
-                      ButtonSegment(
+                      const ButtonSegment(
                         value: IncidentState.closed,
                         label: Text('abgeschlossen'),
                       ),
@@ -465,7 +488,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
                       child: BftagStateView.empty(
                         icon: Icons.local_fire_department,
                         title: 'Keine Einsätze im Zustand ${_filter.label}.',
-                        action: _filter == IncidentState.draft
+                        action: _filter == IncidentState.draft && !isRadio
                             ? FilledButton.icon(
                                 key: const Key('incidents-empty-create'),
                                 onPressed: dayEnded ? null : _openCreateDialog,
@@ -499,7 +522,9 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
                                   alarmFocusNode: canAlarm
                                       ? _focusNodeFor(incident.id)
                                       : null,
-                                  onTap: () => _openEditDialog(incident),
+                                  onTap: isRadio
+                                      ? null
+                                      : () => _openEditDialog(incident),
                                   onDiscard: () => _discard(incident),
                                   onAlarm: () => _openAlarmDialog(incident),
                                 ),
@@ -538,7 +563,7 @@ class _IncidentCard extends StatelessWidget {
   final String? elapsedLabel;
   final bool canAlarm;
   final FocusNode? alarmFocusNode;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback onDiscard;
   final VoidCallback onAlarm;
 
@@ -832,7 +857,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
     if (pin == null && address.isNotEmpty && !_pinRemovedByUser) {
       setState(() => _saving = true);
       try {
-        final results = await ref.read(geocodeRepositoryProvider).search(address);
+        final results = await ref
+            .read(geocodeRepositoryProvider)
+            .search(address);
         if (results.isNotEmpty) {
           pin = LatLng(results.first.latitude, results.first.longitude);
         }
@@ -900,8 +927,7 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                       onSubmitted: readOnly ? null : (_) => _search(),
                       decoration: const InputDecoration(
                         labelText: 'Adresse',
-                        helperText:
-                            'Beim Speichern wird der Ort automatisch auf der Karte gesetzt.',
+                        helperText: 'Beim Speichern wird der Ort automatisch auf der Karte gesetzt.',
                       ),
                     ),
                   ),

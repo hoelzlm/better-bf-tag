@@ -23,10 +23,7 @@ class AuthInterceptor extends QueuedInterceptor {
   bool _isAuthPath(String path) => path.contains('/auth/');
 
   @override
-  void onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
-  ) {
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (!_isAuthPath(options.path)) {
       final token = _ref.read(authSessionBindingProvider).accessToken;
       if (token != null) {
@@ -54,8 +51,9 @@ class AuthInterceptor extends QueuedInterceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    final newToken =
-        await _ref.read(authSessionBindingProvider).refreshAccessToken();
+    final newToken = await _ref
+        .read(authSessionBindingProvider)
+        .refreshAccessToken();
     if (newToken == null) {
       handler.next(err);
       return;

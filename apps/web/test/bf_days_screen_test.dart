@@ -219,8 +219,7 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
     required String displayName,
     required PersonType personType,
     required Permission permission,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Person> updatePerson(
@@ -229,16 +228,14 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
     PersonType? personType,
     Permission? permission,
     bool? active,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<Person> setWebAccess(
     String id, {
     required String username,
     required String password,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> removeWebAccess(String id) => throw UnimplementedError();
@@ -248,9 +245,7 @@ class _FakePersonAdminRepository implements PersonAdminRepository {
       throw UnimplementedError();
 
   @override
-  Future<List<PairingCodeItem>> createPairingCodes({
-    List<String>? personIds,
-  }) =>
+  Future<List<PairingCodeItem>> createPairingCodes({List<String>? personIds}) =>
       throw UnimplementedError();
 
   @override
@@ -301,17 +296,16 @@ void main() {
   testWidgets('lists BF-Tage with Zeitraum and Zustand chip', (tester) async {
     await _pump(
       tester,
-      days: [
-        _bfDay(id: 'd1', name: 'BF-Tag 2026', state: BfDayState.planning),
-      ],
+      days: [_bfDay(id: 'd1', name: 'BF-Tag 2026', state: BfDayState.planning)],
     );
 
     expect(find.textContaining('BF-Tag 2026'), findsOneWidget);
     expect(find.text('in Planung'), findsOneWidget);
   });
 
-  testWidgets('create dialog calls the API with the entered values',
-      (tester) async {
+  testWidgets('create dialog calls the API with the entered values', (
+    tester,
+  ) async {
     final repository = await _pump(tester, days: []);
 
     await tester.tap(find.byKey(const Key('create-bf-day')));
@@ -329,8 +323,9 @@ void main() {
     expect(find.textContaining('Neuer BF-Tag'), findsOneWidget);
   });
 
-  testWidgets('edit dialog (tap list tile) calls update with the new values',
-      (tester) async {
+  testWidgets('edit dialog (tap list tile) calls update with the new values', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay(id: 'd1', name: 'BF-Tag 2026', state: BfDayState.planning)],
@@ -351,8 +346,9 @@ void main() {
     expect(find.textContaining('Umbenannter BF-Tag'), findsOneWidget);
   });
 
-  testWidgets('a running BF-Tag cannot be opened for editing (no onTap)',
-      (tester) async {
+  testWidgets('a running BF-Tag cannot be opened for editing (no onTap)', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay(id: 'd1', state: BfDayState.running)],
@@ -364,8 +360,9 @@ void main() {
     expect(find.text('BF-Tag bearbeiten'), findsNothing);
   });
 
-  testWidgets('starting a BF-Tag calls start only after confirm',
-      (tester) async {
+  testWidgets('starting a BF-Tag calls start only after confirm', (
+    tester,
+  ) async {
     final repository = await _pump(
       tester,
       days: [_bfDay(id: 'd1', state: BfDayState.planning)],
@@ -384,8 +381,9 @@ void main() {
     expect(find.byKey(const Key('bf-day-end-d1')), findsOneWidget);
   });
 
-  testWidgets('a running BF-Tag only offers Beenden, not Starten',
-      (tester) async {
+  testWidgets('a running BF-Tag only offers Beenden, not Starten', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay(id: 'd1', state: BfDayState.running)],
@@ -395,8 +393,9 @@ void main() {
     expect(find.byKey(const Key('bf-day-end-d1')), findsOneWidget);
   });
 
-  testWidgets('starting shows the backend error message on failure',
-      (tester) async {
+  testWidgets('starting shows the backend error message on failure', (
+    tester,
+  ) async {
     final repository = _FakeBfDayAdminRepository(
       days: [_bfDay(id: 'd1', state: BfDayState.planning)],
     );
@@ -429,7 +428,10 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(theme: bftagLightTheme(), home: const BfDaysScreen()),
+        child: MaterialApp(
+          theme: bftagLightTheme(),
+          home: const BfDaysScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -442,8 +444,9 @@ void main() {
     expect(find.text('Es läuft bereits ein BF-Tag.'), findsOneWidget);
   });
 
-  testWidgets('participants dialog saves the selected person ids',
-      (tester) async {
+  testWidgets('participants dialog saves the selected person ids', (
+    tester,
+  ) async {
     final repository = await _pump(
       tester,
       days: [_bfDay(id: 'd1')],
@@ -488,7 +491,10 @@ void main() {
     await tester.tap(find.byKey(const Key('participants-submit')));
     await tester.pumpAndSettle();
 
-    expect(repository.setParticipantsCalls.single.$2, unorderedEquals(['p1', 'p2']));
+    expect(
+      repository.setParticipantsCalls.single.$2,
+      unorderedEquals(['p1', 'p2']),
+    );
   });
 
   group('Anonymisierung (ADR 0020)', () {
@@ -510,62 +516,63 @@ void main() {
       },
     );
 
-    testWidgets('anonymized day shows "Anonymisiert am" instead of the button',
-        (tester) async {
-      await _pump(
-        tester,
-        days: [
-          _bfDay(
-            id: 'd1',
-            state: BfDayState.ended,
-            anonymizedAt: DateTime.utc(2026, 6, 3, 10, 30),
-          ),
-        ],
-      );
+    testWidgets(
+      'anonymized day shows "Anonymisiert am" instead of the button',
+      (tester) async {
+        await _pump(
+          tester,
+          days: [
+            _bfDay(
+              id: 'd1',
+              state: BfDayState.ended,
+              anonymizedAt: DateTime.utc(2026, 6, 3, 10, 30),
+            ),
+          ],
+        );
 
-      expect(find.byKey(const Key('bf-day-anonymize-d1')), findsNothing);
-      expect(
-        find.byKey(const Key('bf-day-anonymized-d1')),
-        findsOneWidget,
-      );
-      expect(find.textContaining('Anonymisiert am 03.06.2026'), findsOneWidget);
-    });
+        expect(find.byKey(const Key('bf-day-anonymize-d1')), findsNothing);
+        expect(find.byKey(const Key('bf-day-anonymized-d1')), findsOneWidget);
+        expect(
+          find.textContaining('Anonymisiert am 03.06.2026'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('dialog shows preview numbers; confirm calls anonymize and reloads',
-        (tester) async {
-      final repository = await _pump(
-        tester,
-        days: [_bfDay(id: 'd1', state: BfDayState.ended)],
-      );
-      repository.anonymizationPreviewResult = const AnonymizationSummary(
-        participations: 3,
-        crewAssignments: 2,
-        alarmRecipients: 5,
-        statusEvents: 7,
-        personsDeleted: 1,
-        announcements: 0,
-      );
+    testWidgets(
+      'dialog shows preview numbers; confirm calls anonymize and reloads',
+      (tester) async {
+        final repository = await _pump(
+          tester,
+          days: [_bfDay(id: 'd1', state: BfDayState.ended)],
+        );
+        repository.anonymizationPreviewResult = const AnonymizationSummary(
+          participations: 3,
+          crewAssignments: 2,
+          alarmRecipients: 5,
+          statusEvents: 7,
+          personsDeleted: 1,
+          announcements: 0,
+        );
 
-      await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));
+        await tester.pumpAndSettle();
 
-      expect(find.text('3 Teilnahmen'), findsOneWidget);
-      expect(find.text('2 Besatzungseinträge'), findsOneWidget);
-      expect(find.textContaining('5 Empfänger und'), findsOneWidget);
-      expect(find.textContaining('1 Personen anderer'), findsOneWidget);
-      expect(find.textContaining('7'), findsWidgets);
-      expect(find.textContaining('nicht rückgängig'), findsOneWidget);
+        expect(find.text('3 Teilnahmen'), findsOneWidget);
+        expect(find.text('2 Besatzungseinträge'), findsOneWidget);
+        expect(find.textContaining('5 Empfänger und'), findsOneWidget);
+        expect(find.textContaining('1 Personen anderer'), findsOneWidget);
+        expect(find.textContaining('7'), findsWidgets);
+        expect(find.textContaining('nicht rückgängig'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('anonymize-dialog-confirm')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('anonymize-dialog-confirm')));
+        await tester.pumpAndSettle();
 
-      expect(repository.anonymizeCalls, ['d1']);
-      expect(find.text('BF-Tag anonymisiert.'), findsOneWidget);
-      expect(
-        find.byKey(const Key('bf-day-anonymized-d1')),
-        findsOneWidget,
-      );
-    });
+        expect(repository.anonymizeCalls, ['d1']);
+        expect(find.text('BF-Tag anonymisiert.'), findsOneWidget);
+        expect(find.byKey(const Key('bf-day-anonymized-d1')), findsOneWidget);
+      },
+    );
 
     testWidgets('cancel does not call anonymize', (tester) async {
       final repository = await _pump(
@@ -596,10 +603,7 @@ void main() {
 
         expect(find.byKey(const Key('create-bf-day')), findsNothing);
         expect(find.byKey(const Key('bf-day-start-d1')), findsNothing);
-        expect(
-          find.byKey(const Key('bf-day-participants-d1')),
-          findsNothing,
-        );
+        expect(find.byKey(const Key('bf-day-participants-d1')), findsNothing);
         expect(find.byKey(const Key('bf-day-anonymize-d2')), findsOneWidget);
       },
     );
@@ -616,9 +620,7 @@ void main() {
         await tester.tap(find.byKey(const Key('bf-day-anonymize-d1')));
         await tester.pumpAndSettle();
 
-        final buttonFinder = find.byKey(
-          const Key('anonymize-dialog-confirm'),
-        );
+        final buttonFinder = find.byKey(const Key('anonymize-dialog-confirm'));
         final button = tester.widget<FilledButton>(buttonFinder);
         final context = tester.element(buttonFinder);
         final alarmColors = Theme.of(context).extension<BftagAlarmColors>()!;
@@ -632,25 +634,27 @@ void main() {
     );
   });
 
-  testWidgets('empty list shows "Noch keine BF-Tage" and a working create action',
-      (tester) async {
-    final repository = await _pump(tester, days: []);
+  testWidgets(
+    'empty list shows "Noch keine BF-Tage" and a working create action',
+    (tester) async {
+      final repository = await _pump(tester, days: []);
 
-    expect(find.textContaining('Noch keine BF-Tage'), findsOneWidget);
+      expect(find.textContaining('Noch keine BF-Tage'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('bf-days-empty-create')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bf-days-empty-create')));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byKey(const Key('bf-day-form-name')),
-      'Erster BF-Tag',
-    );
-    await tester.tap(find.byKey(const Key('bf-day-form-submit')));
-    await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('bf-day-form-name')),
+        'Erster BF-Tag',
+      );
+      await tester.tap(find.byKey(const Key('bf-day-form-submit')));
+      await tester.pumpAndSettle();
 
-    expect(repository.createCalls, hasLength(1));
-    expect(repository.createCalls.single.$1, 'Erster BF-Tag');
-  });
+      expect(repository.createCalls, hasLength(1));
+      expect(repository.createCalls.single.$1, 'Erster BF-Tag');
+    },
+  );
 
   testWidgets(
     'load error shows a retry button; retry calls the same load path',

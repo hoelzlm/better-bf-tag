@@ -108,9 +108,7 @@ Future<_FakeVehicleAdminRepository> _pump(
   final repository = _FakeVehicleAdminRepository(vehicles);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        vehicleAdminRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [vehicleAdminRepositoryProvider.overrideWithValue(repository)],
       child: const MaterialApp(home: VehiclesScreen()),
     ),
   );
@@ -139,8 +137,9 @@ void main() {
 
   // AC 2: Klick auf eine Zeile öffnet den Bearbeiten-Dialog mit
   // vorausgefüllten Werten.
-  testWidgets('tapping a row opens the edit dialog with prefilled values',
-      (tester) async {
+  testWidgets('tapping a row opens the edit dialog with prefilled values', (
+    tester,
+  ) async {
     await _pump(
       tester,
       vehicles: [_vehicle(id: 'v1', callSign: 'Florian 1')],
@@ -158,8 +157,9 @@ void main() {
 
   // AC 3: "Fahrzeug anlegen" (Topbar-Button, Key `create-vehicle`) öffnet
   // den Anlegen-Dialog.
-  testWidgets('create-vehicle button in the AppBar opens the create dialog',
-      (tester) async {
+  testWidgets('create-vehicle button in the AppBar opens the create dialog', (
+    tester,
+  ) async {
     await _pump(tester, vehicles: [_vehicle(id: 'v1')]);
 
     expect(find.byType(FloatingActionButton), findsNothing);
@@ -177,68 +177,63 @@ void main() {
 
   // AC 4: Speichern im Anlegen-Dialog ruft create() mit den eingegebenen
   // Werten auf; die Liste wird danach neu geladen.
-  testWidgets(
-    'create dialog calls the API with the entered values',
-    (tester) async {
-      final repository = await _pump(tester, vehicles: []);
+  testWidgets('create dialog calls the API with the entered values', (
+    tester,
+  ) async {
+    final repository = await _pump(tester, vehicles: []);
 
-      await tester.tap(find.byKey(const Key('create-vehicle')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-vehicle')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('vehicle-form-call-sign')),
-        'Florian 3',
-      );
-      await tester.enterText(
-        find.byKey(const Key('vehicle-form-short-name')),
-        'LF 3',
-      );
-      await tester.tap(find.byKey(const Key('type-suggestion-LF')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('vehicle-form-call-sign')),
+      'Florian 3',
+    );
+    await tester.enterText(
+      find.byKey(const Key('vehicle-form-short-name')),
+      'LF 3',
+    );
+    await tester.tap(find.byKey(const Key('type-suggestion-LF')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('vehicle-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('vehicle-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(repository.createCalls, hasLength(1));
-      final call = repository.createCalls.single;
-      expect(call.$1, 'Florian 3');
-      expect(call.$3, 'LF');
-      expect(find.textContaining('Florian 3'), findsOneWidget);
-    },
-  );
+    expect(repository.createCalls, hasLength(1));
+    final call = repository.createCalls.single;
+    expect(call.$1, 'Florian 3');
+    expect(call.$3, 'LF');
+    expect(find.textContaining('Florian 3'), findsOneWidget);
+  });
 
   // AC 5: Speichern im Bearbeiten-Dialog ruft update() mit den eingegebenen
   // Werten auf.
-  testWidgets(
-    'editing a vehicle calls update with the entered fields',
-    (tester) async {
-      final repository = await _pump(
-        tester,
-        vehicles: [_vehicle(id: 'v1', callSign: 'Florian 1')],
-      );
+  testWidgets('editing a vehicle calls update with the entered fields', (
+    tester,
+  ) async {
+    final repository = await _pump(
+      tester,
+      vehicles: [_vehicle(id: 'v1', callSign: 'Florian 1')],
+    );
 
-      await tester.tap(find.byKey(const ValueKey('v1')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('v1')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('vehicle-form-call-sign')),
-        'Florian 1 neu',
-      );
-      await tester.tap(find.byKey(const Key('vehicle-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('vehicle-form-call-sign')),
+      'Florian 1 neu',
+    );
+    await tester.tap(find.byKey(const Key('vehicle-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(repository.vehicles.single.callSign, 'Florian 1 neu');
-      expect(find.textContaining('Florian 1 neu'), findsOneWidget);
-    },
-  );
+    expect(repository.vehicles.single.callSign, 'Florian 1 neu');
+    expect(find.textContaining('Florian 1 neu'), findsOneWidget);
+  });
 
   // AC 6: Umschalten des Aktiv-Schalters ruft update(active: …) auf und
   // lädt die Liste neu.
   testWidgets('toggling active calls update with active', (tester) async {
-    final repository = await _pump(
-      tester,
-      vehicles: [_vehicle(id: 'v1')],
-    );
+    final repository = await _pump(tester, vehicles: [_vehicle(id: 'v1')]);
 
     await tester.tap(find.byKey(const Key('active-switch-v1')));
     await tester.pumpAndSettle();
@@ -248,40 +243,36 @@ void main() {
 
   // AC 7: Leeres Funkrufname-, Kurzname- oder Typ-Feld zeigt einen
   // Inline-Fehler und verhindert das Absenden.
-  testWidgets(
-    'empty required fields show inline errors and block submit',
-    (tester) async {
-      final repository = await _pump(tester, vehicles: []);
+  testWidgets('empty required fields show inline errors and block submit', (
+    tester,
+  ) async {
+    final repository = await _pump(tester, vehicles: []);
 
-      await tester.tap(find.byKey(const Key('create-vehicle')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-vehicle')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('vehicle-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('vehicle-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Pflichtfeld'), findsNWidgets(3));
-      expect(repository.createCalls, isEmpty);
-      // Dialog is still open.
-      expect(find.byKey(const Key('vehicle-form-call-sign')), findsOneWidget);
+    expect(find.text('Pflichtfeld'), findsNWidgets(3));
+    expect(repository.createCalls, isEmpty);
+    // Dialog is still open.
+    expect(find.byKey(const Key('vehicle-form-call-sign')), findsOneWidget);
 
-      await tester.enterText(
-        find.byKey(const Key('vehicle-form-call-sign')),
-        'Florian 9',
-      );
-      await tester.enterText(
-        find.byKey(const Key('vehicle-form-short-name')),
-        'LF 9',
-      );
-      await tester.enterText(
-        find.byKey(const Key('vehicle-form-type')),
-        'LF',
-      );
-      await tester.tap(find.byKey(const Key('vehicle-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('vehicle-form-call-sign')),
+      'Florian 9',
+    );
+    await tester.enterText(
+      find.byKey(const Key('vehicle-form-short-name')),
+      'LF 9',
+    );
+    await tester.enterText(find.byKey(const Key('vehicle-form-type')), 'LF');
+    await tester.tap(find.byKey(const Key('vehicle-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(repository.createCalls, hasLength(1));
-    },
-  );
+    expect(repository.createCalls, hasLength(1));
+  });
 
   // AC 8: Ziehen einer Zeile an eine neue Position ruft reorder() mit der
   // neuen Reihenfolge der Fahrzeug-IDs auf.
@@ -294,8 +285,9 @@ void main() {
       ],
     );
 
-    final state =
-        tester.state<State<StatefulWidget>>(find.byType(VehiclesScreen));
+    final state = tester.state<State<StatefulWidget>>(
+      find.byType(VehiclesScreen),
+    );
     // Drive the private reorder handler via the public ReorderableListView
     // widget would require real drag gestures; call the API contract the
     // same way the UI does instead, confirming the handoff shape (ids in
@@ -314,29 +306,28 @@ void main() {
 
   // AC 9: Ladefehler zeigt "Fahrzeuge konnten nicht geladen werden." statt
   // der Liste.
-  testWidgets(
-    'load error shows the error message instead of the list',
-    (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            vehicleAdminRepositoryProvider.overrideWithValue(
-              _ThrowingVehicleAdminRepository(),
-            ),
-          ],
-          child: const MaterialApp(home: VehiclesScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('load error shows the error message instead of the list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          vehicleAdminRepositoryProvider.overrideWithValue(
+            _ThrowingVehicleAdminRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: VehiclesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Fahrzeuge konnten nicht geladen werden.'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('vehicles-list')), findsNothing);
-      expect(find.text('Erneut versuchen'), findsOneWidget);
-    },
-  );
+    expect(
+      find.text('Fahrzeuge konnten nicht geladen werden.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('vehicles-list')), findsNothing);
+    expect(find.text('Erneut versuchen'), findsOneWidget);
+  });
 
   // AC 10: Leere Fahrzeugliste zeigt den Leerzustand mit Primäraktion statt
   // einer leeren Fläche.
@@ -393,20 +384,19 @@ void main() {
     },
   );
 
-  testWidgets(
-    'drag handle exposes a sorting Semantics label per vehicle',
-    (tester) async {
-      final handle = tester.ensureSemantics();
-      await _pump(
-        tester,
-        vehicles: [_vehicle(id: 'v1', callSign: 'Florian 1')],
-      );
+  testWidgets('drag handle exposes a sorting Semantics label per vehicle', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _pump(
+      tester,
+      vehicles: [_vehicle(id: 'v1', callSign: 'Florian 1')],
+    );
 
-      expect(
-        find.bySemanticsLabel('Ziehen zum Sortieren: Florian 1'),
-        findsOneWidget,
-      );
-      handle.dispose();
-    },
-  );
+    expect(
+      find.bySemanticsLabel('Ziehen zum Sortieren: Florian 1'),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
 }

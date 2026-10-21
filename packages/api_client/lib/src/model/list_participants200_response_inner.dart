@@ -31,7 +31,7 @@ abstract class ListParticipants200ResponseInner implements Built<ListParticipant
 
   @BuiltValueField(wireName: r'permission')
   ListParticipants200ResponseInnerPermissionEnum get permission;
-  // enum permissionEnum {  crew,  preparation,  dispatch,  admin,  };
+  // enum permissionEnum {  crew,  preparation,  dispatch,  radio,  admin,  };
 
   @BuiltValueField(wireName: r'fire_department_id')
   String get fireDepartmentId;
@@ -194,6 +194,8 @@ class ListParticipants200ResponseInnerPermissionEnum extends EnumClass {
   static const ListParticipants200ResponseInnerPermissionEnum preparation = _$listParticipants200ResponseInnerPermissionEnum_preparation;
   @BuiltValueEnumConst(wireName: r'dispatch')
   static const ListParticipants200ResponseInnerPermissionEnum dispatch = _$listParticipants200ResponseInnerPermissionEnum_dispatch;
+  @BuiltValueEnumConst(wireName: r'radio')
+  static const ListParticipants200ResponseInnerPermissionEnum radio = _$listParticipants200ResponseInnerPermissionEnum_radio;
   @BuiltValueEnumConst(wireName: r'admin')
   static const ListParticipants200ResponseInnerPermissionEnum admin = _$listParticipants200ResponseInnerPermissionEnum_admin;
 

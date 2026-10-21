@@ -80,10 +80,7 @@ void main() {
     await tester.tap(find.byKey(const Key('login-submit')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Benutzername oder Passwort falsch.'),
-      findsOneWidget,
-    );
+    expect(find.text('Benutzername oder Passwort falsch.'), findsOneWidget);
     expect(find.byKey(const Key('login-submit')), findsOneWidget);
   });
 
@@ -92,10 +89,7 @@ void main() {
     (tester) async {
       await _pumpApp(tester);
 
-      await tester.enterText(
-        find.byKey(const Key('login-username')),
-        'admin',
-      );
+      await tester.enterText(find.byKey(const Key('login-username')), 'admin');
       await tester.enterText(
         find.byKey(const Key('login-password')),
         'admin12345',
@@ -112,8 +106,9 @@ void main() {
     },
   );
 
-  testWidgets('Enter key in the password field submits the form',
-      (tester) async {
+  testWidgets('Enter key in the password field submits the form', (
+    tester,
+  ) async {
     await _pumpApp(tester);
 
     await tester.enterText(find.byKey(const Key('login-username')), 'admin');

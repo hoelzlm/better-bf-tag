@@ -40,8 +40,7 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
 
   Future<void> _reload() async {
     try {
-      final vehicles =
-          await ref.read(vehicleAdminRepositoryProvider).listAll();
+      final vehicles = await ref.read(vehicleAdminRepositoryProvider).listAll();
       if (!mounted) return;
       setState(() {
         _vehicles = vehicles;
@@ -57,9 +56,8 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openCreateDialog() async {
@@ -408,11 +406,7 @@ class _VehicleFormDialogState extends State<_VehicleFormDialog> {
     });
     if (callSign.isEmpty || shortName.isEmpty || type.isEmpty) return;
     Navigator.of(context).pop(
-      _VehicleFormResult(
-        callSign: callSign,
-        shortName: shortName,
-        type: type,
-      ),
+      _VehicleFormResult(callSign: callSign, shortName: shortName, type: type),
     );
   }
 

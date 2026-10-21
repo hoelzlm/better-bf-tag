@@ -48,25 +48,20 @@ GoRouter _router(
         path: '/admin/einsaetze',
         builder: (context, state) => AdminShell(
           location: '/admin/einsaetze',
-          child: const Scaffold(
-            body: Center(child: Text('Einsätze-Screen')),
-          ),
+          child: const Scaffold(body: Center(child: Text('Einsätze-Screen'))),
         ),
       ),
       GoRoute(
         path: '/admin/fahrzeuge',
         builder: (context, state) => AdminShell(
           location: '/admin/fahrzeuge',
-          child: const Scaffold(
-            body: Center(child: Text('Fahrzeuge-Screen')),
-          ),
+          child: const Scaffold(body: Center(child: Text('Fahrzeuge-Screen'))),
         ),
       ),
       GoRoute(
         path: '/admin/login',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Login-Screen')),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Login-Screen'))),
       ),
     ],
   );
@@ -113,7 +108,8 @@ Future<void> _pump(
       ],
       child: MaterialApp.router(
         routerConfig: _router(
-          shellChild ?? const Scaffold(body: Center(child: Text('Lage-Inhalt'))),
+          shellChild ??
+              const Scaffold(body: Center(child: Text('Lage-Inhalt'))),
           sessionNotifier: sessionNotifier,
         ),
       ),
@@ -170,6 +166,19 @@ void main() {
       expect(find.text('Verwaltung'), findsNothing);
     },
   );
+
+  testWidgets('Funktisch sees only Lage and Einsätze, no Verwaltung', (
+    tester,
+  ) async {
+    await _pump(tester, permission: Permission.radio);
+
+    expect(find.byKey(const Key('nav-lage')), findsOneWidget);
+    expect(find.byKey(const Key('nav-einsaetze')), findsOneWidget);
+    for (final key in _existingNavKeys.where((k) => k != 'nav-einsaetze')) {
+      expect(find.byKey(Key(key)), findsNothing);
+    }
+    expect(find.text('Verwaltung'), findsNothing);
+  });
 
   testWidgets(
     'AC4: Permission.dispatch sees the Betriebsablauf entries, no Verwaltung',
@@ -259,15 +268,14 @@ void main() {
     expect(find.text('Login-Screen'), findsOneWidget);
   });
 
-  testWidgets(
-    'AC10: footer shows displayName and permission.label',
-    (tester) async {
-      await _pump(tester, permission: Permission.admin);
+  testWidgets('AC10: footer shows displayName and permission.label', (
+    tester,
+  ) async {
+    await _pump(tester, permission: Permission.admin);
 
-      expect(find.textContaining('Max Mustermann'), findsOneWidget);
-      expect(find.textContaining('Administrator'), findsOneWidget);
-    },
-  );
+    expect(find.textContaining('Max Mustermann'), findsOneWidget);
+    expect(find.textContaining('Administrator'), findsOneWidget);
+  });
 
   testWidgets(
     'AC11: collapsed icon-only nav items keep a Tooltip with the German label',
@@ -325,10 +333,7 @@ void main() {
     await _pump(tester, permission: Permission.admin);
 
     Icon iconFor(String key) => tester.widget<Icon>(
-      find.descendant(
-        of: find.byKey(Key(key)),
-        matching: find.byType(Icon),
-      ),
+      find.descendant(of: find.byKey(Key(key)), matching: find.byType(Icon)),
     );
 
     expect(iconFor('nav-lage').icon, Icons.home);

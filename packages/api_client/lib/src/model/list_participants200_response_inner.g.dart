@@ -44,6 +44,9 @@ const ListParticipants200ResponseInnerPermissionEnum
 _$listParticipants200ResponseInnerPermissionEnum_dispatch =
     const ListParticipants200ResponseInnerPermissionEnum._('dispatch');
 const ListParticipants200ResponseInnerPermissionEnum
+_$listParticipants200ResponseInnerPermissionEnum_radio =
+    const ListParticipants200ResponseInnerPermissionEnum._('radio');
+const ListParticipants200ResponseInnerPermissionEnum
 _$listParticipants200ResponseInnerPermissionEnum_admin =
     const ListParticipants200ResponseInnerPermissionEnum._('admin');
 
@@ -56,6 +59,8 @@ _$listParticipants200ResponseInnerPermissionEnumValueOf(String name) {
       return _$listParticipants200ResponseInnerPermissionEnum_preparation;
     case 'dispatch':
       return _$listParticipants200ResponseInnerPermissionEnum_dispatch;
+    case 'radio':
+      return _$listParticipants200ResponseInnerPermissionEnum_radio;
     case 'admin':
       return _$listParticipants200ResponseInnerPermissionEnum_admin;
     default:
@@ -70,6 +75,7 @@ _$listParticipants200ResponseInnerPermissionEnumValues =
         _$listParticipants200ResponseInnerPermissionEnum_crew,
         _$listParticipants200ResponseInnerPermissionEnum_preparation,
         _$listParticipants200ResponseInnerPermissionEnum_dispatch,
+        _$listParticipants200ResponseInnerPermissionEnum_radio,
         _$listParticipants200ResponseInnerPermissionEnum_admin,
       ],
     );
@@ -124,12 +130,14 @@ class _$ListParticipants200ResponseInnerPermissionEnumSerializer
     'crew': 'crew',
     'preparation': 'preparation',
     'dispatch': 'dispatch',
+    'radio': 'radio',
     'admin': 'admin',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'crew': 'crew',
     'preparation': 'preparation',
     'dispatch': 'dispatch',
+    'radio': 'radio',
     'admin': 'admin',
   };
 

@@ -89,7 +89,7 @@ _Avoid_: Anmeldung, Registrierung
 Ob eine Person **Jugendlicher** (minderjähriges JF-Mitglied) oder **Betreuer** (Erwachsener, z. B. Maschinist) ist. Unabhängig von der Berechtigung.
 
 **Berechtigung**:
-Was eine Person im System tun darf: Mannschaft, Einsatzvorbereitung (sieht Drehbücher), Leitstelle (alarmiert), Administrator (Stammdaten). Administrator nur für Betreuer.
+Was eine Person im System tun darf: Mannschaft, Einsatzvorbereitung (sieht Drehbücher), Leitstelle (alarmiert), Funktisch (führt nur laufende Einsätze: Fahrzeugstatus, Nachalarmieren, Schließen; sieht abgeschlossene, aber weder Entwürfe noch geplante Alarmierungen, legt nichts an), Administrator (Stammdaten). Administrator nur für Betreuer.
 _Avoid_: Rolle (mehrdeutig mit Personentyp und Funktion), Teilnehmer
 
 ### Dienst

@@ -5,9 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/announcement.dart';
 import 'dio_provider.dart';
 
-Announcement _announcementFromApi(
-  GetSnapshot200ResponseAnnouncementsInner a,
-) {
+Announcement _announcementFromApi(GetSnapshot200ResponseAnnouncementsInner a) {
   return Announcement(
     id: a.id,
     bfDayId: a.bfDayId,
@@ -50,8 +48,8 @@ class ApiAnnouncementRepository implements AnnouncementRepository {
   @override
   Future<List<Announcement>> list(String bfDayId) async {
     final response = await _api.listAnnouncements(day: bfDayId);
-    final data = response.data ??
-        BuiltList<GetSnapshot200ResponseAnnouncementsInner>();
+    final data =
+        response.data ?? BuiltList<GetSnapshot200ResponseAnnouncementsInner>();
     return data.map(_announcementFromApi).toList();
   }
 
@@ -71,9 +69,7 @@ class ApiAnnouncementRepository implements AnnouncementRepository {
     );
     final data = response.data;
     if (data == null) {
-      throw StateError(
-        'POST /bf-days/{day}/announcements returned no body',
-      );
+      throw StateError('POST /bf-days/{day}/announcements returned no body');
     }
     return _announcementFromApi(data);
   }
@@ -84,9 +80,7 @@ class ApiAnnouncementRepository implements AnnouncementRepository {
   }
 }
 
-final announcementRepositoryProvider = Provider<AnnouncementRepository>((
-  ref,
-) {
+final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return ApiAnnouncementRepository(apiClient.getAnnouncementsApi());
 });

@@ -8,7 +8,7 @@ export const personSummarySchema = z.object({
   id: z.string(),
   display_name: z.string(),
   person_type: z.enum(['youth', 'supervisor']),
-  permission: z.enum(['crew', 'preparation', 'dispatch', 'admin']),
+  permission: z.enum(['crew', 'preparation', 'dispatch', 'radio', 'admin']),
 });
 
 export const errorResponseSchema = z.object({

@@ -41,13 +41,13 @@ class AnonymizationSummary {
 
   @override
   int get hashCode => Object.hash(
-        participations,
-        crewAssignments,
-        alarmRecipients,
-        statusEvents,
-        personsDeleted,
-        announcements,
-      );
+    participations,
+    crewAssignments,
+    alarmRecipients,
+    statusEvents,
+    personsDeleted,
+    announcements,
+  );
 
   @override
   String toString() =>

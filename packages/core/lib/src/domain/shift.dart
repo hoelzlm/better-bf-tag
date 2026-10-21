@@ -32,8 +32,7 @@ class CrewAssignment {
       other.function == function;
 
   @override
-  int get hashCode =>
-      Object.hash(vehicleId, personId, displayName, function);
+  int get hashCode => Object.hash(vehicleId, personId, displayName, function);
 
   @override
   String toString() => 'CrewAssignment($vehicleId, $personId, $function)';

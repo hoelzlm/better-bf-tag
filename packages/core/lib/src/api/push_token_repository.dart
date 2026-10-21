@@ -23,9 +23,7 @@ class ApiPushTokenRepository implements PushTokenRepository {
   @override
   Future<void> updatePushToken(String token) async {
     await _api.updatePushToken(
-      updatePushTokenRequest: UpdatePushTokenRequest(
-        (b) => b..token = token,
-      ),
+      updatePushTokenRequest: UpdatePushTokenRequest((b) => b..token = token),
     );
   }
 }

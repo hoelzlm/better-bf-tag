@@ -5,7 +5,20 @@ enum Permission {
   crew,
   preparation,
   dispatch,
+
+  /// Funktisch (BF-Tag ohne Handys): setzt den per Funk gemeldeten
+  /// Fahrzeugstatus, alarmiert laufende Einsätze nach und schließt sie, sieht
+  /// abgeschlossene Einsätze. Sieht keine Entwürfe/geplanten Alarmierungen und
+  /// legt keine Einsätze an.
+  radio,
   admin;
+
+  /// Darf Fahrzeugstatus setzen und laufende Einsätze führen (Funktisch,
+  /// Nachalarmieren, Schließen).
+  bool get canRunIncidents =>
+      this == Permission.dispatch ||
+      this == Permission.radio ||
+      this == Permission.admin;
 
   /// Parses the wire representation used by the backend API.
   static Permission fromApi(String value) {
@@ -16,6 +29,8 @@ enum Permission {
         return Permission.preparation;
       case 'dispatch':
         return Permission.dispatch;
+      case 'radio':
+        return Permission.radio;
       case 'admin':
         return Permission.admin;
       default:
@@ -32,6 +47,8 @@ enum Permission {
         return 'Einsatzvorbereitung';
       case Permission.dispatch:
         return 'Leitstelle';
+      case Permission.radio:
+        return 'Funktisch';
       case Permission.admin:
         return 'Administrator';
     }

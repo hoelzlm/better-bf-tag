@@ -80,9 +80,7 @@ Future<_FakeMonitorAdminRepository> _pump(
   final repository = _FakeMonitorAdminRepository(monitors);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        monitorAdminRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [monitorAdminRepositoryProvider.overrideWithValue(repository)],
       child: const MaterialApp(home: MonitorsScreen()),
     ),
   );
@@ -91,36 +89,34 @@ Future<_FakeMonitorAdminRepository> _pump(
 }
 
 void main() {
-  testWidgets(
-    'Monitore AC1: lists all monitors with name, status label and '
-    '"zuletzt gesehen"',
-    (tester) async {
-      await _pump(
-        tester,
-        monitors: [
-          _monitor(id: 'm1', name: 'TV Eingang', paired: false),
-          _monitor(
-            id: 'm2',
-            name: 'TV Zelt',
-            paired: true,
-            pairedAt: DateTime(2026, 1, 1),
-            lastSeenAt: DateTime(2026, 1, 3, 9, 12),
-          ),
-        ],
-      );
+  testWidgets('Monitore AC1: lists all monitors with name, status label and '
+      '"zuletzt gesehen"', (tester) async {
+    await _pump(
+      tester,
+      monitors: [
+        _monitor(id: 'm1', name: 'TV Eingang', paired: false),
+        _monitor(
+          id: 'm2',
+          name: 'TV Zelt',
+          paired: true,
+          pairedAt: DateTime(2026, 1, 1),
+          lastSeenAt: DateTime(2026, 1, 3, 9, 12),
+        ),
+      ],
+    );
 
-      expect(find.text('TV Eingang'), findsOneWidget);
-      expect(find.text('nicht gekoppelt · noch nie gesehen'), findsOneWidget);
-      expect(find.text('TV Zelt'), findsOneWidget);
-      expect(
-        find.text('gekoppelt · zuletzt gesehen 03.01.2026 09:12'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(find.text('TV Eingang'), findsOneWidget);
+    expect(find.text('nicht gekoppelt · noch nie gesehen'), findsOneWidget);
+    expect(find.text('TV Zelt'), findsOneWidget);
+    expect(
+      find.text('gekoppelt · zuletzt gesehen 03.01.2026 09:12'),
+      findsOneWidget,
+    );
+  });
 
-  testWidgets('Monitore AC2: "Monitor anlegen" calls createMonitor(name:)',
-      (tester) async {
+  testWidgets('Monitore AC2: "Monitor anlegen" calls createMonitor(name:)', (
+    tester,
+  ) async {
     final repository = await _pump(tester, monitors: []);
 
     await tester.tap(find.byKey(const Key('create-monitor')));
@@ -137,35 +133,32 @@ void main() {
     expect(find.textContaining('Zelt-TV'), findsOneWidget);
   });
 
-  testWidgets(
-    'Monitore AC3: tapping a row opens rename prefilled and calls '
-    'updateMonitor(id, name:)',
-    (tester) async {
-      final repository = await _pump(
-        tester,
-        monitors: [_monitor(id: 'm1', name: 'Monitor 1')],
-      );
+  testWidgets('Monitore AC3: tapping a row opens rename prefilled and calls '
+      'updateMonitor(id, name:)', (tester) async {
+    final repository = await _pump(
+      tester,
+      monitors: [_monitor(id: 'm1', name: 'Monitor 1')],
+    );
 
-      await tester.tap(find.byKey(const Key('monitor-m1')));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<TextField>(find.byKey(const Key('monitor-form-name')))
-            .controller!
-            .text,
-        'Monitor 1',
-      );
-      await tester.enterText(
-        find.byKey(const Key('monitor-form-name')),
-        'Monitor Zelt',
-      );
-      await tester.tap(find.byKey(const Key('monitor-form-submit')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('monitor-m1')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('monitor-form-name')))
+          .controller!
+          .text,
+      'Monitor 1',
+    );
+    await tester.enterText(
+      find.byKey(const Key('monitor-form-name')),
+      'Monitor Zelt',
+    );
+    await tester.tap(find.byKey(const Key('monitor-form-submit')));
+    await tester.pumpAndSettle();
 
-      expect(repository.updateCalls, [('m1', 'Monitor Zelt')]);
-      expect(find.text('Monitor Zelt'), findsOneWidget);
-    },
-  );
+    expect(repository.updateCalls, [('m1', 'Monitor Zelt')]);
+    expect(find.text('Monitor Zelt'), findsOneWidget);
+  });
 
   testWidgets(
     'Monitore AC4: pairing code button calls createPairingCode(id) and '
@@ -236,29 +229,23 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Monitore AC7: load error shows "Monitore konnten nicht geladen '
-    'werden." instead of the list',
-    (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            monitorAdminRepositoryProvider.overrideWith(
-              (ref) => _ThrowingMonitorAdminRepository(),
-            ),
-          ],
-          child: const MaterialApp(home: MonitorsScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('Monitore AC7: load error shows "Monitore konnten nicht geladen '
+      'werden." instead of the list', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          monitorAdminRepositoryProvider.overrideWith(
+            (ref) => _ThrowingMonitorAdminRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: MonitorsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Monitore konnten nicht geladen werden.'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('monitors-list')), findsNothing);
-    },
-  );
+    expect(find.text('Monitore konnten nicht geladen werden.'), findsOneWidget);
+    expect(find.byKey(const Key('monitors-list')), findsNothing);
+  });
 
   testWidgets(
     'Monitore AC8: monitors are sorted gekoppelt, nicht gekoppelt, gesperrt',
@@ -290,8 +277,11 @@ void main() {
               matching: find.byWidgetPredicate(
                 (w) =>
                     w is Text &&
-                    ['Gesperrt', 'Nicht gekoppelt', 'Gekoppelt']
-                        .contains(w.data),
+                    [
+                      'Gesperrt',
+                      'Nicht gekoppelt',
+                      'Gekoppelt',
+                    ].contains(w.data),
               ),
             ),
           )
@@ -320,8 +310,9 @@ void main() {
     },
   );
 
-  testWidgets('Fehlerzustand: empty monitor list shows the empty state',
-      (tester) async {
+  testWidgets('Fehlerzustand: empty monitor list shows the empty state', (
+    tester,
+  ) async {
     await _pump(tester, monitors: []);
 
     expect(find.text('Noch keine Monitore angelegt.'), findsOneWidget);

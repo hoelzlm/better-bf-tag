@@ -551,77 +551,74 @@ void main() {
     },
   );
 
-  testWidgets(
-    'BF-Tag ohne Handys: Einsatzansicht lists the alarmed names and '
-    '"N alarmiert", without Quittierung state (AC4)',
-    (tester) async {
-      final env = _Env();
-      env.adapter.snapshotBody = {
-        'seq': 1,
-        'vehicles': <dynamic>[],
-        'incidents': [_incidentJson()],
-        'alarms': [
-          _alarmJson(
-            recipients: [
-              _recipientJson(personId: 'p1', displayName: 'Max M.'),
-              _recipientJson(personId: 'p2', displayName: 'Lea K.'),
-            ],
-          ),
-        ],
-      };
-      await _pumpMonitor(tester, env);
-      await _activateAndPair(tester, env);
+  testWidgets('BF-Tag ohne Handys: Einsatzansicht lists the alarmed names and '
+      '"N alarmiert", without Quittierung state (AC4)', (tester) async {
+    final env = _Env();
+    env.adapter.snapshotBody = {
+      'seq': 1,
+      'vehicles': <dynamic>[],
+      'incidents': [_incidentJson()],
+      'alarms': [
+        _alarmJson(
+          recipients: [
+            _recipientJson(personId: 'p1', displayName: 'Max M.'),
+            _recipientJson(personId: 'p2', displayName: 'Lea K.'),
+          ],
+        ),
+      ],
+    };
+    await _pumpMonitor(tester, env);
+    await _activateAndPair(tester, env);
 
-      expect(find.byKey(const Key('incident-recipient-p1')), findsOneWidget);
-      expect(find.byKey(const Key('incident-recipient-p2')), findsOneWidget);
-      expect(find.text('Max M.'), findsOneWidget);
-      expect(find.text('Alarmiert'), findsOneWidget);
-      expect(find.byKey(const Key('incident-ack-icon-p1')), findsNothing);
-      expect(
-        find.byKey(const Key('monitor-incident-ack-progress')),
-        findsOneWidget,
-      );
-      expect(find.text('2 alarmiert'), findsOneWidget);
-      expect(find.textContaining('quittiert'), findsNothing);
+    expect(find.byKey(const Key('incident-recipient-p1')), findsOneWidget);
+    expect(find.byKey(const Key('incident-recipient-p2')), findsOneWidget);
+    expect(find.text('Max M.'), findsOneWidget);
+    expect(find.text('Alarmiert'), findsOneWidget);
+    expect(find.byKey(const Key('incident-ack-icon-p1')), findsNothing);
+    expect(
+      find.byKey(const Key('monitor-incident-ack-progress')),
+      findsOneWidget,
+    );
+    expect(find.text('2 alarmiert'), findsOneWidget);
+    expect(find.textContaining('quittiert'), findsNothing);
 
-      // Key('monitor-incident-alarm-label') keeps showing the
-      // Alarmierungsstufe (unverändert), rendered as a neutral chip --
-      // never the alarm/red color (concept §3 Review-Runde 1 Punkt 8).
-      expect(
-        find.byKey(const Key('monitor-incident-alarm-label')),
-        findsOneWidget,
-      );
-      expect(find.text('ERSTALARM'), findsOneWidget);
-      final alarmLabelContainer = tester.widget<Container>(
-        find.byKey(const Key('monitor-incident-alarm-label')),
-      );
-      final alarmLabelDecoration =
-          alarmLabelContainer.decoration as BoxDecoration;
-      final theme = Theme.of(
-        tester.element(find.byKey(const Key('monitor-incident-alarm-label'))),
-      );
-      final alarmColors = theme.extension<BftagAlarmColors>();
-      expect(alarmLabelDecoration.color, isNot(equals(alarmColors?.alarm)));
+    // Key('monitor-incident-alarm-label') keeps showing the
+    // Alarmierungsstufe (unverändert), rendered as a neutral chip --
+    // never the alarm/red color (concept §3 Review-Runde 1 Punkt 8).
+    expect(
+      find.byKey(const Key('monitor-incident-alarm-label')),
+      findsOneWidget,
+    );
+    expect(find.text('ERSTALARM'), findsOneWidget);
+    final alarmLabelContainer = tester.widget<Container>(
+      find.byKey(const Key('monitor-incident-alarm-label')),
+    );
+    final alarmLabelDecoration =
+        alarmLabelContainer.decoration as BoxDecoration;
+    final theme = Theme.of(
+      tester.element(find.byKey(const Key('monitor-incident-alarm-label'))),
+    );
+    final alarmColors = theme.extension<BftagAlarmColors>();
+    expect(alarmLabelDecoration.color, isNot(equals(alarmColors?.alarm)));
 
-      env.connector.connections.single.emit({
-        'seq': 2,
-        'type': 'alarm.acknowledged',
-        'at': '2026-10-09T08:01:00Z',
-        'data': {
-          'alarm_id': 'a1',
-          'incident_id': 'i1',
-          'person_id': 'p1',
-          'display_name': 'Max M.',
-          'acknowledged_at': '2026-10-09T08:01:00Z',
-        },
-      });
-      await tester.pumpAndSettle();
+    env.connector.connections.single.emit({
+      'seq': 2,
+      'type': 'alarm.acknowledged',
+      'at': '2026-10-09T08:01:00Z',
+      'data': {
+        'alarm_id': 'a1',
+        'incident_id': 'i1',
+        'person_id': 'p1',
+        'display_name': 'Max M.',
+        'acknowledged_at': '2026-10-09T08:01:00Z',
+      },
+    });
+    await tester.pumpAndSettle();
 
-      // A stray acknowledgement event changes nothing visible.
-      expect(find.text('2 alarmiert'), findsOneWidget);
-      expect(find.textContaining('quittiert'), findsNothing);
-    },
-  );
+    // A stray acknowledgement event changes nothing visible.
+    expect(find.text('2 alarmiert'), findsOneWidget);
+    expect(find.textContaining('quittiert'), findsNothing);
+  });
 
   testWidgets(
     'connection loss (reconnecting) while the Einsatzansicht is shown '

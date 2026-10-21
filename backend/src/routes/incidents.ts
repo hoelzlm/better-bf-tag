@@ -332,7 +332,7 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.post(
     '/incidents/:id/close',
     {
-      preHandler: [requireAuth(), requirePermission('dispatch')],
+      preHandler: [requireAuth(), requirePermission('dispatch', 'radio')],
       schema: {
         operationId: 'closeIncident',
         tags: ['incidents'],
@@ -349,6 +349,14 @@ export const incidentRoutes: FastifyPluginAsyncZod = async fastify => {
       return fastify.realtime.mutate(async (tx, emit) => {
         const existing = await loadIncidentRow(tx, request.params.id);
         if (!existing) {
+          throw incidentNotFound();
+        }
+        // Funktisch (`radio`) sieht keine Entwürfe: wie nicht vorhanden.
+        if (
+          request.auth?.kind === 'person' &&
+          request.auth.permission === 'radio' &&
+          !canSeeIncident(request.auth, existing.state)
+        ) {
           throw incidentNotFound();
         }
 

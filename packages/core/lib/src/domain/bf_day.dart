@@ -67,8 +67,9 @@ class BfDay {
       startsAt: DateTime.parse(json['starts_at'] as String),
       endsAt: DateTime.parse(json['ends_at'] as String),
       state: BfDayState.fromWire(json['state'] as String),
-      anonymizedAt:
-          anonymizedAtRaw == null ? null : DateTime.parse(anonymizedAtRaw),
+      anonymizedAt: anonymizedAtRaw == null
+          ? null
+          : DateTime.parse(anonymizedAtRaw),
     );
   }
 

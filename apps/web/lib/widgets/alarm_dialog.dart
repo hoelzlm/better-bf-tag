@@ -52,6 +52,7 @@ class AlarmDialog extends ConsumerStatefulWidget {
     required this.title,
     this.alreadyAlarmedVehicleIds = const <String>{},
     this.hasFirstAlarm = false,
+    this.allowPlanning = true,
     this.onTriggered,
   });
 
@@ -59,6 +60,9 @@ class AlarmDialog extends ConsumerStatefulWidget {
   final String title;
   final Set<String> alreadyAlarmedVehicleIds;
   final bool hasFirstAlarm;
+
+  /// `false` für den Funktisch: nur Sofort-Alarmierung, kein "Wann?"-Block.
+  final bool allowPlanning;
 
   /// Called exactly once a Sofort-Alarmierung actually went through
   /// (`trigger()` succeeded, not the idempotent "bereits alarmiert" case)
@@ -309,60 +313,62 @@ class _AlarmDialogState extends ConsumerState<AlarmDialog> {
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
-              const Text(
-                'Wann?',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              // Note: RadioListTile's groupValue/onChanged are deprecated
-              // in favor of RadioGroup, but migrating would lose the
-              // per-tile enabled/disabled distinction needed here
-              // (immediate/scheduled vs. relative without Erstalarm) --
-              // ignored below instead.
-              RadioListTile<AlarmDialogMode>(
-                key: const Key('alarm-mode-immediate'),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Sofort'),
-                value: AlarmDialogMode.immediate,
-                // ignore: deprecated_member_use
-                groupValue: _mode,
-                // ignore: deprecated_member_use
-                onChanged: _submitting
-                    ? null
-                    : (value) => setState(() => _mode = value!),
-              ),
-              RadioListTile<AlarmDialogMode>(
-                key: const Key('alarm-mode-scheduled'),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Zeitpunkt'),
-                value: AlarmDialogMode.scheduled,
-                // ignore: deprecated_member_use
-                groupValue: _mode,
-                // ignore: deprecated_member_use
-                onChanged: _submitting
-                    ? null
-                    : (value) => setState(() => _mode = value!),
-              ),
-              RadioListTile<AlarmDialogMode>(
-                key: const Key('alarm-mode-relative'),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Relativ zum Erstalarm'),
-                subtitle: widget.hasFirstAlarm
-                    ? null
-                    : const Text(
-                        'Erst verfügbar, sobald es einen Erstalarm gibt.',
-                      ),
-                value: AlarmDialogMode.relative,
-                // ignore: deprecated_member_use
-                groupValue: _mode,
-                // ignore: deprecated_member_use
-                onChanged: (_submitting || !widget.hasFirstAlarm)
-                    ? null
-                    : (value) => setState(() => _mode = value!),
-              ),
+              if (widget.allowPlanning) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Wann?',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                // Note: RadioListTile's groupValue/onChanged are deprecated
+                // in favor of RadioGroup, but migrating would lose the
+                // per-tile enabled/disabled distinction needed here
+                // (immediate/scheduled vs. relative without Erstalarm) --
+                // ignored below instead.
+                RadioListTile<AlarmDialogMode>(
+                  key: const Key('alarm-mode-immediate'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Sofort'),
+                  value: AlarmDialogMode.immediate,
+                  // ignore: deprecated_member_use
+                  groupValue: _mode,
+                  // ignore: deprecated_member_use
+                  onChanged: _submitting
+                      ? null
+                      : (value) => setState(() => _mode = value!),
+                ),
+                RadioListTile<AlarmDialogMode>(
+                  key: const Key('alarm-mode-scheduled'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Zeitpunkt'),
+                  value: AlarmDialogMode.scheduled,
+                  // ignore: deprecated_member_use
+                  groupValue: _mode,
+                  // ignore: deprecated_member_use
+                  onChanged: _submitting
+                      ? null
+                      : (value) => setState(() => _mode = value!),
+                ),
+                RadioListTile<AlarmDialogMode>(
+                  key: const Key('alarm-mode-relative'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Relativ zum Erstalarm'),
+                  subtitle: widget.hasFirstAlarm
+                      ? null
+                      : const Text(
+                          'Erst verfügbar, sobald es einen Erstalarm gibt.',
+                        ),
+                  value: AlarmDialogMode.relative,
+                  // ignore: deprecated_member_use
+                  groupValue: _mode,
+                  // ignore: deprecated_member_use
+                  onChanged: (_submitting || !widget.hasFirstAlarm)
+                      ? null
+                      : (value) => setState(() => _mode = value!),
+                ),
+              ],
               if (_mode == AlarmDialogMode.scheduled) ...[
                 const SizedBox(height: 8),
                 Row(

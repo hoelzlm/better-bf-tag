@@ -309,7 +309,11 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
         let source: 'app' | 'dispatch';
         if (isCrew) {
           source = 'app';
-        } else if (auth.permission === 'dispatch' || auth.permission === 'admin') {
+        } else if (
+          auth.permission === 'dispatch' ||
+          auth.permission === 'radio' ||
+          auth.permission === 'admin'
+        ) {
           source = 'dispatch';
         } else {
           throw new ApiError(403, 'forbidden', 'Keine Berechtigung.');
@@ -365,7 +369,7 @@ export const vehicleRoutes: FastifyPluginAsyncZod = async fastify => {
   fastify.get(
     '/vehicles/:id/status-history',
     {
-      preHandler: [requireAuth(), requirePermission('dispatch')],
+      preHandler: [requireAuth(), requirePermission('dispatch', 'radio')],
       schema: {
         operationId: 'getVehicleStatusHistory',
         tags: ['vehicles'],

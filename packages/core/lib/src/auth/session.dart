@@ -51,17 +51,14 @@ PersonType _personTypeFromApi(Login200ResponsePersonPersonTypeEnum value) {
   return PersonType.youth;
 }
 
+/// Maps via the wire name, so a new backend Berechtigung only needs a case in
+/// [Permission.fromApi]. Unknown values fall back to the least privilege.
 Permission _permissionFromApi(Login200ResponsePersonPermissionEnum value) {
-  if (value == Login200ResponsePersonPermissionEnum.preparation) {
-    return Permission.preparation;
+  try {
+    return Permission.fromApi(value.name);
+  } on ArgumentError {
+    return Permission.crew;
   }
-  if (value == Login200ResponsePersonPermissionEnum.dispatch) {
-    return Permission.dispatch;
-  }
-  if (value == Login200ResponsePersonPermissionEnum.admin) {
-    return Permission.admin;
-  }
-  return Permission.crew;
 }
 
 Person _personFromApi(Login200ResponsePerson apiPerson) {

@@ -75,8 +75,8 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
   _FakeBfDayAdminRepository({
     List<BfDay>? days,
     Map<String, List<Participant>>? participants,
-  })  : days = days ?? [],
-        participants = participants ?? {};
+  }) : days = days ?? [],
+       participants = participants ?? {};
 
   List<BfDay> days;
   Map<String, List<Participant>> participants;
@@ -89,8 +89,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     required String name,
     required DateTime startsAt,
     required DateTime endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> update(
@@ -98,8 +97,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
     String? name,
     DateTime? startsAt,
     DateTime? endsAt,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<BfDay> start(String id) => throw UnimplementedError();
@@ -125,7 +123,7 @@ class _FakeBfDayAdminRepository implements BfDayAdminRepository {
 
 class _FakeShiftRepository implements ShiftRepository {
   _FakeShiftRepository({Map<String, List<Shift>>? shiftsByDay})
-      : shiftsByDay = shiftsByDay ?? {};
+    : shiftsByDay = shiftsByDay ?? {};
 
   Map<String, List<Shift>> shiftsByDay;
   final List<(String, List<CrewAssignmentInput>)> setCrewCalls = [];
@@ -177,7 +175,8 @@ class _FakeShiftRepository implements ShiftRepository {
       crew: current.crew,
     );
     shiftsByDay[day] = [
-      for (final s in list) if (s.id == id) updated else s,
+      for (final s in list)
+        if (s.id == id) updated else s,
     ];
     return updated;
   }
@@ -185,7 +184,8 @@ class _FakeShiftRepository implements ShiftRepository {
   @override
   Future<void> deleteShift(String day, String id) async {
     shiftsByDay[day] = [
-      for (final s in shiftsByDay[day] ?? const []) if (s.id != id) s,
+      for (final s in shiftsByDay[day] ?? const [])
+        if (s.id != id) s,
     ];
   }
 
@@ -231,10 +231,7 @@ class _FakeShiftRepository implements ShiftRepository {
   }
 }
 
-Future<(
-  _FakeBfDayAdminRepository,
-  _FakeShiftRepository,
-)> _pump(
+Future<(_FakeBfDayAdminRepository, _FakeShiftRepository)> _pump(
   WidgetTester tester, {
   required List<BfDay> days,
   Map<String, List<Shift>>? shifts,
@@ -252,8 +249,12 @@ Future<(
       overrides: [
         bfDayAdminRepositoryProvider.overrideWithValue(bfDayRepository),
         shiftRepositoryProvider.overrideWithValue(shiftRepository),
-        vehiclesProvider.overrideWith((ref) => Stream.value(vehicles ?? const [])),
-        shiftsProvider.overrideWith((ref) => shiftsEvents ?? Stream.value(const <Shift>[])),
+        vehiclesProvider.overrideWith(
+          (ref) => Stream.value(vehicles ?? const []),
+        ),
+        shiftsProvider.overrideWith(
+          (ref) => shiftsEvents ?? Stream.value(const <Shift>[]),
+        ),
         bfDayProvider.overrideWith((ref) => Stream.value(null)),
       ],
       child: const MaterialApp(home: ShiftsScreen()),
@@ -313,7 +314,11 @@ void main() {
       final target = find.byKey(const Key('vehicle-dropzone-v1'));
       final from = tester.getCenter(draggable);
       final to = tester.getCenter(target);
-      await tester.timedDrag(draggable, to - from, const Duration(milliseconds: 300));
+      await tester.timedDrag(
+        draggable,
+        to - from,
+        const Duration(milliseconds: 300),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Funktion wählen'), findsOneWidget);
@@ -331,8 +336,9 @@ void main() {
     },
   );
 
-  testWidgets('a person on two vehicles shows the double-booking marker',
-      (tester) async {
+  testWidgets('a person on two vehicles shows the double-booking marker', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay()],
@@ -369,8 +375,9 @@ void main() {
     expect(find.byIcon(Icons.warning), findsNWidgets(3));
   });
 
-  testWidgets('removing an assignment calls setCrew with the filtered list',
-      (tester) async {
+  testWidgets('removing an assignment calls setCrew with the filtered list', (
+    tester,
+  ) async {
     final (_, shiftRepository) = await _pump(
       tester,
       days: [_bfDay()],
@@ -435,7 +442,9 @@ void main() {
   testWidgets('a 409 error from setCrew shows a SnackBar', (tester) async {
     final bfDayRepository = _FakeBfDayAdminRepository(
       days: [_bfDay()],
-      participants: {'d1': [_participant()]},
+      participants: {
+        'd1': [_participant()],
+      },
     );
     final shiftRepository = _FakeShiftRepository(
       shiftsByDay: {
@@ -474,7 +483,11 @@ void main() {
     final target = find.byKey(const Key('vehicle-dropzone-v1'));
     final from = tester.getCenter(draggable);
     final to = tester.getCenter(target);
-    await tester.timedDrag(draggable, to - from, const Duration(milliseconds: 300));
+    await tester.timedDrag(
+      draggable,
+      to - from,
+      const Duration(milliseconds: 300),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('function-btn-GF')));
@@ -483,8 +496,9 @@ void main() {
     expect(find.text('Die Person nimmt nicht am BF-Tag teil.'), findsOneWidget);
   });
 
-  testWidgets('edit-shift calls updateShift with the new values',
-      (tester) async {
+  testWidgets('edit-shift calls updateShift with the new values', (
+    tester,
+  ) async {
     final (_, shiftRepository) = await _pump(
       tester,
       days: [_bfDay()],
@@ -515,8 +529,9 @@ void main() {
     expect(find.textContaining('Tagschicht'), findsOneWidget);
   });
 
-  testWidgets('delete-shift calls deleteShift only after confirm',
-      (tester) async {
+  testWidgets('delete-shift calls deleteShift only after confirm', (
+    tester,
+  ) async {
     final (_, _) = await _pump(
       tester,
       days: [_bfDay()],
@@ -541,188 +556,198 @@ void main() {
   });
 
   testWidgets(
-      'cancelling the delete-shift confirmation does not remove the shift',
-      (tester) async {
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      shifts: {
-        'd1': [_shift(id: 's1', name: 'Schicht 1')],
-      },
-      participants: {
-        'd1': [_participant()],
-      },
-      vehicles: [_vehicle()],
-    );
+    'cancelling the delete-shift confirmation does not remove the shift',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        shifts: {
+          'd1': [_shift(id: 's1', name: 'Schicht 1')],
+        },
+        participants: {
+          'd1': [_participant()],
+        },
+        vehicles: [_vehicle()],
+      );
 
-    await tester.tap(find.byKey(const Key('delete-shift')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Abbrechen').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('delete-shift')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Abbrechen').last);
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Schicht 1'), findsOneWidget);
-  });
+      expect(find.textContaining('Schicht 1'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'Echtzeit-Updates: a shiftsProvider event reloads the shift list',
-      (tester) async {
-    final controller = StreamController<List<Shift>>();
-    addTearDown(controller.close);
-    final shiftRepository = _FakeShiftRepository(
-      shiftsByDay: {
-        'd1': [_shift(id: 's1', name: 'Schicht 1')],
-      },
-    );
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          bfDayAdminRepositoryProvider.overrideWithValue(
-            _FakeBfDayAdminRepository(
-              days: [_bfDay()],
-              participants: {'d1': [_participant()]},
+    'Echtzeit-Updates: a shiftsProvider event reloads the shift list',
+    (tester) async {
+      final controller = StreamController<List<Shift>>();
+      addTearDown(controller.close);
+      final shiftRepository = _FakeShiftRepository(
+        shiftsByDay: {
+          'd1': [_shift(id: 's1', name: 'Schicht 1')],
+        },
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bfDayAdminRepositoryProvider.overrideWithValue(
+              _FakeBfDayAdminRepository(
+                days: [_bfDay()],
+                participants: {
+                  'd1': [_participant()],
+                },
+              ),
             ),
-          ),
-          shiftRepositoryProvider.overrideWithValue(shiftRepository),
-          vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
-          shiftsProvider.overrideWith((ref) => controller.stream),
-          bfDayProvider.overrideWith((ref) => Stream.value(null)),
-        ],
-        child: const MaterialApp(home: ShiftsScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
+            shiftRepositoryProvider.overrideWithValue(shiftRepository),
+            vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
+            shiftsProvider.overrideWith((ref) => controller.stream),
+            bfDayProvider.overrideWith((ref) => Stream.value(null)),
+          ],
+          child: const MaterialApp(home: ShiftsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Schicht 1'), findsOneWidget);
+      expect(find.textContaining('Schicht 1'), findsOneWidget);
 
-    // Simulate a WebSocket live-update: a new shift appears via the
-    // backend-pushed shiftsProvider event, which triggers a reload.
-    shiftRepository.shiftsByDay['d1'] = [
-      ...shiftRepository.shiftsByDay['d1']!,
-      _shift(id: 's2', name: 'Schicht 2'),
-    ];
-    controller.add(const []);
-    await tester.pumpAndSettle();
+      // Simulate a WebSocket live-update: a new shift appears via the
+      // backend-pushed shiftsProvider event, which triggers a reload.
+      shiftRepository.shiftsByDay['d1'] = [
+        ...shiftRepository.shiftsByDay['d1']!,
+        _shift(id: 's2', name: 'Schicht 2'),
+      ];
+      controller.add(const []);
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Schicht 2'), findsOneWidget);
-  });
+      expect(find.textContaining('Schicht 2'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Leerzustand: no shifts on the selected BF-Tag shows a message',
-      (tester) async {
+  testWidgets('Leerzustand: no shifts on the selected BF-Tag shows a message', (
+    tester,
+  ) async {
     await _pump(
       tester,
       days: [_bfDay()],
       shifts: {'d1': []},
-      participants: {'d1': [_participant()]},
+      participants: {
+        'd1': [_participant()],
+      },
       vehicles: [_vehicle()],
     );
 
     expect(find.text('Keine Schicht vorhanden.'), findsOneWidget);
   });
 
-  testWidgets('Leerzustand: no BF-Tage at all shows a message',
-      (tester) async {
+  testWidgets('Leerzustand: no BF-Tage at all shows a message', (tester) async {
     await _pump(tester, days: []);
 
     expect(find.text('Keine BF-Tage angelegt.'), findsOneWidget);
   });
 
   testWidgets(
-      'AC2: drop-target highlight during a drag uses colorScheme.primary',
-      (tester) async {
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      shifts: {
-        'd1': [_shift()],
-      },
-      participants: {
-        'd1': [_participant()],
-      },
-      vehicles: [_vehicle()],
-    );
+    'AC2: drop-target highlight during a drag uses colorScheme.primary',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        shifts: {
+          'd1': [_shift()],
+        },
+        participants: {
+          'd1': [_participant()],
+        },
+        vehicles: [_vehicle()],
+      );
 
-    final draggable = find.byKey(const Key('participant-draggable-p1'));
-    final target = find.byKey(const Key('vehicle-dropzone-v1'));
-    final from = tester.getCenter(draggable);
-    final to = tester.getCenter(target);
+      final draggable = find.byKey(const Key('participant-draggable-p1'));
+      final target = find.byKey(const Key('vehicle-dropzone-v1'));
+      final from = tester.getCenter(draggable);
+      final to = tester.getCenter(target);
 
-    final gesture = await tester.startGesture(from);
-    await tester.pump(const Duration(milliseconds: 50));
-    await gesture.moveTo(to);
-    await tester.pump(const Duration(milliseconds: 50));
+      final gesture = await tester.startGesture(from);
+      await tester.pump(const Duration(milliseconds: 50));
+      await gesture.moveTo(to);
+      await tester.pump(const Duration(milliseconds: 50));
 
-    final card = tester.widget<Card>(find.byKey(const Key('vehicle-card-v1')));
-    final shape = card.shape! as RoundedRectangleBorder;
-    final theme = Theme.of(tester.element(target));
-    expect(shape.side.color, theme.colorScheme.primary);
+      final card = tester.widget<Card>(
+        find.byKey(const Key('vehicle-card-v1')),
+      );
+      final shape = card.shape! as RoundedRectangleBorder;
+      final theme = Theme.of(tester.element(target));
+      expect(shape.side.color, theme.colorScheme.primary);
 
-    await gesture.up();
-    await tester.pumpAndSettle();
-  });
+      await gesture.up();
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets(
-      'AC3: a double-booked person shows a warning-colored border on its '
-      'chip in both the participants panel and both vehicle cards',
-      (tester) async {
-    await _pump(
-      tester,
-      days: [_bfDay()],
-      shifts: {
-        'd1': [
-          _shift(
-            crew: const [
-              CrewAssignment(
-                vehicleId: 'v1',
-                personId: 'p1',
-                displayName: 'Max Mustermann',
-                function: 'GF',
-              ),
-              CrewAssignment(
-                vehicleId: 'v2',
-                personId: 'p1',
-                displayName: 'Max Mustermann',
-                function: 'MA',
-              ),
-            ],
-          ),
+    'AC3: a double-booked person shows a warning-colored border on its '
+    'chip in both the participants panel and both vehicle cards',
+    (tester) async {
+      await _pump(
+        tester,
+        days: [_bfDay()],
+        shifts: {
+          'd1': [
+            _shift(
+              crew: const [
+                CrewAssignment(
+                  vehicleId: 'v1',
+                  personId: 'p1',
+                  displayName: 'Max Mustermann',
+                  function: 'GF',
+                ),
+                CrewAssignment(
+                  vehicleId: 'v2',
+                  personId: 'p1',
+                  displayName: 'Max Mustermann',
+                  function: 'MA',
+                ),
+              ],
+            ),
+          ],
+        },
+        participants: {
+          'd1': [_participant()],
+        },
+        vehicles: [
+          _vehicle(id: 'v1', shortName: 'HLF 1', sortOrder: 1),
+          _vehicle(id: 'v2', shortName: 'HLF 2', sortOrder: 2),
         ],
-      },
-      participants: {
-        'd1': [_participant()],
-      },
-      vehicles: [
-        _vehicle(id: 'v1', shortName: 'HLF 1', sortOrder: 1),
-        _vehicle(id: 'v2', shortName: 'HLF 2', sortOrder: 2),
-      ],
-    );
+      );
 
-    final theme = Theme.of(tester.element(find.byKey(const Key('vehicle-cards'))));
-    final warningColor = theme.colorScheme.error;
+      final theme = Theme.of(
+        tester.element(find.byKey(const Key('vehicle-cards'))),
+      );
+      final warningColor = theme.colorScheme.error;
 
-    final assignedChip = tester.widget<Chip>(
-      find.descendant(
-        of: find.byKey(const Key('assigned-participants')),
-        matching: find.byType(Chip),
-      ),
-    );
-    expect(assignedChip.side?.color, warningColor);
+      final assignedChip = tester.widget<Chip>(
+        find.descendant(
+          of: find.byKey(const Key('assigned-participants')),
+          matching: find.byType(Chip),
+        ),
+      );
+      expect(assignedChip.side?.color, warningColor);
 
-    final crewEntryChips = tester.widgetList<Chip>(
-      find.descendant(
-        of: find.byKey(const Key('vehicle-cards')),
-        matching: find.byType(Chip),
-      ),
-    );
-    expect(crewEntryChips, hasLength(2));
-    for (final chip in crewEntryChips) {
-      expect(chip.side?.color, warningColor);
-    }
-  });
+      final crewEntryChips = tester.widgetList<Chip>(
+        find.descendant(
+          of: find.byKey(const Key('vehicle-cards')),
+          matching: find.byType(Chip),
+        ),
+      );
+      expect(crewEntryChips, hasLength(2));
+      for (final chip in crewEntryChips) {
+        expect(chip.side?.color, warningColor);
+      }
+    },
+  );
 
-  testWidgets(
-      'AC4: dayEnded disables create/edit/delete and tooltips mention '
-      '"beendet"',
-      (tester) async {
+  testWidgets('AC4: dayEnded disables create/edit/delete and tooltips mention '
+      '"beendet"', (tester) async {
     await _pump(
       tester,
       days: [_bfDay(state: BfDayState.ended)],
@@ -735,8 +760,9 @@ void main() {
       vehicles: [_vehicle()],
     );
 
-    final createButton =
-        tester.widget<FilledButton>(find.byKey(const Key('create-shift')));
+    final createButton = tester.widget<FilledButton>(
+      find.byKey(const Key('create-shift')),
+    );
     expect(createButton.onPressed, isNull);
     final createTooltip = tester.widget<Tooltip>(
       find.ancestor(
@@ -746,73 +772,77 @@ void main() {
     );
     expect(createTooltip.message, contains('beendet'));
 
-    final editButton =
-        tester.widget<IconButton>(find.byKey(const Key('edit-shift')));
+    final editButton = tester.widget<IconButton>(
+      find.byKey(const Key('edit-shift')),
+    );
     expect(editButton.onPressed, isNull);
     expect(editButton.tooltip, contains('beendet'));
 
-    final deleteButton =
-        tester.widget<IconButton>(find.byKey(const Key('delete-shift')));
+    final deleteButton = tester.widget<IconButton>(
+      find.byKey(const Key('delete-shift')),
+    );
     expect(deleteButton.onPressed, isNull);
     expect(deleteButton.tooltip, contains('beendet'));
   });
 
   testWidgets(
-      'AC8: a shiftsProvider event keeps the BF-Tag/Schicht selection',
-      (tester) async {
-    final controller = StreamController<List<Shift>>();
-    addTearDown(controller.close);
-    final shiftRepository = _FakeShiftRepository(
-      shiftsByDay: {
-        'd1': [
-          _shift(
-            id: 's1',
-            name: 'Schicht 1',
-            startsAt: DateTime.now().subtract(const Duration(hours: 5)),
-          ),
-          _shift(
-            id: 's2',
-            name: 'Schicht 2',
-            startsAt: DateTime.now().add(const Duration(hours: 5)),
-          ),
-        ],
-      },
-    );
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          bfDayAdminRepositoryProvider.overrideWithValue(
-            _FakeBfDayAdminRepository(
-              days: [_bfDay()],
-              participants: {'d1': [_participant()]},
+    'AC8: a shiftsProvider event keeps the BF-Tag/Schicht selection',
+    (tester) async {
+      final controller = StreamController<List<Shift>>();
+      addTearDown(controller.close);
+      final shiftRepository = _FakeShiftRepository(
+        shiftsByDay: {
+          'd1': [
+            _shift(
+              id: 's1',
+              name: 'Schicht 1',
+              startsAt: DateTime.now().subtract(const Duration(hours: 5)),
             ),
-          ),
-          shiftRepositoryProvider.overrideWithValue(shiftRepository),
-          vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
-          shiftsProvider.overrideWith((ref) => controller.stream),
-          bfDayProvider.overrideWith((ref) => Stream.value(null)),
-        ],
-        child: const MaterialApp(home: ShiftsScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
+            _shift(
+              id: 's2',
+              name: 'Schicht 2',
+              startsAt: DateTime.now().add(const Duration(hours: 5)),
+            ),
+          ],
+        },
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bfDayAdminRepositoryProvider.overrideWithValue(
+              _FakeBfDayAdminRepository(
+                days: [_bfDay()],
+                participants: {
+                  'd1': [_participant()],
+                },
+              ),
+            ),
+            shiftRepositoryProvider.overrideWithValue(shiftRepository),
+            vehiclesProvider.overrideWith((ref) => Stream.value([_vehicle()])),
+            shiftsProvider.overrideWith((ref) => controller.stream),
+            bfDayProvider.overrideWith((ref) => Stream.value(null)),
+          ],
+          child: const MaterialApp(home: ShiftsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('shift-tab-s2')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('shift-tab-s2')));
+      await tester.pumpAndSettle();
 
-    final chipBefore =
-        tester.widget<ChoiceChip>(find.byKey(const Key('shift-tab-s2')));
-    expect(chipBefore.selected, isTrue);
+      final chipBefore = tester.widget<ChoiceChip>(
+        find.byKey(const Key('shift-tab-s2')),
+      );
+      expect(chipBefore.selected, isTrue);
 
-    controller.add(const []);
-    await tester.pumpAndSettle();
+      controller.add(const []);
+      await tester.pumpAndSettle();
 
-    final chipAfter =
-        tester.widget<ChoiceChip>(find.byKey(const Key('shift-tab-s2')));
-    expect(chipAfter.selected, isTrue);
-    expect(
-      find.byKey(const Key('bf-day-dropdown')),
-      findsOneWidget,
-    );
-  });
+      final chipAfter = tester.widget<ChoiceChip>(
+        find.byKey(const Key('shift-tab-s2')),
+      );
+      expect(chipAfter.selected, isTrue);
+      expect(find.byKey(const Key('bf-day-dropdown')), findsOneWidget);
+    },
+  );
 }

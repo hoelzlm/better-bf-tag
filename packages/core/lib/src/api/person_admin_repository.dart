@@ -14,17 +14,14 @@ PersonType _personTypeFromList(ListPersons200ResponseInnerPersonTypeEnum v) {
       : PersonType.youth;
 }
 
+/// Maps via the wire name, so a new backend Berechtigung only needs a case in
+/// [Permission.fromApi]. Unknown values fall back to the least privilege.
 Permission _permissionFromList(ListPersons200ResponseInnerPermissionEnum v) {
-  if (v == ListPersons200ResponseInnerPermissionEnum.preparation) {
-    return Permission.preparation;
+  try {
+    return Permission.fromApi(v.name);
+  } on ArgumentError {
+    return Permission.crew;
   }
-  if (v == ListPersons200ResponseInnerPermissionEnum.dispatch) {
-    return Permission.dispatch;
-  }
-  if (v == ListPersons200ResponseInnerPermissionEnum.admin) {
-    return Permission.admin;
-  }
-  return Permission.crew;
 }
 
 Person _personFromApi(ListPersons200ResponseInner p) {
@@ -51,6 +48,8 @@ CreatePersonRequestPermissionEnum _permissionToCreate(Permission p) {
       return CreatePersonRequestPermissionEnum.preparation;
     case Permission.dispatch:
       return CreatePersonRequestPermissionEnum.dispatch;
+    case Permission.radio:
+      return CreatePersonRequestPermissionEnum.radio;
     case Permission.admin:
       return CreatePersonRequestPermissionEnum.admin;
     case Permission.crew:
@@ -70,6 +69,8 @@ UpdatePersonRequestPermissionEnum _permissionToUpdate(Permission p) {
       return UpdatePersonRequestPermissionEnum.preparation;
     case Permission.dispatch:
       return UpdatePersonRequestPermissionEnum.dispatch;
+    case Permission.radio:
+      return UpdatePersonRequestPermissionEnum.radio;
     case Permission.admin:
       return UpdatePersonRequestPermissionEnum.admin;
     case Permission.crew:
@@ -205,10 +206,12 @@ class ApiPersonAdminRepository implements PersonAdminRepository {
       updatePersonRequest: UpdatePersonRequest(
         (b) => b
           ..displayName = displayName
-          ..personType =
-              personType == null ? null : _personTypeToUpdate(personType)
-          ..permission =
-              permission == null ? null : _permissionToUpdate(permission)
+          ..personType = personType == null
+              ? null
+              : _personTypeToUpdate(personType)
+          ..permission = permission == null
+              ? null
+              : _permissionToUpdate(permission)
           ..active = active,
       ),
     );
@@ -250,9 +253,7 @@ class ApiPersonAdminRepository implements PersonAdminRepository {
     final response = await _personsApi.createPairingCode(id: id);
     final data = response.data;
     if (data == null) {
-      throw StateError(
-        'POST /persons/{id}/pairing-code returned no body',
-      );
+      throw StateError('POST /persons/{id}/pairing-code returned no body');
     }
     return _pairingCodeFromApi(data);
   }
@@ -262,13 +263,11 @@ class ApiPersonAdminRepository implements PersonAdminRepository {
     List<String>? personIds,
   }) async {
     final response = await _personsApi.createPairingCodes(
-      createPairingCodesRequest: CreatePairingCodesRequest(
-        (b) {
-          if (personIds != null) {
-            b.personIds.addAll(personIds);
-          }
-        },
-      ),
+      createPairingCodesRequest: CreatePairingCodesRequest((b) {
+        if (personIds != null) {
+          b.personIds.addAll(personIds);
+        }
+      }),
     );
     final data = response.data;
     if (data == null) {

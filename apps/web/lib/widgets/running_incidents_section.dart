@@ -70,8 +70,7 @@ class RunningIncidentsSection extends ConsumerWidget {
       SessionSignedIn(person: final person) => person.permission,
       _ => null,
     };
-    final canDispatch =
-        permission == Permission.dispatch || permission == Permission.admin;
+    final canDispatch = permission?.canRunIncidents ?? false;
 
     if (incidents.isEmpty) {
       return const BftagStateView.empty(
@@ -97,6 +96,7 @@ class RunningIncidentsSection extends ConsumerWidget {
             vehiclesById: vehiclesById,
             now: now,
             canDispatch: canDispatch,
+            allowPlanning: permission != Permission.radio,
             closeSuggested: closeSuggestedIds.contains(incident.id),
           ),
       ],
@@ -113,6 +113,7 @@ class _IncidentCard extends ConsumerWidget {
     required this.vehiclesById,
     required this.now,
     required this.canDispatch,
+    required this.allowPlanning,
     required this.closeSuggested,
   });
 
@@ -122,6 +123,7 @@ class _IncidentCard extends ConsumerWidget {
   final Map<String, Vehicle> vehiclesById;
   final DateTime now;
   final bool canDispatch;
+  final bool allowPlanning;
   final bool closeSuggested;
 
   Future<void> _openNachalarmierenDialog(BuildContext context) async {
@@ -138,6 +140,8 @@ class _IncidentCard extends ConsumerWidget {
         // A laufender Einsatz has always been triggered at least once
         // (draft -> running only happens via triggerAlarm, ADR 0022).
         hasFirstAlarm: true,
+        // Funktisch: nur sofort nachalarmieren, nichts planen.
+        allowPlanning: allowPlanning,
       ),
     );
   }
