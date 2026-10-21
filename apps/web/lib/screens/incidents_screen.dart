@@ -651,7 +651,8 @@ class _IncidentCard extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                width: 160,
+                // Fits "Nachalarmieren" + icon on one line.
+                width: 200,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -712,6 +713,8 @@ class _IncidentCard extends StatelessWidget {
                             icon: const Icon(Icons.notification_important),
                             label: Text(
                               isDraft ? 'Alarmieren' : 'Nachalarmieren',
+                              maxLines: 1,
+                              softWrap: false,
                             ),
                             onPressed: onAlarm,
                           ),
